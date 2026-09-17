@@ -1,0 +1,18 @@
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Bloquear acesso direto a arquivos sensíveis
+    RewriteRule ^\.env - [F,L]
+
+    # Front controller
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# Não servir arquivos ocultos
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>

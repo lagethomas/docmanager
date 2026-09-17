@@ -1,0 +1,735 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Controllers;
+
+use App\Core\Auth;
+use App\Core\Auth\PermissionManager;
+use App\Core\Controller;
+use App\Core\CSRF;
+use App\Core\Database;
+use App\Core\Logger;
+use App\Models\CategoryModel;
+use App\Models\DocumentModel;
+use App\Models\TagModel;
+
+class DocumentController extends Controller
+{
+    public function index(): void
+    {
+        $this->render('docs/index', [
+            'title' => 'Gestão de Documentos — DocManager',
+            'user' => Auth::user(),
+            'csrfToken' => CSRF::token(),
+            'page' => 'docs',
+        ], 'header');
+    }
+
+    public function view(string $id): void
+    {
+        $intId = (int) $id;
+        $user = Auth::user();
+        $userId = (int) ($user['id'] ?? 0);
+        $userRole = (string) ($user['role'] ?? '');
+
+        $model = new DocumentModel();
+        $doc = $model->find($intId, $userId);
+        if ($doc === null || !empty($doc['deleted_at'])) {
+            $this->redirect('/docs');
+            return;
+        }
+
+        // Se visualizador e doc não aprovado
+        if ($userRole === 'Visualizador' && ($doc['status'] ?? '') !== 'aprovado') {
+            $this->redirect('/docs');
+            return;
+        }
+
+        // Se editor, mas doc não aprovado e não é autor nem compartilhado
+        if ($userRole === 'Editor' && ($doc['status'] ?? '') !== 'aprovado') {
+            if (!$model->canUserEdit($intId, $userId, $userRole)) {
+                $this->redirect('/docs');
+                return;
+            }
+        }
+
+        $model->incrementViews($intId);
+        $doc['views_count'] = ((int) ($doc['views_count'] ?? 0)) + 1;
+
+        $canEdit = $model->canUserEdit($intId, $userId, $userRole);
+        $canManageShares = $model->canUserManageShares($intId, $userId, $userRole);
+        $canComment = in_array($userRole, ['Admin', 'Editor', 'Aprovador'], true);
+
+        $followerModel = new \App\Models\DocumentFollowerModel();
+        $isFollowing = $followerModel->isFollowing($intId, $userId);
+
+        $this->render('docs/view', [
+            'title' => ($doc['title'] ?? 'Documento') . ' — DocManager',
+            'doc' => $doc,
+            'canEdit' => $canEdit,
+            'canManageShares' => $canManageShares,
+            'canComment' => $canComment,
+            'isFollowing' => $isFollowing,
+            'user' => $user,
+            'csrfToken' => CSRF::token(),
+            'page' => 'docs_view',
+        ], 'header');
+    }
+
+    // ─── API: DOCUMENTS ──────────────────────────────────
+
+    public function listDocs(): void
+    {
+        $user = Auth::user();
+        $q = trim((string) ($_GET['q'] ?? ''));
+        $catId = isset($_GET['category_id']) && $_GET['category_id'] !== '' ? (int) $_GET['category_id'] : null;
+        $tag = trim((string) ($_GET['tag'] ?? ''));
+        $sort = trim((string) ($_GET['sort'] ?? 'updated_desc'));
+        $status = isset($_GET['status']) && $_GET['status'] !== '' ? trim((string) $_GET['status']) : null;
+        $trash = isset($_GET['trash']) && $_GET['trash'] !== '' && $_GET['trash'] !== '0' && $_GET['trash'] !== 'false';
+        $favorites = isset($_GET['favorites']) && $_GET['favorites'] !== '' && $_GET['favorites'] !== '0' && $_GET['favorites'] !== 'false';
+        $sharedWithMe = isset($_GET['shared_with_me']) && $_GET['shared_with_me'] !== '' && $_GET['shared_with_me'] !== '0' && $_GET['shared_with_me'] !== 'false';
+        $sharedByMe = isset($_GET['shared_by_me']) && $_GET['shared_by_me'] !== '' && $_GET['shared_by_me'] !== '0' && $_GET['shared_by_me'] !== 'false';
+
+        $model = new DocumentModel();
+        $docs = $model->search(
+            query: $q,
+            categoryId: $catId,
+            tag: $tag,
+            sort: $sort,
+            trash: $trash,
+            status: $status,
+            userId: isset($user['id']) ? (int) $user['id'] : null,
+            userRole: $user['role'] ?? null,
+            favorites: $favorites,
+            sharedWithMe: $sharedWithMe,
+            sharedByMe: $sharedByMe
+        );
+        $this->jsonOk(['docs' => $docs]);
+    }
+
+    public function toggleFavorite(string $id): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            $this->jsonError('Não autenticado.', 401);
+            return;
+        }
+
+        $intId = (int) $id;
+        $userId = (int) $user['id'];
+        $model = new DocumentModel();
+        $doc = $model->find($intId, $userId);
+        if ($doc === null || !empty($doc['deleted_at'])) {
+            $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+
+        $isFav = $model->toggleFavorite($intId, $userId);
+        $totalFavs = $model->countUserFavorites($userId);
+
+        $this->jsonOk([
+            'is_favorite' => $isFav,
+            'total_favorites' => $totalFavs,
+            'message' => $isFav ? 'Documento adicionado aos favoritos!' : 'Documento removido dos favoritos.'
+        ]);
+    }
+
+    public function getStats(): void
+    {
+        $user = Auth::user();
+        $model = new DocumentModel();
+        $stats = $model->getStats(
+            userId: isset($user['id']) ? (int) $user['id'] : null,
+            userRole: $user['role'] ?? null
+        );
+        $this->jsonOk(['stats' => $stats]);
+    }
+
+    public function getDoc(string $id): void
+    {
+        $intId = (int) $id;
+        $model = new DocumentModel();
+        $doc = $model->find($intId);
+        if ($doc === null) {
+            $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+
+        $user = Auth::user();
+        $userId = (int) ($user['id'] ?? 0);
+        $userRole = (string) ($user['role'] ?? '');
+
+        // Se visualizador e doc não aprovado
+        if ($userRole === 'Visualizador' && ($doc['status'] ?? '') !== 'aprovado') {
+            $this->jsonError('Acesso restrito: este documento ainda não foi publicado.', 403);
+            return;
+        }
+
+        $model->incrementViews($intId);
+        $doc['views_count'] = ((int) ($doc['views_count'] ?? 0)) + 1;
+
+        $doc['can_edit'] = $model->canUserEdit($intId, $userId, $userRole);
+        $doc['is_owner'] = ((int) ($doc['created_by'] ?? 0) === $userId);
+        $doc['can_manage_shares'] = $model->canUserManageShares($intId, $userId, $userRole);
+
+        $this->jsonOk(['doc' => $doc]);
+    }
+
+    public function createDoc(): void
+    {
+        $user = Auth::user();
+        if (!PermissionManager::can($user['role'] ?? null, 'docs.create')) {
+            $this->jsonError('Acesso negado: seu perfil não possui permissão para criar documentos.', 403);
+            return;
+        }
+
+        $input = self::input();
+        $title = sanitize_input((string) ($input['title'] ?? ''));
+        $content = (string) ($input['content'] ?? '');
+        $categoryId = isset($input['category_id']) && $input['category_id'] !== '' ? (int) $input['category_id'] : null;
+        $tags = $input['tags'] ?? [];
+
+        if ($title === '') {
+            $this->jsonError('Título obrigatório.', 422);
+            return;
+        }
+
+        $role = $user['role'] ?? '';
+        // Admin auto-aprova na criação; Editor cria como pendente de aprovação
+        $status = ($role === 'Admin') ? 'aprovado' : 'pendente';
+        $approvedBy = ($role === 'Admin') ? (int) $user['id'] : null;
+
+        $model = new DocumentModel();
+        $docId = $model->create($title, $content, $categoryId, (int) $user['id'], $status, $approvedBy);
+
+        // Tags
+        if (is_array($tags) && $tags !== []) {
+            $tagModel = new TagModel();
+            /** @var list<string> $tagNames */
+            $tagNames = array_values(array_map('strval', $tags));
+            $tagIds = $tagModel->resolve($tagNames);
+            $model->setTags($docId, $tagIds);
+        }
+
+        $statusMsg = ($status === 'aprovado') ? 'criado e publicado' : 'criado e enviado para aprovação';
+        Logger::log('create_doc', "Documento \"{$title}\" {$statusMsg}");
+
+        // Notificar Admin e Aprovador quando documento fica pendente
+        if ($status === 'pendente') {
+            $stmtNotif = $this->db->prepare("SELECT id FROM cp_users WHERE role IN ('Admin','Aprovador') AND status = 'ativo'");
+            $stmtNotif->execute();
+            $notifyIds = array_map('intval', array_column($stmtNotif->fetchAll() ?: [], 'id'));
+            if ($notifyIds !== []) {
+                (new \App\Models\NotificationModel())->notifyUsers(
+                    $notifyIds,
+                    'novo_documento',
+                    'Novo documento para aprovação',
+                    $user['name'] . ' enviou o documento "' . $title . '" para aprovação.',
+                    '/aprovacoes'
+                );
+            }
+        }
+
+        $this->jsonOk(['id' => $docId, 'status' => $status], 201);
+    }
+
+    public function updateDoc(string $id): void
+    {
+        $user = Auth::user();
+        if (!PermissionManager::can($user['role'] ?? null, 'docs.edit')) {
+            $this->jsonError('Acesso negado: seu perfil não possui permissão para editar documentos.', 403);
+            return;
+        }
+
+        $intId = (int) $id;
+        $model = new DocumentModel();
+        $doc = $model->find($intId);
+        if ($doc === null) {
+            $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+
+        $userId = (int) ($user['id'] ?? 0);
+        $role = (string) ($user['role'] ?? '');
+
+        if (!$model->canUserEdit($intId, $userId, $role)) {
+            $this->jsonError('Acesso negado: você não tem permissão para editar este documento. Solicite compartilhamento ao autor.', 403);
+            return;
+        }
+
+        $input = self::input();
+        $title = sanitize_input((string) ($input['title'] ?? $doc['title']));
+        $content = (string) ($input['content'] ?? $doc['content']);
+        $categoryId = array_key_exists('category_id', $input)
+            ? ($input['category_id'] !== null && $input['category_id'] !== '' ? (int) $input['category_id'] : null)
+            : ($doc['category_id'] !== null ? (int) $doc['category_id'] : null);
+        $versionNote = sanitize_input((string) ($input['version_note'] ?? ''));
+        $tags = $input['tags'] ?? null;
+
+        // Se Admin editar, mantém aprovado; se Editor editar, volta para pendente para revisão
+        $status = ($role === 'Admin') ? 'aprovado' : 'pendente';
+        $approvedBy = ($role === 'Admin') ? (int) $user['id'] : null;
+
+        $model->update($intId, $title, $content, $categoryId, $userId, $versionNote, $status, $approvedBy);
+
+        if (is_array($tags)) {
+            $tagModel = new TagModel();
+            /** @var list<string> $tagNames */
+            $tagNames = array_values(array_map('strval', $tags));
+            $tagIds = $tagModel->resolve($tagNames);
+            $model->setTags($intId, $tagIds);
+        }
+
+        Logger::log('edit_doc', "Documento #{$intId} atualizado");
+
+        // Notificar seguidores do documento (exceto quem atualizou)
+        $followerModel = new \App\Models\DocumentFollowerModel();
+        $followerIds = $followerModel->getFollowers($intId);
+        $followerIds = array_filter($followerIds, fn(int $fid) => $fid !== $userId);
+        if ($followerIds !== []) {
+            $notifModel = new \App\Models\NotificationModel();
+            $notifModel->notifyUsers(
+                array_values($followerIds),
+                'doc_update',
+                'Documento atualizado',
+                $user['name'] . ' atualizou o documento "' . $doc['title'] . '"',
+                '/docs/view/' . $intId
+            );
+        }
+
+        $this->jsonOk(['id' => $intId, 'status' => $status]);
+    }
+
+    public function duplicateDoc(string $id): void
+    {
+        $user = Auth::user();
+        if (!PermissionManager::can($user['role'] ?? null, 'docs.duplicate')) {
+            $this->jsonError('Acesso negado: seu perfil não possui permissão para duplicar documentos.', 403);
+            return;
+        }
+
+        $intId = (int) $id;
+        $model = new DocumentModel();
+        $doc = $model->find($intId);
+        if ($doc === null) {
+            $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+
+        $newTitle = $doc['title'] . ' (Cópia)';
+        $catId = $doc['category_id'] !== null ? (int) $doc['category_id'] : null;
+        $newDocId = $model->create($newTitle, (string) $doc['content'], $catId, (int) $user['id']);
+
+        if (!empty($doc['tags']) && is_array($doc['tags'])) {
+            $tagModel = new TagModel();
+            /** @var list<string> $tagNames */
+            $tagNames = array_values(array_map('strval', $doc['tags']));
+            $tagIds = $tagModel->resolve($tagNames);
+            $model->setTags($newDocId, $tagIds);
+        }
+
+        Logger::log('duplicate_doc', "Documento #{$intId} duplicado para #{$newDocId}");
+        $this->jsonOk(['id' => $newDocId], 201);
+    }
+
+    public function deleteDoc(string $id): void
+    {
+        $user = Auth::user();
+        if (!PermissionManager::can($user['role'] ?? null, 'docs.trash')) {
+            $this->jsonError('Acesso negado: seu perfil não possui permissão para mover documentos para a lixeira.', 403);
+            return;
+        }
+
+        $intId = (int) $id;
+        $model = new DocumentModel();
+        if ($model->find($intId) === null) {
+            $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+
+        $userId = (int) ($user['id'] ?? 0);
+        $role = (string) ($user['role'] ?? '');
+        if (!$model->canUserManageShares($intId, $userId, $role)) {
+            $this->jsonError('Acesso negado: apenas o autor do documento ou Administrador pode excluí-lo.', 403);
+            return;
+        }
+
+        $model->trash($intId);
+        Logger::log('trash_doc', "Documento #{$intId} movido para a lixeira");
+        $this->jsonOk(['id' => $intId]);
+    }
+
+    public function restoreDoc(string $id): void
+    {
+        $user = Auth::user();
+        if (!PermissionManager::can($user['role'] ?? null, 'docs.trash')) {
+            $this->jsonError('Acesso negado: seu perfil não possui permissão para restaurar documentos.', 403);
+            return;
+        }
+
+        $intId = (int) $id;
+        $model = new DocumentModel();
+        if ($model->find($intId) === null) {
+            $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+
+        $userId = (int) ($user['id'] ?? 0);
+        $role = (string) ($user['role'] ?? '');
+        if (!$model->canUserManageShares($intId, $userId, $role)) {
+            $this->jsonError('Acesso negado: apenas o autor do documento ou Administrador pode restaurá-lo.', 403);
+            return;
+        }
+
+        $model->restore($intId);
+        Logger::log('restore_doc', "Documento #{$intId} restaurado da lixeira");
+        $this->jsonOk(['id' => $intId]);
+    }
+
+    public function forceDeleteDoc(string $id): void
+    {
+        $user = Auth::user();
+        if (!PermissionManager::can($user['role'] ?? null, 'docs.force_delete')) {
+            $this->jsonError('Acesso negado: apenas administradores podem excluir documentos definitivamente.', 403);
+            return;
+        }
+
+        $intId = (int) $id;
+        $model = new DocumentModel();
+        if ($model->find($intId) === null) {
+            $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+        $model->forceDelete($intId);
+        Logger::log('force_delete_doc', "Documento #{$intId} excluído definitivamente");
+        $this->jsonOk(['id' => $intId]);
+    }
+
+    public function getShares(string $id): void
+    {
+        $intId = (int) $id;
+        $model = new DocumentModel();
+        $doc = $model->find($intId);
+        if ($doc === null) {
+            $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+
+        $user = Auth::user();
+        $userId = (int) ($user['id'] ?? 0);
+        $role = (string) ($user['role'] ?? '');
+
+        if (!$model->canUserEdit($intId, $userId, $role) && !$model->canUserManageShares($intId, $userId, $role)) {
+            $this->jsonError('Acesso negado.', 403);
+            return;
+        }
+
+        $shares = $model->getShares($intId);
+        $canManage = $model->canUserManageShares($intId, $userId, $role);
+        $this->jsonOk(['shares' => $shares, 'can_manage' => $canManage]);
+    }
+
+    public function addShare(string $id): void
+    {
+        $intId = (int) $id;
+        $model = new DocumentModel();
+        $doc = $model->find($intId);
+        if ($doc === null) {
+            $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+
+        $user = Auth::user();
+        $userId = (int) ($user['id'] ?? 0);
+        $role = (string) ($user['role'] ?? '');
+
+        if (!$model->canUserManageShares($intId, $userId, $role)) {
+            $this->jsonError('Acesso negado: apenas o autor do documento ou Administrador pode gerenciar compartilhamentos.', 403);
+            return;
+        }
+
+        $input = self::input();
+        $targetUserId = (int) ($input['user_id'] ?? 0);
+        $canEdit = (bool) ($input['can_edit'] ?? true);
+
+        if ($targetUserId <= 0) {
+            $this->jsonError('Selecione um usuário válido.', 422);
+            return;
+        }
+
+        if ($targetUserId === (int) $doc['created_by']) {
+            $this->jsonError('O autor já possui acesso total ao documento.', 422);
+            return;
+        }
+
+        $model->addShare($intId, $targetUserId, $userId, $canEdit);
+        Logger::log('share_doc', "Documento #{$intId} compartilhado com usuário #{$targetUserId}");
+        $this->jsonOk(['message' => 'Documento compartilhado com sucesso.', 'shares' => $model->getShares($intId)]);
+    }
+
+    public function removeShare(string $id, string $userId): void
+    {
+        $intId = (int) $id;
+        $targetUserId = (int) $userId;
+        $model = new DocumentModel();
+        $doc = $model->find($intId);
+        if ($doc === null) {
+            $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+
+        $user = Auth::user();
+        $currentUserId = (int) ($user['id'] ?? 0);
+        $role = (string) ($user['role'] ?? '');
+
+        if (!$model->canUserManageShares($intId, $currentUserId, $role)) {
+            $this->jsonError('Acesso negado: apenas o autor do documento ou Administrador pode remover compartilhamentos.', 403);
+            return;
+        }
+
+        $model->removeShare($intId, $targetUserId);
+        Logger::log('unshare_doc', "Compartilhamento do documento #{$intId} com usuário #{$targetUserId} removido");
+        $this->jsonOk(['message' => 'Compartilhamento removido com sucesso.', 'shares' => $model->getShares($intId)]);
+    }
+
+    public function getUsersForShare(string $id): void
+    {
+        $intId = (int) $id;
+        $model = new DocumentModel();
+        $doc = $model->find($intId);
+        if ($doc === null) {
+            $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+
+        $user = Auth::user();
+        $userId = (int) ($user['id'] ?? 0);
+        $role = (string) ($user['role'] ?? '');
+
+        if (!$model->canUserManageShares($intId, $userId, $role)) {
+            $this->jsonError('Acesso negado.', 403);
+            return;
+        }
+
+        $users = $model->getEligibleUsersForShare($intId);
+        $this->jsonOk(['users' => $users]);
+    }
+
+    public function emptyTrash(): void
+    {
+        $user = Auth::user();
+        if (!PermissionManager::can($user['role'] ?? null, 'docs.empty_trash')) {
+            $this->jsonError('Acesso negado: apenas administradores podem esvaziar a lixeira.', 403);
+            return;
+        }
+
+        $model = new DocumentModel();
+        $count = $model->emptyTrash();
+        Logger::log('empty_trash_doc', "Lixeira esvaziada: {$count} documento(s) removido(s)");
+        $this->jsonOk(['deleted_count' => $count]);
+    }
+
+    // ─── API: CATEGORIES ─────────────────────────────────
+
+    public function listCategories(): void
+    {
+        $cats = (new CategoryModel())->withCounts();
+        $this->jsonOk(['categories' => $cats]);
+    }
+
+    public function createCategory(): void
+    {
+        $user = Auth::user();
+        if (!PermissionManager::can($user['role'] ?? null, 'categories.create')) {
+            $this->jsonError('Acesso negado: seu perfil não possui permissão para criar pastas.', 403);
+            return;
+        }
+
+        $input = self::input();
+        $name = sanitize_input((string) ($input['name'] ?? ''));
+        if ($name === '') {
+            $this->jsonError('Nome obrigatório.', 422);
+            return;
+        }
+        $parentId = isset($input['parent_id']) && $input['parent_id'] !== '' ? (int) $input['parent_id'] : null;
+        $icon = sanitize_input((string) ($input['icon'] ?? 'folder'));
+        $sortOrder = (int) ($input['sort_order'] ?? 0);
+        $color = sanitize_input((string) ($input['color'] ?? '#1abb9c'));
+
+        $catId = (new CategoryModel())->create($name, $parentId, $icon, $sortOrder, $color);
+        Logger::log('create_category', "Pasta \"{$name}\" criada");
+        $this->jsonOk(['id' => $catId], 201);
+    }
+
+    public function updateCategory(string $id): void
+    {
+        $user = Auth::user();
+        if (!PermissionManager::can($user['role'] ?? null, 'categories.edit')) {
+            $this->jsonError('Acesso negado: seu perfil não possui permissão para editar pastas.', 403);
+            return;
+        }
+
+        $intId = (int) $id;
+        $cat = (new CategoryModel())->find($intId);
+        if ($cat === null) {
+            $this->jsonError('Categoria não encontrada.', 404);
+            return;
+        }
+
+        $input = self::input();
+        $name = sanitize_input((string) ($input['name'] ?? $cat['name']));
+        $parentId = array_key_exists('parent_id', $input)
+            ? ($input['parent_id'] !== null && $input['parent_id'] !== '' ? (int) $input['parent_id'] : null)
+            : ($cat['parent_id'] !== null ? (int) $cat['parent_id'] : null);
+        $icon = sanitize_input((string) ($input['icon'] ?? $cat['icon']));
+        $sortOrder = (int) ($input['sort_order'] ?? $cat['sort_order']);
+        $color = sanitize_input((string) ($input['color'] ?? ($cat['color'] ?? '#1abb9c')));
+
+        (new CategoryModel())->update($intId, $name, $parentId, $icon, $sortOrder, $color);
+        Logger::log('edit_category', "Pasta #{$intId} atualizada");
+        $this->jsonOk(['id' => $intId]);
+    }
+
+
+    public function deleteCategory(string $id): void
+    {
+        $user = Auth::user();
+        if (!PermissionManager::can($user['role'] ?? null, 'categories.delete')) {
+            $this->jsonError('Acesso negado: seu perfil não possui permissão para excluir pastas.', 403);
+            return;
+        }
+
+        $intId = (int) $id;
+        $model = new CategoryModel();
+        if ($model->find($intId) === null) {
+            $this->jsonError('Categoria não encontrada.', 404);
+            return;
+        }
+        $model->delete($intId);
+        Logger::log('delete_category', "Pasta #{$intId} excluída");
+        $this->jsonOk(['id' => $intId]);
+    }
+
+    // ─── API: TAGS ───────────────────────────────────────
+
+    public function listTags(): void
+    {
+        $stmt = (new TagModel())->db()->query(
+            'SELECT t.*, COUNT(dt.document_id) AS usage_count
+             FROM cp_doc_tags t
+             LEFT JOIN cp_document_tags dt ON t.id = dt.tag_id
+             GROUP BY t.id, t.name ORDER BY usage_count DESC, t.name ASC'
+        );
+        $tags = $stmt->fetchAll() ?: [];
+        $this->jsonOk(['tags' => $tags]);
+    }
+
+    // ─── API: UPLOAD ─────────────────────────────────────
+
+    public function upload(): void
+    {
+        $user = Auth::user();
+        if (!PermissionManager::can($user['role'] ?? null, 'docs.upload')) {
+            $this->jsonError('Acesso negado: seu perfil não possui permissão para enviar anexos.', 403);
+            return;
+        }
+        if (empty($_FILES['file'])) {
+            $this->jsonError('Nenhum arquivo enviado.', 400);
+            return;
+        }
+
+        $file = $_FILES['file'];
+        $ext = pathinfo((string) $file['name'], PATHINFO_EXTENSION);
+        $stored = uniqid('up_', true) . ($ext !== '' ? '.' . $ext : '');
+        $dest = $this->storagePath('uploads/docs/' . $stored);
+
+        $dir = dirname($dest);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        if (!move_uploaded_file((string) $file['tmp_name'], $dest)) {
+            $this->jsonError('Falha no upload.', 500);
+            return;
+        }
+
+        $user = Auth::user();
+        $db = Database::getInstance();
+        $stmt = $db->prepare(
+            'INSERT INTO cp_doc_uploads (original_name, stored_name, mime_type, size_bytes, uploaded_by) VALUES (?, ?, ?, ?, ?)'
+        );
+        $stmt->execute([
+            (string) $file['name'],
+            $stored,
+            (string) $file['type'],
+            (int) $file['size'],
+            (int) $user['id'],
+        ]);
+        $uploadId = (int) $db->lastInsertId();
+
+        $this->jsonOk([
+            'id' => $uploadId,
+            'url' => 'storage/uploads/docs/' . $stored,
+            'name' => (string) $file['name'],
+            'mime' => (string) $file['type'],
+            'size' => (int) $file['size'],
+        ]);
+    }
+
+    public function serveFile(string $id): void
+    {
+        $db = Database::getInstance();
+        $stmt = $db->prepare('SELECT * FROM cp_doc_uploads WHERE id = ? LIMIT 1');
+        $stmt->execute([(int) $id]);
+        $upload = $stmt->fetch();
+
+        if ($upload === false) {
+            http_response_code(404);
+            echo 'Arquivo não encontrado.';
+            return;
+        }
+
+        $path = $this->storagePath('uploads/docs/' . $upload['stored_name']);
+        if (!file_exists($path)) {
+            http_response_code(404);
+            echo 'Arquivo não encontrado no disco.';
+            return;
+        }
+
+        $mime = !empty($upload['mime_type']) ? (string) $upload['mime_type'] : 'application/octet-stream';
+        header('Content-Type: ' . $mime);
+        header('Content-Length: ' . (string) filesize($path));
+        $isInline = (bool) preg_match('/^(image\/|text\/|application\/pdf)/', $mime);
+        $disposition = $isInline ? 'inline' : 'attachment';
+        header('Content-Disposition: ' . $disposition . '; filename="' . rawurlencode((string) $upload['original_name']) . '"');
+        header('Cache-Control: public, max-age=86400');
+        readfile($path);
+        exit;
+    }
+
+    public function toggleFollow(string $id): void
+    {
+        $user = Auth::user();
+        if ($user === null) {
+            $this->jsonError('Não autenticado.', 401);
+            return;
+        }
+
+        $intId = (int) $id;
+        $docModel = new DocumentModel();
+        $doc = $docModel->find($intId);
+        if ($doc === null) {
+            $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+
+        $followerModel = new \App\Models\DocumentFollowerModel();
+        $isNowFollowing = $followerModel->toggle($intId, (int) $user['id']);
+
+        $this->jsonOk([
+            'is_following' => $isNowFollowing,
+            'message' => $isNowFollowing ? 'Você agora está seguindo este documento.' : 'Você deixou de seguir este documento.',
+        ]);
+    }
+}

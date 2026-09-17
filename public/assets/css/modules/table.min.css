@@ -1,0 +1,328 @@
+/* ==========================================================================
+   TABLE.MIN.CSS — Sistema de Tabelas Unificado do DocManager
+   Aplicado globalmente em todos os módulos: docs, aprovações, usuários,
+   dashboard e quaisquer novos módulos futuros.
+/* ─── GLOBAL MODAL / HIDDEN ACCESSIBILITY FIX ───────────────────────────── */
+
+[hidden],
+.modal-backdrop[hidden],
+.modal-backdrop-custom[hidden] {
+  display: none !important;
+}
+
+.modal-backdrop:not(.show) {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* ─── SCROLL CONTAINER ──────────────────────────────────────────────────── */
+
+.table-scroll-container,
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: var(--docs-border, #cbd5e1) transparent;
+}
+
+.table-scroll-container::-webkit-scrollbar,
+.table-responsive::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
+}
+
+.table-scroll-container::-webkit-scrollbar-track,
+.table-responsive::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb,
+.table-responsive::-webkit-scrollbar-thumb {
+  background: var(--docs-border, #cbd5e1);
+  border-radius: 99px;
+}
+
+.table-scroll-container:hover::-webkit-scrollbar-thumb,
+.table-responsive:hover::-webkit-scrollbar-thumb {
+  background: var(--docs-primary, #1abb9c);
+}
+
+/* ─── WRAPPER / CONTAINER ───────────────────────────────────────────────── */
+
+.docs-table-container,
+.docs-table-wrapper,
+.sys-table-container {
+  background-color: var(--docs-surface, #fff);
+  border: 1px solid var(--docs-border, #e2e8f0);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* ─── BASE TABLE ─────────────────────────────────────────────────────────── */
+/*
+ * Classes canônicas:
+ *   .docs-table  — tabela principal de documentos (min-width: 820px)
+ *   .dash-table  — tabelas compactas do dashboard (min-width: 650px)
+ *   .sys-table   — alias genérico (idêntico ao docs-table) para qualquer módulo futuro
+ *   .table       — compatibilidade legada (usuários, etc.)
+ */
+
+.docs-table,
+.sys-table,
+.table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.dash-table {
+  width: 100%;
+  min-width: 650px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+/* ─── THEAD ──────────────────────────────────────────────────────────────── */
+
+.docs-table th,
+.dash-table th,
+.sys-table th,
+.table th {
+  padding: 0.85rem 1rem;
+  background-color: var(--docs-surface-2, #f8fafc);
+  border-bottom: 1px solid var(--docs-border, #e2e8f0);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--docs-text-mut, #64748b);
+  white-space: nowrap;
+}
+
+/* ─── TBODY TD ───────────────────────────────────────────────────────────── */
+
+.docs-table td,
+.dash-table td,
+.sys-table td,
+.table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--docs-border, #e2e8f0);
+  vertical-align: middle;
+  color: var(--docs-text, #1e293b);
+  transition: background 0.12s ease;
+}
+
+/* Fundo branco garantido em cada linha */
+.docs-table tbody tr,
+.dash-table tbody tr,
+.sys-table tbody tr,
+.table tbody tr {
+  background-color: var(--docs-surface, #fff);
+}
+
+/* Remove borda da última linha */
+.docs-table tr:last-child td,
+.dash-table tr:last-child td,
+.sys-table tr:last-child td,
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Hover row highlight */
+.docs-table tbody tr:hover td,
+.dash-table tbody tr:hover td,
+.sys-table tbody tr:hover td,
+.table tbody tr:hover td,
+.docs-table-row:hover td {
+  background-color: var(--docs-primary-lt, rgba(26, 187, 156, 0.06));
+}
+
+/* Nota: linhas de tabela NÃO são clicáveis por padrão.
+   Cursor pointer deve ser aplicado apenas nos botões de ação e no título do doc. */
+
+/* ─── ACTION BUTTONS ─────────────────────────────────────────────────────── */
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.table-action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--docs-border, #e2e8f0);
+  background-color: var(--docs-surface, #fff);
+  color: var(--docs-text-mut, #64748b);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.table-action-btn:hover {
+  color: var(--docs-primary, #1abb9c);
+  border-color: var(--docs-primary, #1abb9c);
+  background-color: var(--docs-primary-lt, rgba(26, 187, 156, 0.08));
+}
+
+.table-action-btn.del:hover {
+  color: var(--danger, #d63939);
+  border-color: var(--danger, #d63939);
+  background-color: rgba(214, 57, 57, 0.07);
+}
+
+.table-action-btn.restore-btn {
+  color: var(--docs-primary, #1abb9c);
+  border-color: var(--docs-primary, #1abb9c);
+}
+
+.table-action-btn.restore-btn:hover {
+  background-color: var(--docs-primary, #1abb9c);
+  color: #fff;
+}
+
+/* Botão favorito */
+.table-action-btn.is-fav {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.table-action-btn.is-fav svg {
+  width: 14px;
+  height: 14px;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* ─── DOC CELL (titulo com ícone) ────────────────────────────────────────── */
+
+.table-doc-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: 260px;
+  text-decoration: none !important;
+}
+
+.table-doc-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background-color: var(--docs-primary-lt, rgba(26, 187, 156, 0.1));
+  color: var(--docs-primary, #1abb9c);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.table-doc-name {
+  font-weight: 600;
+  color: var(--docs-text, #0f172a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+
+.table-doc-cell:hover .table-doc-name {
+  color: var(--docs-primary, #1abb9c);
+}
+
+.table-doc-title {
+  font-weight: 600;
+  color: var(--docs-text, #0f172a);
+}
+
+/* ─── PAGINAÇÃO ──────────────────────────────────────────────────────────── */
+
+.docs-pagination,
+.dash-table-pagination,
+.pagination-footer,
+.sys-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid var(--docs-border, #e2e8f0);
+  background-color: var(--docs-surface, #fff);
+  font-size: 0.8rem;
+  color: var(--docs-text-mut, #64748b);
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.pagination-info strong {
+  color: var(--docs-text, #1e293b);
+}
+
+.pagination-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pagination-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 0.65rem;
+  border-radius: 6px;
+  border: 1px solid var(--docs-border, #e2e8f0);
+  background-color: var(--docs-surface-2, #f8fafc);
+  color: var(--docs-text, #1e293b);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.pagination-btn:hover:not(.disabled):not(:disabled) {
+  background-color: var(--docs-primary-lt, rgba(26, 187, 156, 0.1));
+  border-color: var(--docs-primary, #1abb9c);
+  color: var(--docs-primary, #1abb9c);
+}
+
+.pagination-btn.active {
+  background-color: var(--docs-primary, #1abb9c);
+  border-color: var(--docs-primary, #1abb9c);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 4px rgba(26, 187, 156, 0.25);
+}
+
+.pagination-btn.disabled,
+.pagination-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.pagination-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  color: var(--docs-text-mut, #64748b);
+  font-weight: bold;
+}
+
+/* ─── th-actions (compat usuários) ──────────────────────────────────────── */
+.th-actions {
+  text-align: right !important;
+}
