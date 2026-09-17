@@ -43,4 +43,14 @@ final class Logger
             // Banco indisponível: o log em arquivo já foi gravado.
         }
     }
+
+    public static function office(string $message): void
+    {
+        $dir = ROOT_DIR . '/storage/logs';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        $line = sprintf("[%s] %s%s", date('Y-m-d H:i:s'), $message, PHP_EOL);
+        @file_put_contents($dir . '/office.log', $line, FILE_APPEND);
+    }
 }

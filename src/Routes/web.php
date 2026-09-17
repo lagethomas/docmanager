@@ -14,9 +14,13 @@ return [
     // Página inicial (Dashboard)
     ['GET', '/', [HomeController::class, 'index'], [AuthMiddleware::class]],
 
-    // Módulo Documentação
+    // Módulo Documentação do Acervo
     ['GET', '/docs', [DocumentController::class, 'index'], [AuthMiddleware::class]],
     ['GET', '/docs/view/{id}', [DocumentController::class, 'view'], [AuthMiddleware::class]],
+
+    // Módulo Documentação do Sistema (Manual, .env, Office 365) - Somente Admin
+    ['GET', '/sistema-docs', [App\Controllers\DocsController::class, 'index'], [AuthMiddleware::class, AdminMiddleware::class]],
+    ['GET', '/sistema-docs/{slug}', [App\Controllers\DocsController::class, 'show'], [AuthMiddleware::class, AdminMiddleware::class]],
 
     // Módulo Aprovações (Admin e Aprovador)
     ['GET', '/aprovacoes', [ApprovalController::class, 'index'], [AuthMiddleware::class]],
@@ -35,4 +39,6 @@ return [
 
     // Autenticação
     ['GET', '/login', [AuthController::class, 'showLogin'], []],
+    ['GET', '/login/oauth', [AuthController::class, 'oauthStart'], []],
+    ['GET', '/login/oauth/callback', [AuthController::class, 'oauthCallback'], []],
 ];

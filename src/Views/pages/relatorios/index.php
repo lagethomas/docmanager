@@ -122,65 +122,23 @@ use App\Core\Controller;
     <div class="card">
       <div class="card-header" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color);">
         <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-          <h3 style="font-size: 1.05rem; font-weight: 700; margin: 0; color: var(--text);">Trilha de Auditoria Recente</h3>
-        </div>
-        <span style="font-size: 0.8rem; color: var(--text-muted);" id="logsFilteredCount">Mostrando <?php echo count($logs); ?> registros</span>
-      </div>
-
-      <div class="table-responsive">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);"><line x1="18" y1="20" x2      <div class="table-responsive">
         <table class="table" id="auditLogsTable">
           <thead>
             <tr>
-              <th style="width: 70px;">ID</th>
-              <th style="min-width: 140px;">Ação</th>
-              <th style="min-width: 260px;">Descrição</th>
-              <th style="min-width: 150px;">Usuário</th>
-              <th style="min-width: 110px;">IP</th>
-              <th style="min-width: 140px; text-align: right;">Data / Hora</th>
+              <th data-sort="id" class="sortable-th" style="width: 80px;">ID <span class="sort-icon"></span></th>
+              <th data-sort="action" class="sortable-th" style="min-width: 140px;">Ação <span class="sort-icon"></span></th>
+              <th data-sort="description" class="sortable-th" style="min-width: 260px;">Descrição <span class="sort-icon"></span></th>
+              <th data-sort="user" class="sortable-th" style="min-width: 150px;">Usuário <span class="sort-icon"></span></th>
+              <th data-sort="ip" class="sortable-th" style="min-width: 110px;">IP <span class="sort-icon"></span></th>
+              <th data-sort="created_at" class="sortable-th" style="min-width: 140px; text-align: right;">Data / Hora <span class="sort-icon"></span></th>
             </tr>
           </thead>
-          <tbody id="auditLogsBody">
-            <?php if (empty($logs)): ?>
-              <tr>
-                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2.5rem 1rem;">
-                  Nenhum registro de auditoria encontrado.
-                </td>
-              </tr>
-            <?php else: ?>
-              <?php foreach ($logs as $log): ?>
-                <?php
-                  $act = (string) $log['action'];
-                  $badgeCls = 'action-badge-delete';
-                  if (str_contains($act, 'login')) $badgeCls = 'action-badge-login';
-                  elseif (str_contains($act, 'approve')) $badgeCls = 'action-badge-approve';
-                  elseif (str_contains($act, 'reject')) $badgeCls = 'action-badge-reject';
-                  elseif (str_contains($act, 'create')) $badgeCls = 'action-badge-create';
-                  elseif (str_contains($act, 'update') || str_contains($act, 'edit')) $badgeCls = 'action-badge-edit';
-                ?>
-                <tr data-action="<?php echo e($act); ?>" data-user="<?php echo e((string) $log['user_login']); ?>" data-text="<?php echo e(mb_strtolower((string) $log['description'] . ' ' . (string) $log['user_name'])); ?>">
-                  <td style="font-weight: 600; color: var(--text-muted);">#<?php echo e((string) $log['id']); ?></td>
-                  <td>
-                    <span class="action-badge <?php echo $badgeCls; ?>">
-                      <?php echo e($act); ?>
-
-                    </span>
-                  </td>
-                  <td style="font-weight: 500; color: var(--text);"><?php echo e((string) $log['description']); ?></td>
-                  <td>
-                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--text);"><?php echo e((string) ($log['user_name'] ?: $log['user_login'] ?: '—')); ?></div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted);"><?php echo e((string) ($log['user_login'] ? '@' . $log['user_login'] : '—')); ?></div>
-                  </td>
-                  <td style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;"><?php echo e((string) ($log['ip'] ?: '127.0.0.1')); ?></td>
-                  <td style="text-align: right; font-size: 0.8rem; color: var(--text-muted); white-space: nowrap;">
-                    <?php echo e(date('d/m/Y H:i', strtotime((string) $log['created_at']))); ?>
-
-                  </td>
-                </tr>
-              <?php endforeach; ?>
-            <?php endif; ?>
-          </tbody>
+          <tbody id="auditLogsBody"></tbody>
         </table>
+      </div>
+      <div class="card-footer">
+        <div class="pagination-footer" id="logsPagination"></div>
       </div>
     </div>
 
@@ -233,48 +191,138 @@ use App\Core\Controller;
 </div>
 
 <script>
+var ALL_LOGS = <?php echo json_encode($logs, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?> || [];
+
 var ReportsApp = (function () {
   'use strict';
 
-  function applyFilters() {
+  var currentFiltered = [];
+
+  function getBadgeClass(act) {
+    if (!act) return 'action-badge-delete';
+    if (act.indexOf('login') !== -1) return 'action-badge-login';
+    if (act.indexOf('approve') !== -1) return 'action-badge-approve';
+    if (act.indexOf('reject') !== -1) return 'action-badge-reject';
+    if (act.indexOf('create') !== -1) return 'action-badge-create';
+    if (act.indexOf('update') !== -1 || act.indexOf('edit') !== -1) return 'action-badge-edit';
+    return 'action-badge-delete';
+  }
+
+  function formatDate(dtStr) {
+    if (!dtStr) return '—';
+    var d = new Date(dtStr);
+    if (isNaN(d.getTime())) return dtStr;
+    var day = String(d.getDate()).padStart(2, '0');
+    var month = String(d.getMonth() + 1).padStart(2, '0');
+    var year = d.getFullYear();
+    var hours = String(d.getHours()).padStart(2, '0');
+    var mins = String(d.getMinutes()).padStart(2, '0');
+    return day + '/' + month + '/' + year + ' ' + hours + ':' + mins;
+  }
+
+  function render() {
     var actVal = document.getElementById('filterAction').value;
     var userVal = document.getElementById('filterUser').value;
     var searchVal = document.getElementById('filterSearch').value.trim().toLowerCase();
 
-    var rows = document.querySelectorAll('#auditLogsBody tr');
-    var visibleCount = 0;
-
-    rows.forEach(function (tr) {
-      var rAct = tr.getAttribute('data-action') || '';
-      var rUser = tr.getAttribute('data-user') || '';
-      var rText = tr.getAttribute('data-text') || '';
-
-      var matchAct = !actVal || rAct === actVal;
-      var matchUser = !userVal || rUser === userVal;
-      var matchSearch = !searchVal || rText.indexOf(searchVal) !== -1;
-
-      if (matchAct && matchUser && matchSearch) {
-        tr.style.display = '';
-        visibleCount++;
-      } else {
-        tr.style.display = 'none';
-      }
+    // 1. Filtragem dos registros
+    currentFiltered = ALL_LOGS.filter(function (log) {
+      var matchAct = !actVal || log.action === actVal;
+      var matchUser = !userVal || log.user_login === userVal;
+      var logText = ((log.description || '') + ' ' + (log.user_name || '') + ' ' + (log.user_login || '') + ' ' + (log.ip || '')).toLowerCase();
+      var matchSearch = !searchVal || logText.indexOf(searchVal) !== -1;
+      return matchAct && matchUser && matchSearch;
     });
 
+    // 2. Ordenação por coluna (TableSort)
+    var sortState = TableSort.getSort('auditLogsTable');
+    if (sortState.col) {
+      currentFiltered = TableSort.sortArray(currentFiltered, sortState.col, sortState.dir, function (log, col) {
+        if (col === 'id') return parseInt(log.id, 10);
+        if (col === 'action') return log.action || '';
+        if (col === 'description') return log.description || '';
+        if (col === 'user') return log.user_name || log.user_login || '';
+        if (col === 'ip') return log.ip || '';
+        if (col === 'created_at') return log.created_at || '';
+        return log.id;
+      });
+    }
+
+    // 3. Paginação (utilitário padronizado global paginated)
+    var pg = paginated('audit_logs', currentFiltered);
+    var tbody = document.getElementById('auditLogsBody');
+
+    if (!pg.total) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2.5rem 1rem;">' +
+        '<div class="empty-state">' +
+        '<div class="empty-state-title">Nenhum registro de auditoria encontrado</div>' +
+        '</div></td></tr>';
+    } else {
+      tbody.innerHTML = pg.page.map(function (log) {
+        var badgeCls = getBadgeClass(log.action);
+        var uName = esc(log.user_name || log.user_login || '—');
+        var uLogin = log.user_login ? ('@' + esc(log.user_login)) : '—';
+        var ip = esc(log.ip || '127.0.0.1');
+
+        return '<tr>' +
+          '<td style="font-weight: 600; color: var(--text-muted);">#' + esc(log.id) + '</td>' +
+          '<td><span class="action-badge ' + badgeCls + '">' + esc(log.action) + '</span></td>' +
+          '<td style="font-weight: 500; color: var(--text);">' + esc(log.description) + '</td>' +
+          '<td>' +
+            '<div style="font-size: 0.85rem; font-weight: 600; color: var(--text);">' + uName + '</div>' +
+            '<div style="font-size: 0.75rem; color: var(--text-muted);">' + uLogin + '</div>' +
+          '</td>' +
+          '<td style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">' + ip + '</td>' +
+          '<td style="text-align: right; font-size: 0.8rem; color: var(--text-muted); white-space: nowrap;">' + formatDate(log.created_at) + '</td>' +
+          '</tr>';
+      }).join('');
+    }
+
+    // 4. Atualização de indicadores de filtro e rodapé de paginação
     var countEl = document.getElementById('logsFilteredCount');
-    if (countEl) countEl.textContent = 'Mostrando ' + visibleCount + ' registros';
+    if (countEl) {
+      countEl.textContent = 'Mostrando ' + pg.total + ' registros';
+    }
+
+    renderPagination('logsPagination', pg.total, pg.current, pg.pages, function (p) {
+      PAGINATION.audit_logs = p;
+      render();
+    });
+  }
+
+  function applyFilters() {
+    PAGINATION.audit_logs = 1;
+    render();
   }
 
   function resetFilters() {
     document.getElementById('filterAction').value = '';
     document.getElementById('filterUser').value = '';
     document.getElementById('filterSearch').value = '';
-    applyFilters();
+    PAGINATION.audit_logs = 1;
+    render();
+  }
+
+  function init() {
+    var tableEl = document.getElementById('auditLogsTable');
+    if (tableEl) {
+      TableSort.init(tableEl, {
+        onSort: function () {
+          render();
+        }
+      });
+    }
+    render();
   }
 
   return {
+    init: init,
     applyFilters: applyFilters,
     resetFilters: resetFilters
   };
 })();
+
+document.addEventListener('DOMContentLoaded', function () {
+  ReportsApp.init();
+});
 </script>

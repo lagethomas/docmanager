@@ -47,9 +47,22 @@
             </div>
           </div>
 
-          <div class="alert alert-error auth-error" id="loginError" hidden>
+<?php
+$errorMessageMap = [
+    'user_not_found' => 'E-mail do Office 365 não cadastrado no sistema.',
+    'user_inactive' => 'Usuário do Office 365 está inativo no sistema.',
+    'no_email' => 'E-mail não encontrado no seu perfil da Microsoft.',
+    'invalid_state' => 'Falha de validação de segurança (state inválido). Tente novamente.',
+    'authorization_denied' => 'Acesso negado ou login cancelado na Microsoft.',
+    'oauth_disabled' => 'O login via Office 365 está desabilitado.',
+    'oauth_init_error' => 'Falha ao iniciar a conexão com o Office 365.',
+    'oauth_process_error' => 'Ocorreu um erro no processamento do login Office 365.',
+];
+$serverError = !empty($error ?? '') ? ($errorMessageMap[$error] ?? 'Ocorreu um erro na autenticação com o Office 365.') : '';
+?>
+          <div class="alert alert-error auth-error" id="loginError" <?php echo empty($serverError) ? 'hidden' : ''; ?>>
             <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-            <div class="alert-body" id="loginErrorText"></div>
+            <div class="alert-body" id="loginErrorText"><?php echo e($serverError); ?></div>
           </div>
 
           <button id="btnLogin" class="btn btn-primary btn-lg btn-block">
@@ -57,6 +70,24 @@
             <span class="btn-label" hidden>Entrando...</span>
             <svg class="auth-btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
           </button>
+
+          <?php if ($oauth_enabled ?? false): ?>
+            <div style="display: flex; align-items: center; margin: 1.25rem 0; color: var(--text-muted, #94a3b8); font-size: 0.85rem;">
+              <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+              <span style="padding: 0 0.75rem;">OU</span>
+              <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+            </div>
+
+            <a href="/login/oauth" class="btn btn-block" style="display: flex; align-items: center; justify-content: center; gap: 0.6rem; background: #2f2f2f; color: #fff; border: 1px solid rgba(255,255,255,0.15); text-decoration: none; border-radius: 6px; padding: 0.75rem 1rem; font-weight: 500; transition: background 0.2s;" onmouseover="this.style.background='#3d3d3d'" onmouseout="this.style.background='#2f2f2f'">
+              <svg width="18" height="18" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#f35325" d="M1 1h10v10H1z"/>
+                <path fill="#81bc06" d="M12 1h10v10H12z"/>
+                <path fill="#05a6f0" d="M1 12h10v10H1z"/>
+                <path fill="#ffba08" d="M12 12h10v10H1z"/>
+              </svg>
+              <span>Entrar com Office 365</span>
+            </a>
+          <?php endif; ?>
 
           <p class="auth-foot">O perfil é identificado automaticamente pelo usuário.</p>
         </div>

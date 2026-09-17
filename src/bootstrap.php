@@ -55,3 +55,4 @@ require_once __DIR__ . '/Helpers/globals.php';
 class_alias(\App\Core\Database::class, 'DB');
 class_alias(\App\Core\Auth::class, 'Auth');
 class_alias(\App\Core\CSRF::class, 'CSRF');
+class_alias(\App\Core\Logger::class, 'Log');

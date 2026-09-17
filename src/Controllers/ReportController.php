@@ -34,11 +34,11 @@ class ReportController extends Controller
         $usersStmt = $db->query('SELECT id, login, name FROM cp_users ORDER BY name ASC');
         $usersList = $usersStmt->fetchAll() ?: [];
 
-        // Logs recentes (limite 200 para performance)
+        // Logs recentes (limite 500 para auditoria paginada)
         $stmtLogs = $db->query(
             'SELECT id, action, description, user_login, user_name, ip, created_at
              FROM cp_logs
-             ORDER BY id DESC LIMIT 200'
+             ORDER BY id DESC LIMIT 500'
         );
         $logs = $stmtLogs->fetchAll() ?: [];
 
