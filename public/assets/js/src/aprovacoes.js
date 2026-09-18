@@ -202,7 +202,7 @@ var Approvals = (function () {
         + '<button type="button" class="table-action-btn" style="color:var(--docs-primary,#1abb9c)" onclick="event.stopPropagation();Approvals.approveDoc(' + d.id + ')" title="Aprovar e publicar">'
         + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="20 6 9 17 4 12"/></svg></button>';
     }
-    var html = '<button type="button" class="table-action-btn" onclick="event.stopPropagation();window.location.href=\'/docs/view/' + d.id + '\'" title="Visualizar">'
+    var html = '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Approvals.previewDoc(' + d.id + ')" title="Visualizar / Revisar">'
       + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>';
     if (d.status === 'rejeitado') {
       html += '<button type="button" class="table-action-btn" style="color:var(--docs-primary,#1abb9c)" onclick="event.stopPropagation();Approvals.approveDoc(' + d.id + ')" title="Reavaliar e Aprovar">'
@@ -449,223 +449,23 @@ var Approvals = (function () {
   }
 
   function switchPreviewTab(tab) {
-    CURRENT_PREVIEW_TAB = tab;
-
-    var btnDiff = document.getElementById('btnTabDiff');
-    var btnRendered = document.getElementById('btnTabRendered');
-    var btnHistory = document.getElementById('btnTabHistory');
-
-    var containerDiff = document.getElementById('previewDiffContainer');
-    var containerBody = document.getElementById('previewBody');
-    var containerHistory = document.getElementById('previewVersionsContainer');
-    var diffControls = document.getElementById('diffVersionControls');
-
-    if (btnDiff) btnDiff.className = tab === 'diff' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
-    if (btnRendered) btnRendered.className = tab === 'rendered' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
-    if (btnHistory) btnHistory.className = tab === 'history' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
-
-    if (containerDiff) containerDiff.hidden = (tab !== 'diff');
-    if (containerBody) containerBody.hidden = (tab !== 'rendered');
-    if (containerHistory) containerHistory.hidden = (tab !== 'history');
-    if (diffControls) diffControls.hidden = (tab !== 'diff');
-  }
-
-  function populateVersionSelects(versions) {
-    var oldSelect = document.getElementById('diffOldVersionSelect');
-    var newSelect = document.getElementById('diffNewVersionSelect');
-
-    if (!oldSelect || !newSelect) return;
-
-    oldSelect.innerHTML = '';
-    newSelect.innerHTML = '';
-
-    if (!versions || !versions.length) {
-      oldSelect.innerHTML = '<option value="">Sem versão anterior</option>';
-      newSelect.innerHTML = '<option value="0">Conteúdo Atual</option>';
-      return;
-    }
-
-    var total = versions.length;
-
-    for (var i = 0; i < total; i++) {
-      var v = versions[i];
-      var vNum = total - i;
-      var dateStr = formatDate(v.edited_at);
-      var label = 'v' + vNum + ' (' + dateStr + ' - ' + (v.editor_name || 'Autor') + ')';
-
-      var optOld = document.createElement('option');
-      optOld.value = String(i);
-      optOld.textContent = label;
-
-      var optNew = document.createElement('option');
-      optNew.value = String(i);
-      optNew.textContent = label;
-
-      oldSelect.appendChild(optOld);
-      newSelect.appendChild(optNew);
-    }
-
-    newSelect.value = '0';
-    if (total >= 2) {
-      oldSelect.value = '1';
-    } else {
-      oldSelect.value = '0';
-    }
+    DocDiff.switchTab(tab);
   }
 
   function onVersionSelectChange() {
-    if (!CURRENT_PREVIEW_DOC) return;
-    renderSelectedDiff();
-  }
-
-  function renderSelectedDiff() {
-    var oldSelect = document.getElementById('diffOldVersionSelect');
-    var newSelect = document.getElementById('diffNewVersionSelect');
-    var diffContainer = document.getElementById('previewDiffContainer');
-    var statsBadge = document.getElementById('diffStatsBadge');
-
-    if (!CURRENT_PREVIEW_DOC || !diffContainer) return;
-
-    var versions = CURRENT_PREVIEW_DOC.versions || [];
-
-    var oldIdx = oldSelect ? parseInt(oldSelect.value, 10) : 1;
-    var newIdx = newSelect ? parseInt(newSelect.value, 10) : 0;
-
-    var oldContent = '';
-    var oldLabel = 'Versão Anterior';
-    var newContent = CURRENT_PREVIEW_DOC.content || '';
-    var newLabel = 'Nova Alteração (Proposta)';
-
-    if (versions.length > 0) {
-      if (!isNaN(newIdx) && versions[newIdx]) {
-        newContent = versions[newIdx].content || '';
-        var vNumNew = versions.length - newIdx;
-        newLabel = 'Versão v' + vNumNew + ' (' + formatDate(versions[newIdx].edited_at) + ')';
-      }
-
-      if (!isNaN(oldIdx) && versions[oldIdx] && oldIdx !== newIdx) {
-        oldContent = versions[oldIdx].content || '';
-        var vNumOld = versions.length - oldIdx;
-        oldLabel = 'Versão v' + vNumOld + ' (' + formatDate(versions[oldIdx].edited_at) + ')';
-      } else if (oldIdx === newIdx) {
-        oldContent = newContent;
-        oldLabel = newLabel + ' (Sem alteração)';
-      }
-    }
-
-    if (!oldContent && (!versions || versions.length <= 1)) {
-      oldLabel = 'Sem versão anterior (Documento Novo)';
-    }
-
-    var ops = computeLineDiff(oldContent, newContent);
-    var res = renderSideBySideDiff(ops, oldLabel, newLabel);
-
-    diffContainer.innerHTML = res.html;
-    if (statsBadge) statsBadge.innerHTML = res.statsHtml;
-  }
-
-  function renderVersionsHistoryList(versions) {
-    var container = document.getElementById('previewVersionsContainer');
-    if (!container) return;
-
-    if (!versions || !versions.length) {
-      container.innerHTML = '<p style="color:var(--docs-text-mut);padding:1rem 0;">Nenhum histórico de edições anteriores registrado.</p>';
-      return;
-    }
-
-    var html = '<div style="display:flex;flex-direction:column;gap:0.75rem;">';
-    var total = versions.length;
-
-    for (var i = 0; i < total; i++) {
-      var v = versions[i];
-      var vNum = total - i;
-      var isLatest = (i === 0);
-
-      html += '<div style="background:var(--docs-bg,#f8fafc);border:1px solid var(--docs-border,#e2e8f0);border-radius:8px;padding:0.85rem 1.1rem;display:flex;align-items:center;justify-content:space-between;">'
-        + '<div>'
-        + '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">'
-        + '<strong style="font-size:0.95rem;">Versão ' + vNum + '</strong>'
-        + (isLatest ? '<span class="badge" style="background:rgba(26,187,156,0.15);color:var(--docs-primary,#1abb9c);font-size:0.75rem;padding:2px 8px;border-radius:10px;">Versão Submetida</span>' : '')
-        + '</div>'
-        + '<div style="font-size:0.8rem;color:var(--docs-text-mut);">'
-        + 'Editado por <strong>' + esc(v.editor_name || 'Autor') + '</strong> em ' + formatDate(v.edited_at)
-        + '</div>'
-        + (v.version_note ? '<div style="font-size:0.8rem;color:var(--docs-text);margin-top:0.35rem;"><em>" ' + esc(v.version_note) + ' "</em></div>' : '')
-        + '</div>'
-        + '<button type="button" class="btn btn-sm btn-secondary" onclick="Approvals.compareVersionIndex(' + i + ')" style="font-size:0.78rem;border-radius:6px;">Comparar com Anterior</button>'
-        + '</div>';
-    }
-
-    html += '</div>';
-    container.innerHTML = html;
+    DocDiff.onVersionSelectChange();
   }
 
   function compareVersionIndex(idx) {
-    switchPreviewTab('diff');
-    var oldSelect = document.getElementById('diffOldVersionSelect');
-    var newSelect = document.getElementById('diffNewVersionSelect');
-    var versions = (CURRENT_PREVIEW_DOC && CURRENT_PREVIEW_DOC.versions) || [];
-    if (newSelect) newSelect.value = String(idx);
-    if (oldSelect) oldSelect.value = String(Math.min(versions.length - 1, idx + 1));
-    onVersionSelectChange();
+    DocDiff.compareVersionIndex(idx);
   }
 
   function previewDoc(id) {
-    api('GET', '/api/docs/' + id).then(function (res) {
-      CURRENT_PREVIEW_DOC = res.doc;
-      var modal   = document.getElementById('previewApprovalModal');
-      var title   = document.getElementById('previewTitle');
-      var meta    = document.getElementById('previewMeta');
-      var body    = document.getElementById('previewBody');
-      var notice  = document.getElementById('previewStatusNotice');
-      var actions = document.getElementById('previewModalActions');
-
-      if (title) title.textContent = CURRENT_PREVIEW_DOC.title || '';
-      if (meta) {
-        var cat    = CURRENT_PREVIEW_DOC.category_name ? ('📁 ' + CURRENT_PREVIEW_DOC.category_name) : '📂 Geral';
-        var author = '👤 ' + (CURRENT_PREVIEW_DOC.author_name || 'Autor');
-        var date   = '🕒 ' + formatDate(CURRENT_PREVIEW_DOC.updated_at);
-        meta.textContent = author + ' • ' + cat + ' • ' + date;
-      }
-
-      if (notice) {
-        if (CURRENT_PREVIEW_DOC.status === 'rejeitado' && CURRENT_PREVIEW_DOC.rejection_reason) {
-          notice.hidden = false;
-          notice.className = 'approval-rejection-callout';
-          notice.innerHTML = '<strong>Motivo da rejeição anterior:</strong> ' + esc(CURRENT_PREVIEW_DOC.rejection_reason);
-        } else {
-          notice.hidden = true;
-        }
-      }
-
-      // Render Markdown no body tab
-      if (body) {
-        var raw = CURRENT_PREVIEW_DOC.content || '';
-        body.innerHTML = parseMarkdown(raw);
-      }
-
-      // Preencher seletores e renderizar Diff + Histórico
-      var versions = CURRENT_PREVIEW_DOC.versions || [];
-      populateVersionSelects(versions);
-      renderSelectedDiff();
-      renderVersionsHistoryList(versions);
-
-      // Alternar para a aba Diff por padrão
-      switchPreviewTab('diff');
-
-      if (actions) {
-        actions.hidden = !(CURRENT_PREVIEW_DOC.status === 'pendente' || CURRENT_PREVIEW_DOC.status === 'rejeitado');
-      }
-      if (modal) modal.hidden = false;
-    }).catch(function (err) {
-      toast(err.message || 'Erro ao carregar documento.', 'error');
-    });
+    DocDiff.open(id, { showApprovalButtons: true });
   }
 
   function closePreviewModal() {
-    var modal = document.getElementById('previewApprovalModal');
-    if (modal) modal.hidden = true;
-    CURRENT_PREVIEW_DOC = null;
+    DocDiff.close();
   }
 
   /* ─── APPROVE / REJECT ──────────────────────────────────────── */
@@ -688,8 +488,9 @@ var Approvals = (function () {
   }
 
   function approveFromPreview() {
-    if (!CURRENT_PREVIEW_DOC) return;
-    approveDoc(CURRENT_PREVIEW_DOC.id);
+    var doc = DocDiff.getCurrentDoc();
+    if (!doc) return;
+    approveDoc(doc.id);
   }
 
   function openRejectModal(id) {
@@ -702,8 +503,9 @@ var Approvals = (function () {
   }
 
   function openRejectFromPreview() {
-    if (!CURRENT_PREVIEW_DOC) return;
-    openRejectModal(CURRENT_PREVIEW_DOC.id);
+    var doc = DocDiff.getCurrentDoc();
+    if (!doc) return;
+    openRejectModal(doc.id);
   }
 
   function closeRejectModal() {

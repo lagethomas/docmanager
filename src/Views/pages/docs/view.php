@@ -80,6 +80,13 @@ $status = $doc['status'] ?? 'aprovado';
         <span>Baixar .md</span>
       </button>
 
+      <?php if (($user['role'] ?? '') === 'Admin' || ($user['role'] ?? '') === 'Editor' || ($user['role'] ?? '') === 'Aprovador' || $canEdit): ?>
+      <button type="button" class="btn btn-sm btn-outline" onclick="DocDiff.open(<?php echo (int)$doc['id']; ?>)" title="Comparar histórico de versões do documento (Diff)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        <span>Comparar Diff</span>
+      </button>
+      <?php endif; ?>
+
            <?php if ($canEdit): ?>
       <button type="button" class="btn btn-sm btn-primary" onclick="DocsView.editDoc(<?php echo (int)$doc['id']; ?>)" title="Editar este documento">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -188,9 +195,15 @@ $status = $doc['status'] ?? 'aprovado';
     <?php if (!empty($doc['versions']) && count($doc['versions']) > 1): ?>
     <div class="docs-single-versions-section">
       <details class="docs-versions-details">
-        <summary class="docs-versions-summary">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="badge-svg"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
-          <span>Histórico de Versões (<?php echo count($doc['versions']); ?> versões gravadas)</span>
+        <summary class="docs-versions-summary" style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="badge-svg"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+            <span>Histórico de Versões (<?php echo count($doc['versions']); ?> versões gravadas)</span>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline" onclick="event.stopPropagation();DocDiff.open(<?php echo (int)$doc['id']; ?>)" style="font-size:0.75rem;padding:3px 10px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;margin-right:4px;"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <span>Comparar no Diff</span>
+          </button>
         </summary>
         <div class="docs-versions-list">
           <?php foreach ($doc['versions'] as $v): ?>

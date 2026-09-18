@@ -11,6 +11,7 @@ $settings = (new SettingsModel())->allAsMap();
 </div>
 
 <?php require __DIR__ . '/../components/modal_confirm.php'; ?>
+<?php require __DIR__ . '/../components/modal_diff.php'; ?>
 
 <div class="app-footer">Desenvolvido por Thomas Marcelino</div>
 
@@ -20,7 +21,7 @@ window.CSRF_TOKEN = <?php echo json_encode($csrfToken ?? '', JSON_UNESCAPED_SLAS
 window.SETTINGS = <?php echo json_encode($settings, JSON_UNESCAPED_SLASHES); ?>;
 </script>
 <script src="<?php echo Controller::asset('/assets/js/src/common.js'); ?>"></script>
-<?php if ($page === 'docs' || $page === 'docs_view'): ?>
+<?php if (in_array($page, ['docs', 'docs_view', 'aprovacoes', 'home'], true)): ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
 <?php endif; ?>
 <?php if ($page !== 'home'): ?>
