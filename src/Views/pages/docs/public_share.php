@@ -39,10 +39,10 @@ declare(strict_types=1);
 
       <div style="margin-top: 2.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color, rgba(255,255,255,0.1)); display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted, #64748b);">
         <span>🔒 Acesso seguro via link único • DocManager</span>
-        <button onclick="window.print()" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color, rgba(255,255,255,0.12)); color: #fff; padding: 0.4rem 0.85rem; border-radius: 8px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 0.4rem;">
+        <a href="<?php echo e(\App\Core\Controller::url('/s/' . rawurlencode((string)$doc['token']) . '/pdf')); ?>" target="_blank" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color, rgba(255,255,255,0.12)); color: #fff; padding: 0.4rem 0.85rem; border-radius: 8px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 0.4rem; text-decoration: none;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-          Imprimir / Salvar PDF
-        </button>
+          Imprimir / Exportar PDF
+        </a>
       </div>
     </div>
 

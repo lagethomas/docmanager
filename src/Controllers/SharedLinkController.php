@@ -73,4 +73,20 @@ class SharedLinkController extends Controller
             'doc' => $link,
         ], 'public_header');
     }
+
+    public function exportPublicPdf(string $token): void
+    {
+        $model = new SharedLinkModel();
+        $link = $model->findByToken($token);
+
+        if ($link === null || (!empty($link['expires_at']) && strtotime((string) $link['expires_at']) < time())) {
+            $this->redirect('/docs');
+            return;
+        }
+
+        $download = isset($_GET['download']) && $_GET['download'] === '1';
+
+        $pdfService = new \App\Services\PdfService();
+        $pdfService->renderDocumentPdf($link, $download);
+    }
 }

@@ -15,6 +15,7 @@ final class Router
     private const CSRF_EXEMPT = [
         '/api/webhooks/',
         '/api/docs/upload',
+        '/api/docs/export-pdf-preview',
     ];
 
     public static function run(): void

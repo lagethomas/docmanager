@@ -12,6 +12,7 @@ use App\Core\Logger;
 use App\Models\CategoryModel;
 use App\Models\DocumentModel;
 use App\Models\TagModel;
+use App\Services\PdfService;
 
 class DocumentController extends Controller
 {
@@ -74,6 +75,63 @@ class DocumentController extends Controller
             'csrfToken' => CSRF::token(),
             'page' => 'docs_view',
         ], 'header');
+    }
+
+    public function exportPdf(string $id): void
+    {
+        $intId = (int) $id;
+        $user = Auth::user();
+        $userId = (int) ($user['id'] ?? 0);
+        $userRole = (string) ($user['role'] ?? '');
+
+        $model = new DocumentModel();
+        $doc = $model->find($intId, $userId);
+        if ($doc === null || !empty($doc['deleted_at'])) {
+            $this->redirect('/docs');
+            return;
+        }
+
+        if ($userRole === 'Visualizador' && ($doc['status'] ?? '') !== 'aprovado') {
+            $this->redirect('/docs');
+            return;
+        }
+
+        if ($userRole === 'Editor' && ($doc['status'] ?? '') !== 'aprovado') {
+            if (!$model->canUserEdit($intId, $userId, $userRole)) {
+                $this->redirect('/docs');
+                return;
+            }
+        }
+
+        $download = isset($_GET['download']) && $_GET['download'] === '1';
+
+        $pdfService = new PdfService();
+        $pdfService->renderDocumentPdf($doc, $download);
+    }
+
+    public function exportPdfPreview(): void
+    {
+        $input = self::input();
+        $title = trim((string) ($_POST['title'] ?? $input['title'] ?? 'Documento'));
+        $content = (string) ($_POST['content'] ?? $input['content'] ?? '');
+        $categoryName = trim((string) ($_POST['category_name'] ?? $input['category_name'] ?? 'Geral'));
+
+        $user = Auth::user();
+        $authorName = (string) ($user['name'] ?? 'Usuário');
+
+        $doc = [
+            'title' => $title !== '' ? $title : 'Documento sem título',
+            'content' => $content,
+            'category_name' => $categoryName,
+            'author_name' => $authorName,
+            'created_at' => date('Y-m-d H:i:s'),
+            'status' => 'aprovado',
+        ];
+
+        $download = (isset($_GET['download']) && $_GET['download'] === '1') || (isset($_POST['download']) && $_POST['download'] === '1');
+
+        $pdfService = new PdfService();
+        $pdfService->renderDocumentPdf($doc, $download);
     }
 
     // ─── API: DOCUMENTS ──────────────────────────────────

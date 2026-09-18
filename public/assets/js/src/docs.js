@@ -1496,28 +1496,45 @@ var Docs = (function () {
 
   function printDocument() {
     toggleExportMenu();
-    var title = document.getElementById('docTitle').value || 'Documento';
-    var contentHtml = document.getElementById('previewContent').innerHTML;
+    var titleEl = document.getElementById('docTitle');
+    var contentEl = document.getElementById('docContent');
+    var catSelect = document.getElementById('docCategory');
 
-    var win = window.open('', '_blank');
-    win.document.write('<!DOCTYPE html><html><head><title>' + esc(title) + '</title>'
-      + '<style>'
-      + 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #111; }'
-      + 'h1 { border-bottom: 2px solid #eaeaea; padding-bottom: 8px; }'
-      + 'table { width: 100%; border-collapse: collapse; margin: 16px 0; }'
-      + 'th, td { border: 1px solid #ddd; padding: 8px 12px; }'
-      + 'th { background: #f7f7f7; }'
-      + 'pre { background: #f4f4f4; padding: 12px; border-radius: 6px; overflow-x: auto; }'
-      + 'blockquote { border-left: 4px solid #0066cc; margin: 16px 0; padding: 8px 16px; background: #f0f7ff; }'
-      + 'img { max-width: 100%; }'
-      + '</style>'
-      + '</head><body>'
-      + '<h1>' + esc(title) + '</h1>'
-      + contentHtml
-      + '</body></html>');
-    win.document.close();
-    win.focus();
-    setTimeout(function () { win.print(); win.close(); }, 300);
+    var title = titleEl ? titleEl.value.trim() : '';
+    var content = contentEl ? contentEl.value : '';
+    var catName = (catSelect && catSelect.options && catSelect.options[catSelect.selectedIndex]) ? catSelect.options[catSelect.selectedIndex].text : 'Geral';
+
+    if (CURRENT_DOC && CURRENT_DOC.id && (!content || content === CURRENT_DOC.content)) {
+      window.open('/api/docs/' + CURRENT_DOC.id + '/pdf', '_blank');
+      return;
+    }
+
+    var form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/api/docs/export-pdf-preview';
+    form.target = '_blank';
+
+    var inputTitle = document.createElement('input');
+    inputTitle.type = 'hidden';
+    inputTitle.name = 'title';
+    inputTitle.value = title || 'Documento';
+    form.appendChild(inputTitle);
+
+    var inputContent = document.createElement('input');
+    inputContent.type = 'hidden';
+    inputContent.name = 'content';
+    inputContent.value = content;
+    form.appendChild(inputContent);
+
+    var inputCat = document.createElement('input');
+    inputCat.type = 'hidden';
+    inputCat.name = 'category_name';
+    inputCat.value = catName;
+    form.appendChild(inputCat);
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
   }
 
   function copyMarkdown() {

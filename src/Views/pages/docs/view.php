@@ -77,10 +77,10 @@ $status = $doc['status'] ?? 'aprovado';
       </button>
       <?php endif; ?>
 
-      <button type="button" class="btn btn-sm btn-outline" onclick="window.print()" title="Imprimir / Exportar PDF com marca d'água">
+      <a href="<?php echo e(Controller::url('/api/docs/' . (int)$doc['id'] . '/pdf')); ?>" target="_blank" class="btn btn-sm btn-outline" title="Exportar / Imprimir PDF de Alta Qualidade">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
         <span>Imprimir / PDF</span>
-      </button>
+      </a>
 
       <button type="button" class="btn btn-sm btn-outline" onclick="DocsView.copyMarkdown()" title="Copiar conteúdo em Markdown">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>

@@ -41,6 +41,7 @@ return [
     ['POST', '/api/docs/upload', [DocumentController::class, 'upload'], [AuthMiddleware::class]],
     ['GET', '/api/docs/file/{id}', [DocumentController::class, 'serveFile'], [AuthMiddleware::class]],
     ['POST', '/api/docs/trash/empty', [DocumentController::class, 'emptyTrash'], [AuthMiddleware::class]],
+    ['POST', '/api/docs/export-pdf-preview', [DocumentController::class, 'exportPdfPreview'], [AuthMiddleware::class]],
 
     // Notificações
     ['GET', '/api/notifications', [App\Controllers\NotificationController::class, 'getNotifications'], [AuthMiddleware::class]],
@@ -71,6 +72,7 @@ return [
     ['POST', '/api/docs/{id}/shares', [DocumentController::class, 'addShare'], [AuthMiddleware::class]],
     ['DELETE', '/api/docs/{id}/shares/{userId}', [DocumentController::class, 'removeShare'], [AuthMiddleware::class]],
     ['GET', '/api/docs/{id}/share-users', [DocumentController::class, 'getUsersForShare'], [AuthMiddleware::class]],
+    ['GET', '/api/docs/{id}/pdf', [DocumentController::class, 'exportPdf'], [AuthMiddleware::class]],
     ['GET', '/api/docs/{id}', [DocumentController::class, 'getDoc'], [AuthMiddleware::class]],
     ['PUT', '/api/docs/{id}', [DocumentController::class, 'updateDoc'], [AuthMiddleware::class]],
     ['DELETE', '/api/docs/{id}', [DocumentController::class, 'deleteDoc'], [AuthMiddleware::class]],

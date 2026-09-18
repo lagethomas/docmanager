@@ -36,6 +36,7 @@ return [
 
     // Link público de compartilhamento
     ['GET', '/s/{token}', [App\Controllers\SharedLinkController::class, 'showPublic'], []],
+    ['GET', '/s/{token}/pdf', [App\Controllers\SharedLinkController::class, 'exportPublicPdf'], []],
 
     // Autenticação
     ['GET', '/login', [AuthController::class, 'showLogin'], []],
