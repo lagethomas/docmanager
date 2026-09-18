@@ -226,15 +226,16 @@ class DocumentModel extends Repository
         ?int $categoryId,
         int $createdBy,
         string $status = 'pendente',
-        ?int $approvedBy = null
+        ?int $approvedBy = null,
+        int $isPublic = 0
     ): int {
         $categoryId = ($categoryId !== null && $categoryId > 0) ? $categoryId : null;
         $approvedAt = ($status === 'aprovado') ? date('Y-m-d H:i:s') : null;
 
         $stmt = $this->db->prepare(
-            'INSERT INTO cp_documents (title, content, category_id, created_by, status, approved_by, approved_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO cp_documents (title, content, category_id, created_by, status, approved_by, approved_at, is_public) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->execute([trim($title), $content, $categoryId, $createdBy, $status, $approvedBy, $approvedAt]);
+        $stmt->execute([trim($title), $content, $categoryId, $createdBy, $status, $approvedBy, $approvedAt, $isPublic]);
         $id = (int) $this->db->lastInsertId();
 
         // Versão inicial
@@ -256,32 +257,40 @@ class DocumentModel extends Repository
         int $userId,
         string $versionNote = '',
         ?string $status = null,
-        ?int $approvedBy = null
+        ?int $approvedBy = null,
+        ?int $isPublic = null
     ): bool {
         $categoryId = ($categoryId !== null && $categoryId > 0) ? $categoryId : null;
 
+        $fields = ['title = ?', 'content = ?', 'category_id = ?'];
+        $params = [trim($title), $content, $categoryId];
+
         if ($status !== null) {
-            $approvedAt = ($status === 'aprovado') ? date('Y-m-d H:i:s') : null;
-            $clearRejection = ($status === 'pendente' || $status === 'aprovado');
-            if ($clearRejection) {
-                $stmt = $this->db->prepare(
-                    'UPDATE cp_documents SET title = ?, content = ?, category_id = ?, status = ?, approved_by = ?, approved_at = ?, rejection_reason = NULL, rejected_by = NULL WHERE id = ?'
-                );
-                $ok = $stmt->execute([trim($title), $content, $categoryId, $status, $approvedBy, $approvedAt, $id]);
-            } else {
-                $stmt = $this->db->prepare(
-                    'UPDATE cp_documents SET title = ?, content = ?, category_id = ?, status = ?, approved_by = ?, approved_at = ? WHERE id = ?'
-                );
-                $ok = $stmt->execute([trim($title), $content, $categoryId, $status, $approvedBy, $approvedAt, $id]);
+            $fields[] = 'status = ?';
+            $params[] = $status;
+
+            $fields[] = 'approved_by = ?';
+            $params[] = $approvedBy;
+
+            $fields[] = 'approved_at = ?';
+            $params[] = ($status === 'aprovado') ? date('Y-m-d H:i:s') : null;
+
+            if ($status === 'pendente' || $status === 'aprovado') {
+                $fields[] = 'rejection_reason = NULL';
+                $fields[] = 'rejected_by = NULL';
             }
-        } else {
-            $stmt = $this->db->prepare(
-                'UPDATE cp_documents SET title = ?, content = ?, category_id = ? WHERE id = ?'
-            );
-            $ok = $stmt->execute([trim($title), $content, $categoryId, $id]);
         }
 
-        // Nova versão
+        if ($isPublic !== null) {
+            $fields[] = 'is_public = ?';
+            $params[] = $isPublic;
+        }
+
+        $params[] = $id;
+        $sql = 'UPDATE cp_documents SET ' . implode(', ', $fields) . ' WHERE id = ?';
+        $stmt = $this->db->prepare($sql);
+        $ok = (bool) $stmt->execute($params);
+
         if ($ok) {
             $note = trim($versionNote) !== '' ? trim($versionNote) : 'Atualização de conteúdo';
             $stmt2 = $this->db->prepare(
@@ -293,6 +302,119 @@ class DocumentModel extends Repository
         }
 
         return $ok;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function getPublicDocs(
+        string $query = '',
+        ?int $categoryId = null,
+        int $page = 1,
+        int $perPage = 10,
+        string $sort = 'updated_desc'
+    ): array {
+        $sql = "SELECT d.*, u.name AS author_name, c.name AS category_name, c.icon AS category_icon, c.color AS category_color
+                FROM cp_documents d
+                LEFT JOIN cp_users u ON d.created_by = u.id
+                LEFT JOIN cp_doc_categories c ON d.category_id = c.id
+                WHERE d.deleted_at IS NULL AND d.status = 'aprovado' AND d.is_public = 1";
+        $params = [];
+
+        if ($query !== '') {
+            $sql .= " AND (d.title LIKE ? OR d.content LIKE ?)";
+            $params[] = '%' . $query . '%';
+            $params[] = '%' . $query . '%';
+        }
+
+        if ($categoryId !== null) {
+            if ($categoryId === -1) {
+                $sql .= " AND d.category_id IS NULL";
+            } elseif ($categoryId > 0) {
+                $sql .= " AND d.category_id = ?";
+                $params[] = $categoryId;
+            }
+        }
+
+        $orderBy = match ($sort) {
+            'title_asc' => 'd.title ASC',
+            'title_desc' => 'd.title DESC',
+            'created_desc' => 'd.created_at DESC',
+            'created_asc' => 'd.created_at ASC',
+            'views_desc' => 'd.views_count DESC',
+            default => 'd.updated_at DESC',
+        };
+
+        $sql .= " ORDER BY {$orderBy}";
+
+        if ($perPage > 0) {
+            $offset = max(0, ($page - 1) * $perPage);
+            $sql .= " LIMIT {$perPage} OFFSET {$offset}";
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll() ?: [];
+    }
+
+    public function countPublicDocs(string $query = '', ?int $categoryId = null): int
+    {
+        $sql = "SELECT COUNT(*)
+                FROM cp_documents d
+                WHERE d.deleted_at IS NULL AND d.status = 'aprovado' AND d.is_public = 1";
+        $params = [];
+
+        if ($query !== '') {
+            $sql .= " AND (d.title LIKE ? OR d.content LIKE ?)";
+            $params[] = '%' . $query . '%';
+            $params[] = '%' . $query . '%';
+        }
+
+        if ($categoryId !== null) {
+            if ($categoryId === -1) {
+                $sql .= " AND d.category_id IS NULL";
+            } elseif ($categoryId > 0) {
+                $sql .= " AND d.category_id = ?";
+                $params[] = $categoryId;
+            }
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function getPublicStats(): array
+    {
+        $totalDocs = (int) $this->db->query("SELECT COUNT(*) FROM cp_documents WHERE deleted_at IS NULL AND status = 'aprovado' AND is_public = 1")->fetchColumn();
+        $totalCategories = (int) $this->db->query("SELECT COUNT(DISTINCT category_id) FROM cp_documents WHERE deleted_at IS NULL AND status = 'aprovado' AND is_public = 1 AND category_id IS NOT NULL")->fetchColumn();
+        $totalViews = (int) $this->db->query("SELECT COALESCE(SUM(views_count), 0) FROM cp_documents WHERE deleted_at IS NULL AND status = 'aprovado' AND is_public = 1")->fetchColumn();
+
+        return [
+            'total_docs' => $totalDocs,
+            'total_categories' => $totalCategories,
+            'total_views' => $totalViews,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function findPublicDoc(int $id): ?array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT d.*, u.name AS author_name, c.name AS category_name, c.icon AS category_icon, c.color AS category_color
+             FROM cp_documents d
+             LEFT JOIN cp_users u ON d.created_by = u.id
+             LEFT JOIN cp_doc_categories c ON d.category_id = c.id
+             WHERE d.id = ? AND d.deleted_at IS NULL AND d.status = 'aprovado' AND d.is_public = 1"
+        );
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        return $row ?: null;
     }
 
     public function approve(int $id, int $approvedBy): bool

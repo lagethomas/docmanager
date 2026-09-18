@@ -310,6 +310,10 @@ $status = $doc['status'] ?? 'aprovado';
             <label style="font-size:0.8rem;color:var(--docs-text-mut);display:block;margin-bottom:4px;">Senha Opcional</label>
             <input type="password" id="txtPublicLinkPassword" class="form-control" placeholder="Deixe em branco para sem senha" style="font-size:0.85rem;" />
           </div>
+          <div>
+            <label style="font-size:0.8rem;color:var(--docs-text-mut);display:block;margin-bottom:4px;">Data de Expiração (Opcional)</label>
+            <input type="datetime-local" id="txtPublicLinkExpiresAt" class="form-control" style="font-size:0.85rem;" />
+          </div>
           <button type="button" class="btn btn-primary btn-sm" onclick="DocsView.createPublicLink(<?php echo (int)$doc['id']; ?>)">
             <span>Gerar Link de Acesso</span>
           </button>

@@ -333,6 +333,11 @@ $migrations = [
                 REFERENCES cp_users(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ",
+
+    '0021_add_is_public_to_documents' => "
+        ALTER TABLE cp_documents ADD COLUMN is_public TINYINT(1) NOT NULL DEFAULT 0;
+        CREATE INDEX idx_docs_is_public ON cp_documents (is_public, status, deleted_at);
+    ",
 ];
 
 $stmt = $db->query('SELECT name FROM cp_migrations');

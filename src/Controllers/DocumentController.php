@@ -246,6 +246,7 @@ class DocumentController extends Controller
         $title = sanitize_input((string) ($input['title'] ?? ''));
         $content = (string) ($input['content'] ?? '');
         $categoryId = isset($input['category_id']) && $input['category_id'] !== '' ? (int) $input['category_id'] : null;
+        $isPublic = !empty($input['is_public']) ? 1 : 0;
         $tags = $input['tags'] ?? [];
 
         if ($title === '') {
@@ -260,7 +261,7 @@ class DocumentController extends Controller
         $approvedBy = $isApprover ? (int) $user['id'] : null;
 
         $model = new DocumentModel();
-        $docId = $model->create($title, $content, $categoryId, (int) $user['id'], $status, $approvedBy);
+        $docId = $model->create($title, $content, $categoryId, (int) $user['id'], $status, $approvedBy, $isPublic);
 
         // Tags
         if (is_array($tags) && $tags !== []) {
@@ -325,6 +326,7 @@ class DocumentController extends Controller
         $categoryId = array_key_exists('category_id', $input)
             ? ($input['category_id'] !== null && $input['category_id'] !== '' ? (int) $input['category_id'] : null)
             : ($doc['category_id'] !== null ? (int) $doc['category_id'] : null);
+        $isPublic = array_key_exists('is_public', $input) ? (!empty($input['is_public']) ? 1 : 0) : (int) ($doc['is_public'] ?? 0);
         $versionNote = sanitize_input((string) ($input['version_note'] ?? ''));
         $tags = $input['tags'] ?? null;
 
@@ -333,7 +335,7 @@ class DocumentController extends Controller
         $status = $isApprover ? 'aprovado' : 'pendente';
         $approvedBy = $isApprover ? (int) $user['id'] : null;
 
-        $model->update($intId, $title, $content, $categoryId, $userId, $versionNote, $status, $approvedBy);
+        $model->update($intId, $title, $content, $categoryId, $userId, $versionNote, $status, $approvedBy, $isPublic);
 
         if (is_array($tags)) {
             $tagModel = new TagModel();

@@ -38,6 +38,11 @@ return [
     ['GET', '/s/{token}', [App\Controllers\SharedLinkController::class, 'showPublic'], []],
     ['GET', '/s/{token}/pdf', [App\Controllers\SharedLinkController::class, 'exportPublicPdf'], []],
 
+    // Base de Conhecimento / Documentos Públicos (sem login)
+    ['GET', '/public-docs', [App\Controllers\PublicDocController::class, 'index'], []],
+    ['GET', '/public-docs/view/{id}', [App\Controllers\PublicDocController::class, 'show'], []],
+    ['GET', '/public-docs/pdf/{id}', [App\Controllers\PublicDocController::class, 'exportPdf'], []],
+
     // Autenticação
     ['GET', '/login', [AuthController::class, 'showLogin'], []],
     ['GET', '/login/oauth', [AuthController::class, 'oauthStart'], []],

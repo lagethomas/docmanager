@@ -100,5 +100,18 @@ class CategoryModel extends Repository
         );
         return $stmt->fetchAll() ?: [];
     }
+
+    public function withPublicCounts(): array
+    {
+        $stmt = $this->db->query(
+            "SELECT c.id, c.name, c.parent_id, c.icon, c.sort_order, c.color, c.created_at,
+                    COUNT(d.id) AS doc_count
+             FROM cp_doc_categories c
+             LEFT JOIN cp_documents d ON d.category_id = c.id AND d.deleted_at IS NULL AND d.status = 'aprovado' AND d.is_public = 1
+             GROUP BY c.id, c.name, c.parent_id, c.icon, c.sort_order, c.color, c.created_at
+             ORDER BY c.sort_order, c.name"
+        );
+        return $stmt->fetchAll() ?: [];
+    }
 }
 

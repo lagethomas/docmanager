@@ -207,10 +207,11 @@ var DocsView = (function () {
       links.forEach(function (link) {
         var fullUrl = window.location.origin + '/s/' + link.token;
         var hasPass = link.password_hash ? ' 🔒 (Com Senha)' : '';
+        var expStr = link.expires_at ? (' • ⏳ Expira em ' + formatDate(link.expires_at)) : '';
         html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--docs-surface);border:1px solid var(--docs-border);border-radius:8px;">'
           + '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:10px;">'
           + '<div style="font-size:0.82rem;font-weight:600;color:var(--docs-text);">' + esc(fullUrl) + hasPass + '</div>'
-          + '<div style="font-size:0.72rem;color:var(--docs-text-mut);">' + link.views_count + ' visualizações • Criado por ' + esc(link.creator_name || 'Usuário') + '</div>'
+          + '<div style="font-size:0.72rem;color:var(--docs-text-mut);">' + link.views_count + ' visualizações • Criado por ' + esc(link.creator_name || 'Usuário') + expStr + '</div>'
           + '</div>'
           + '<div style="display:flex;gap:6px;white-space:nowrap;">'
           + '<button type="button" class="btn btn-sm btn-outline" onclick="DocsView.copyLink(\'' + esc(fullUrl) + '\')">Copiar</button>'
@@ -227,10 +228,13 @@ var DocsView = (function () {
 
   function createPublicLink(docId) {
     var passEl = document.getElementById('txtPublicLinkPassword');
+    var expEl = document.getElementById('txtPublicLinkExpiresAt');
     var password = passEl ? passEl.value : '';
+    var expiresAt = expEl ? expEl.value : '';
 
-    api('POST', '/api/docs/' + docId + '/links', { password: password }).then(function (res) {
+    api('POST', '/api/docs/' + docId + '/links', { password: password, expires_at: expiresAt }).then(function (res) {
       if (passEl) passEl.value = '';
+      if (expEl) expEl.value = '';
       toast('Link público gerado com sucesso!', 'success');
       loadPublicLinks(docId);
     }).catch(function (err) {
