@@ -52,7 +52,7 @@ Extend `App\Core\Controller`. Methods: `$this->render()`, `$this->jsonResponse()
 ```bash
 composer lint          # PHP syntax check (src, public, bin)
 vendor/bin/phpunit     # Run tests (tests/Unit/)
-composer migrate       # Run pending migrations (database/migrations.php)
+composer migrate       # Run pending migrations (bin/migrate.php)
 composer seed          # Seed data
 ```
 
