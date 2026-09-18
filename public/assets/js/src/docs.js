@@ -163,6 +163,14 @@ var Docs = (function () {
         var status = document.getElementById('statusSaveState');
         if (status) status.textContent = 'Alterações não salvas';
       });
+
+      // Suporte à tecla Tab (recuo de parágrafo / indentação)
+      docContent.addEventListener('keydown', function (e) {
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          indentText(docContent, e.shiftKey);
+        }
+      });
     }
 
     // Upload Dropzone
@@ -1304,10 +1312,83 @@ var Docs = (function () {
   }
 
   // ─── TOOLBAR FORMATTING ─────────────────────────────
+  function indentText(ta, isShift) {
+    if (!ta) return;
+    var start = ta.selectionStart;
+    var end = ta.selectionEnd;
+    var val = ta.value;
+
+    if (start === end && !isShift) {
+      // Nenhum texto selecionado e modo indent: insere 4 espaços na posição do cursor
+      var indentStr = '    ';
+      ta.value = val.substring(0, start) + indentStr + val.substring(end);
+      ta.focus();
+      ta.setSelectionRange(start + indentStr.length, start + indentStr.length);
+    } else {
+      // Seleção de texto ou Outdent (Shift+Tab): processa as linhas afetadas
+      var lineStart = val.lastIndexOf('\n', start - 1) + 1;
+      var lineEnd = val.indexOf('\n', end);
+      if (lineEnd === -1) lineEnd = val.length;
+
+      var targetText = val.substring(lineStart, lineEnd);
+      var lines = targetText.split('\n');
+
+      var firstLineRemoved = 0;
+      var totalDelta = 0;
+
+      var newLines = lines.map(function (line, index) {
+        if (isShift) {
+          var removed = 0;
+          if (line.indexOf('\t') === 0) {
+            removed = 1;
+            line = line.substring(1);
+          } else {
+            while (removed < 4 && line.charAt(0) === ' ') {
+              line = line.substring(1);
+              removed++;
+            }
+          }
+          if (index === 0) firstLineRemoved = removed;
+          totalDelta -= removed;
+          return line;
+        } else {
+          if (index === 0) firstLineRemoved = -4;
+          totalDelta += 4;
+          return '    ' + line;
+        }
+      });
+
+      var replacement = newLines.join('\n');
+      ta.value = val.substring(0, lineStart) + replacement + val.substring(lineEnd);
+      ta.focus();
+
+      var newStart = isShift ? Math.max(lineStart, start - firstLineRemoved) : ((start === lineStart) ? lineStart : start + 4);
+      var newEnd = isShift ? Math.max(newStart, end + totalDelta) : end + totalDelta;
+
+      ta.setSelectionRange(newStart, newEnd);
+    }
+
+    updateWordStats();
+    if (EDITOR_MODE === 'split' || EDITOR_MODE === 'preview') {
+      renderMarkdownPreview();
+    }
+    var status = document.getElementById('statusSaveState');
+    if (status) status.textContent = 'Alterações não salvas';
+  }
+
   function insertFormat(type) {
     if (IS_VIEW_ONLY) return;
     var ta = document.getElementById('docContent');
     if (!ta) return;
+
+    if (type === 'indent' || type === 'tab') {
+      indentText(ta, false);
+      return;
+    }
+    if (type === 'outdent') {
+      indentText(ta, true);
+      return;
+    }
 
     var start = ta.selectionStart;
     var end = ta.selectionEnd;

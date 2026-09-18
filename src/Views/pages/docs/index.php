@@ -286,6 +286,17 @@ $user = $user ?? [];
       <div class="toolbar-separator"></div>
 
       <div class="toolbar-group">
+        <button type="button" class="toolbar-btn" onclick="Docs.insertFormat('indent')" title="Parágrafo / Recuo (Tab)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="6" x2="11" y2="6"/><line x1="21" y1="12" x2="11" y2="12"/><line x1="21" y1="18" x2="11" y2="18"/><polyline points="3 8 7 12 3 16"/><line x1="7" y1="12" x2="3" y2="12"/></svg>
+        </button>
+        <button type="button" class="toolbar-btn" onclick="Docs.insertFormat('outdent')" title="Diminuir recuo (Shift+Tab)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="6" x2="11" y2="6"/><line x1="21" y1="12" x2="11" y2="12"/><line x1="21" y1="18" x2="11" y2="18"/><polyline points="7 8 3 12 7 16"/><line x1="3" y1="12" x2="7" y2="12"/></svg>
+        </button>
+      </div>
+
+      <div class="toolbar-separator"></div>
+
+      <div class="toolbar-group">
         <button type="button" class="toolbar-btn" onclick="Docs.insertFormat('quote')" title="Citação / Callout">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.75-2-2-2H4c-1.25 0-2 .75-2 2v6c0 7 3 10 3 10z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.75-2-2-2h-4c-1.25 0-2 .75-2 2v6c0 7 3 10 3 10z"/></svg>
         </button>
