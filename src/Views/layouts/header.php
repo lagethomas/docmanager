@@ -91,10 +91,20 @@ function navActive(string $current, string $target): string
 
 <!-- ===== Topbar ===== -->
 <header class="topbar">
-  <div class="topbar-left">
+  <div class="topbar-left" style="display: flex; align-items: center; gap: 0.75rem; flex: 1; max-width: 480px;">
     <button class="sidebar-toggle" onclick="toggleSidebar()" title="Alternar menu lateral" aria-label="Alternar menu lateral">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
+    <div class="topbar-global-search" style="position: relative; width: 100%;">
+      <div style="position: relative; display: flex; align-items: center;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 10px; width: 14px; height: 14px; color: var(--text-muted); pointer-events: none;">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="globalDocSearchInput" class="form-control" placeholder="Buscar documentos no sistema... (/)" autocomplete="off" style="padding-left: 30px; padding-right: 28px; height: 34px; font-size: 0.82rem; border-radius: 8px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-color);" />
+        <button type="button" id="globalDocSearchClear" onclick="clearGlobalDocSearch()" hidden style="position: absolute; right: 8px; background: none; border: none; color: var(--text-muted); font-size: 0.9rem; cursor: pointer; padding: 2px;">✕</button>
+      </div>
+      <div id="globalDocSearchDropdown" class="tb-dropdown" hidden style="position: absolute; top: 40px; left: 0; width: 100%; max-height: 360px; overflow-y: auto; z-index: 1050; padding: 0; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);"></div>
+    </div>
   </div>
   <div class="topbar-right">
     <!-- Sino de Notificações -->

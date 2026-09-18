@@ -61,11 +61,11 @@ function renderAdminUsers() {
     row += '<td>' + roleLabel + '</td>';
     row += '<td><span class="' + statusCls + '">' + statusLabel + '</span></td>';
     row += '<td><div class="table-actions">'
-      + '<button class="table-action" title="Editar" aria-label="Editar '
+      + '<button class="table-action-btn" title="Editar" aria-label="Editar '
       + esc(login) + '" onclick="abrirModalUsuario(\'' + esc(login) + '\')">'
       + ICON_PENCIL + '</button>';
     if (login !== 'admin') {
-      row += '<button class="table-action danger" title="Excluir" aria-label="Excluir '
+      row += '<button class="table-action-btn del" title="Excluir" aria-label="Excluir '
         + esc(login) + '" onclick="confirmDeleteUser(\'' + esc(login) + '\')">'
         + ICON_TRASH + '</button>';
     }

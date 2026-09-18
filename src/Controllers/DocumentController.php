@@ -254,9 +254,10 @@ class DocumentController extends Controller
         }
 
         $role = $user['role'] ?? '';
-        // Admin auto-aprova na criação; Editor cria como pendente de aprovação
-        $status = ($role === 'Admin') ? 'aprovado' : 'pendente';
-        $approvedBy = ($role === 'Admin') ? (int) $user['id'] : null;
+        // Admin e Aprovador auto-aprovam na criação; Editor cria como pendente de aprovação
+        $isApprover = in_array($role, ['Admin', 'Aprovador'], true);
+        $status = $isApprover ? 'aprovado' : 'pendente';
+        $approvedBy = $isApprover ? (int) $user['id'] : null;
 
         $model = new DocumentModel();
         $docId = $model->create($title, $content, $categoryId, (int) $user['id'], $status, $approvedBy);
@@ -275,9 +276,11 @@ class DocumentController extends Controller
 
         // Notificar Admin e Aprovador quando documento fica pendente
         if ($status === 'pendente') {
-            $stmtNotif = $this->db->prepare("SELECT id FROM cp_users WHERE role IN ('Admin','Aprovador') AND status = 'ativo'");
+            $db = Database::getInstance();
+            $stmtNotif = $db->prepare("SELECT id FROM cp_users WHERE role IN ('Admin','Aprovador') AND status = 'ativo'");
             $stmtNotif->execute();
             $notifyIds = array_map('intval', array_column($stmtNotif->fetchAll() ?: [], 'id'));
+            $notifyIds = array_values(array_filter($notifyIds, fn(int $nid) => $nid !== (int) $user['id']));
             if ($notifyIds !== []) {
                 (new \App\Models\NotificationModel())->notifyUsers(
                     $notifyIds,
@@ -325,9 +328,10 @@ class DocumentController extends Controller
         $versionNote = sanitize_input((string) ($input['version_note'] ?? ''));
         $tags = $input['tags'] ?? null;
 
-        // Se Admin editar, mantém aprovado; se Editor editar, volta para pendente para revisão
-        $status = ($role === 'Admin') ? 'aprovado' : 'pendente';
-        $approvedBy = ($role === 'Admin') ? (int) $user['id'] : null;
+        // Se Admin ou Aprovador editar, mantém aprovado; se Editor editar, volta para pendente para revisão
+        $isApprover = in_array($role, ['Admin', 'Aprovador'], true);
+        $status = $isApprover ? 'aprovado' : 'pendente';
+        $approvedBy = $isApprover ? (int) $user['id'] : null;
 
         $model->update($intId, $title, $content, $categoryId, $userId, $versionNote, $status, $approvedBy);
 
@@ -339,7 +343,26 @@ class DocumentController extends Controller
             $model->setTags($intId, $tagIds);
         }
 
-        Logger::log('edit_doc', "Documento #{$intId} atualizado");
+        $statusMsg = ($status === 'aprovado') ? 'atualizado e mantido publicado' : 'atualizado e enviado para re-aprovação';
+        Logger::log('edit_doc', "Documento #{$intId} {$statusMsg}");
+
+        // Notificar Admin e Aprovador quando documento alterado fica pendente
+        if ($status === 'pendente') {
+            $db = Database::getInstance();
+            $stmtNotif = $db->prepare("SELECT id FROM cp_users WHERE role IN ('Admin','Aprovador') AND status = 'ativo'");
+            $stmtNotif->execute();
+            $notifyIds = array_map('intval', array_column($stmtNotif->fetchAll() ?: [], 'id'));
+            $notifyIds = array_values(array_filter($notifyIds, fn(int $nid) => $nid !== $userId));
+            if ($notifyIds !== []) {
+                (new \App\Models\NotificationModel())->notifyUsers(
+                    $notifyIds,
+                    'edicao_documento',
+                    'Documento alterado para re-aprovação',
+                    $user['name'] . ' alterou o documento "' . $title . '" e enviou para re-avaliação.',
+                    '/aprovacoes'
+                );
+            }
+        }
 
         // Notificar seguidores do documento (exceto quem atualizou)
         $followerModel = new \App\Models\DocumentFollowerModel();

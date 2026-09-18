@@ -169,49 +169,43 @@ var TableSort = {
   }
 };
 
-/* ------------------------------------------------------------------ Busca global */
-
-var SEARCH_GROUPS = [
-  // Adicione grupos aqui: { key: 'usuarios', label: 'Usuários', icon: 'U', cls: 'search-group-green' }
-];
+/* ------------------------------------------------------------------ Busca global de documentos */
 
 function initGlobalSearch() {
-  var input = document.getElementById('globalSearch');
-  if (!input) return;
-  var panel = document.getElementById('searchPanel');
-  if (!panel) return;
+  var input = document.getElementById('globalDocSearchInput') || document.getElementById('globalSearch');
+  var panel = document.getElementById('globalDocSearchDropdown') || document.getElementById('searchPanel');
+  var clearBtn = document.getElementById('globalDocSearchClear');
+  if (!input || !panel) return;
+
   var timer = null;
 
-  function closePanel() { panel.hidden = true; panel.innerHTML = ''; }
+  function closePanel() {
+    panel.hidden = true;
+    panel.innerHTML = '';
+    if (clearBtn) clearBtn.hidden = !input.value;
+  }
 
   function run() {
     var q = input.value.trim();
+    if (clearBtn) clearBtn.hidden = !q;
     if (q.length < 2) { closePanel(); return; }
-    if (SEARCH_GROUPS.length === 0) { closePanel(); return; }
-    api('GET', '/api/search?q=' + encodeURIComponent(q)).then(function (d) {
-      if (!d) { closePanel(); return; }
-      var any = SEARCH_GROUPS.some(function (g) { return (d[g.key] || []).length > 0; });
-      if (!any) {
-        panel.innerHTML = '<div class="search-empty">Nada encontrado para "' + esc(q) + '"</div>';
+
+    api('GET', '/api/docs?q=' + encodeURIComponent(q)).then(function (data) {
+      var docs = (data && data.docs) ? data.docs : [];
+      if (!docs.length) {
+        panel.innerHTML = '<div style="padding:1rem; text-align:center; color:var(--text-muted); font-size:0.82rem;">Nenhum documento encontrado para "' + esc(q) + '"</div>';
       } else {
-        var html = '';
-        SEARCH_GROUPS.forEach(function (g) {
-          var items = d[g.key] || [];
-          var total = (d.totais || {})[g.key] || items.length;
-          if (!items.length && total === 0) return;
-          html += '<div class="search-group ' + g.cls + '"><div class="search-group-head">'
-            + '<span class="search-group-icon">' + g.icon + '</span>' + g.label
-            + '<span class="search-group-count">' + total + '</span></div>';
-          items.forEach(function (it) {
-            var href = it.rota + (it.rota.indexOf('?') === -1 ? '?' : '&') + 'd=' + encodeURIComponent(it.id) + '&q=' + encodeURIComponent(q);
-            html += '<a class="search-item" href="' + esc(href) + '">'
-              + '<div class="search-item-title">' + esc(it.titulo) + '</div>'
-              + '<div class="search-item-sub">' + esc(it.detalhe) + '</div></a>';
-          });
-          if (total > items.length) {
-            html += '<a class="search-more" href="' + esc('/' + g.key) + '">Ver todos os ' + total + ' &rarr;</a>';
-          }
-          html += '</div>';
+        var html = '<div style="padding:0.4rem 0.75rem; font-size:0.72rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); border-bottom:1px solid var(--border-color); background:var(--bg-muted, rgba(0,0,0,0.02));">Documentos (' + docs.length + ')</div>';
+        docs.forEach(function (doc) {
+          var viewUrl = '/docs/view/' + doc.id;
+          var catLabel = doc.category_name ? esc(doc.category_name) : 'Geral';
+          var author = doc.author_name ? esc(doc.author_name) : '';
+          html += '<a href="' + viewUrl + '" class="tb-dropdown-item" style="display:flex; flex-direction:column; align-items:flex-start; padding:0.6rem 0.85rem; border-bottom:1px solid var(--border-color); text-decoration:none;">'
+            + '<div style="font-weight:600; font-size:0.85rem; color:var(--text-color); margin-bottom:2px;">' + esc(doc.title) + '</div>'
+            + '<div style="font-size:0.75rem; color:var(--text-muted); display:flex; gap:0.5rem; align-items:center;">'
+            + '<span style="background:rgba(26,187,156,0.1); color:var(--primary); padding:1px 6px; border-radius:4px; font-weight:500;">' + catLabel + '</span>'
+            + (author ? '<span>Por ' + author + '</span>' : '')
+            + '</div></a>';
         });
         panel.innerHTML = html;
       }
@@ -223,13 +217,36 @@ function initGlobalSearch() {
     clearTimeout(timer);
     timer = setTimeout(run, 250);
   });
+
+  input.addEventListener('focus', function () {
+    if (input.value.trim().length >= 2) run();
+  });
+
   input.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') { closePanel(); input.blur(); }
-    if (e.key === 'Enter') { run(); }
   });
+
   document.addEventListener('click', function (e) {
-    if (!e.target.closest('.topbar-search')) closePanel();
+    if (!e.target.closest('.topbar-global-search') && !e.target.closest('.topbar-search')) closePanel();
   });
+
+  // Atalho global '/' para focar a busca quando fora de um campo de texto
+  document.addEventListener('keydown', function (e) {
+    if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+      input.focus();
+      input.select();
+    }
+  });
+}
+
+function clearGlobalDocSearch() {
+  var input = document.getElementById('globalDocSearchInput');
+  var panel = document.getElementById('globalDocSearchDropdown');
+  var clearBtn = document.getElementById('globalDocSearchClear');
+  if (input) input.value = '';
+  if (clearBtn) clearBtn.hidden = true;
+  if (panel) { panel.hidden = true; panel.innerHTML = ''; }
 }
 
 function highlightFromUrl(rowSelector, idAttr) {
