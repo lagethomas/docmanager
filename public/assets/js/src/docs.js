@@ -1288,11 +1288,7 @@ var Docs = (function () {
       return;
     }
 
-    if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
-      preview.innerHTML = marked.parse(raw);
-    } else {
-      preview.innerHTML = '<div style="white-space:pre-wrap;font-family:inherit;line-height:1.7">' + esc(raw) + '</div>';
-    }
+    preview.innerHTML = parseMarkdown(raw);
   }
 
   function updateWordStats() {
@@ -1317,13 +1313,14 @@ var Docs = (function () {
     var start = ta.selectionStart;
     var end = ta.selectionEnd;
     var val = ta.value;
+    var indentStr = '}} ';
+    var indentLen = indentStr.length;
 
     if (start === end && !isShift) {
-      // Nenhum texto selecionado e modo indent: insere 4 espaços na posição do cursor
-      var indentStr = '    ';
+      // Nenhum texto selecionado e modo indent: insere '}} ' na posição do cursor
       ta.value = val.substring(0, start) + indentStr + val.substring(end);
       ta.focus();
-      ta.setSelectionRange(start + indentStr.length, start + indentStr.length);
+      ta.setSelectionRange(start + indentLen, start + indentLen);
     } else {
       // Seleção de texto ou Outdent (Shift+Tab): processa as linhas afetadas
       var lineStart = val.lastIndexOf('\n', start - 1) + 1;
@@ -1339,7 +1336,25 @@ var Docs = (function () {
       var newLines = lines.map(function (line, index) {
         if (isShift) {
           var removed = 0;
-          if (line.indexOf('\t') === 0) {
+          if (line.indexOf('}} ') === 0) {
+            removed = 3;
+            line = line.substring(3);
+          } else if (line.indexOf('}}') === 0) {
+            removed = 2;
+            line = line.substring(2);
+          } else if (line.indexOf('&emsp;&emsp;') === 0) {
+            removed = 12;
+            line = line.substring(12);
+          } else if (line.indexOf('&emsp;') === 0) {
+            removed = 6;
+            line = line.substring(6);
+          } else if (line.indexOf('&nbsp;&nbsp;&nbsp;&nbsp;') === 0) {
+            removed = 24;
+            line = line.substring(24);
+          } else if (line.indexOf('&nbsp;') === 0) {
+            removed = 6;
+            line = line.substring(6);
+          } else if (line.indexOf('\t') === 0) {
             removed = 1;
             line = line.substring(1);
           } else {
@@ -1352,9 +1367,8 @@ var Docs = (function () {
           totalDelta -= removed;
           return line;
         } else {
-          if (index === 0) firstLineRemoved = -4;
-          totalDelta += 4;
-          return '    ' + line;
+          totalDelta += indentLen;
+          return indentStr + line;
         }
       });
 
@@ -1362,7 +1376,7 @@ var Docs = (function () {
       ta.value = val.substring(0, lineStart) + replacement + val.substring(lineEnd);
       ta.focus();
 
-      var newStart = isShift ? Math.max(lineStart, start - firstLineRemoved) : ((start === lineStart) ? lineStart : start + 4);
+      var newStart = isShift ? Math.max(lineStart, start - firstLineRemoved) : ((start === lineStart) ? lineStart : start + indentLen);
       var newEnd = isShift ? Math.max(newStart, end + totalDelta) : end + totalDelta;
 
       ta.setSelectionRange(newStart, newEnd);

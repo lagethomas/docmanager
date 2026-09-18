@@ -26,11 +26,7 @@ var DocsView = (function () {
     if (!raw || !target) return;
 
     var content = raw.value || '';
-    if (typeof marked !== 'undefined') {
-      target.innerHTML = marked.parse(content);
-    } else {
-      target.innerHTML = '<pre>' + esc(content) + '</pre>';
-    }
+    target.innerHTML = parseMarkdown(content);
   }
 
   function editDoc(id) {

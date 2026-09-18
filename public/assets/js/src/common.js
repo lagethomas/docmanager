@@ -16,6 +16,16 @@ var fmtFull = function (x) { return x ? new Date(x).toLocaleString('pt-BR', { da
 var minutes = function (a, b) { b = b || new Date(); return Math.round((new Date(b) - new Date(a)) / 60000); };
 var esc = function (v) { return String(v == null ? '' : v).replace(/[&<>'"]/g, function (m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[m]; }); };
 
+function parseMarkdown(text) {
+  if (!text) return '';
+  // Substitui o alias '}}' no início de linhas pelo recuo de parágrafo HTML &emsp;&emsp;
+  var processed = String(text).replace(/(^|\n)[ \t]*}}([ \t]?)/g, '$1&emsp;&emsp;');
+  if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
+    return marked.parse(processed);
+  }
+  return '<div style="white-space:pre-wrap;">' + esc(processed) + '</div>';
+}
+
 /* ------------------------------------------------------------------ API */
 
 function api(method, url, body) {

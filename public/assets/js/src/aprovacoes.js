@@ -324,11 +324,7 @@ var Approvals = (function () {
 
       if (body) {
         var raw = CURRENT_PREVIEW_DOC.content || '';
-        if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
-          body.innerHTML = marked.parse(raw);
-        } else {
-          body.innerHTML = '<div style="white-space:pre-wrap;">' + esc(raw) + '</div>';
-        }
+        body.innerHTML = parseMarkdown(raw);
       }
 
       if (actions) {
