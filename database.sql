@@ -89,7 +89,9 @@ INSERT IGNORE INTO cp_users (login, name, password, role, status)
 VALUES ('admin', 'Administrador', '$2y$12$8NcsVUHXH7Io5bVvnXdE7eE8Go2eJVFiKbVNAQe0W0SGXKwJcXUNm', 'Admin', 'ativo');
 
 -- Configuracoes padrao
-INSERT IGNORE INTO cp_settings (setting_key, setting_value) VALUES ('per_page', '10');
+INSERT IGNORE INTO cp_settings (setting_key, setting_value) VALUES 
+('per_page', '10'),
+('doc_max_versions', '10');
 
 -- =====================================================================
 -- Módulo Documentação
@@ -268,13 +270,16 @@ CREATE TABLE IF NOT EXISTS cp_comments (
     user_id INT UNSIGNED NOT NULL,
     comment TEXT NOT NULL,
     resolved_at DATETIME DEFAULT NULL,
+    resolved_by INT UNSIGNED DEFAULT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_comm_doc (document_id),
     CONSTRAINT fk_comm_doc FOREIGN KEY (document_id)
         REFERENCES cp_documents(id) ON DELETE CASCADE,
     CONSTRAINT fk_comm_user FOREIGN KEY (user_id)
-        REFERENCES cp_users(id) ON DELETE CASCADE
+        REFERENCES cp_users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_comm_resolved_by FOREIGN KEY (resolved_by)
+        REFERENCES cp_users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
@@ -330,3 +335,42 @@ CREATE TABLE IF NOT EXISTS cp_document_subscribers (
     CONSTRAINT fk_sub_user FOREIGN KEY (user_id)
         REFERENCES cp_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- cp_document_followers
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS cp_document_followers (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    document_id INT UNSIGNED NOT NULL,
+    user_id INT UNSIGNED NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_doc_follow (document_id, user_id),
+    CONSTRAINT fk_follow_doc FOREIGN KEY (document_id)
+        REFERENCES cp_documents(id) ON DELETE CASCADE,
+    CONSTRAINT fk_follow_user FOREIGN KEY (user_id)
+        REFERENCES cp_users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Migrações aplicadas
+INSERT IGNORE INTO cp_migrations (name) VALUES
+('0001_create_users_table'),
+('0002_create_settings_table'),
+('0003_create_roles_table'),
+('0004_create_doc_categories_table'),
+('0005_create_doc_tags_table'),
+('0006_create_documents_table'),
+('0007_create_document_tags_table'),
+('0008_create_document_versions_table'),
+('0009_create_doc_uploads_table'),
+('0010_add_deleted_at_and_version_settings'),
+('0011_add_roles_editor_and_visualizador'),
+('0012_add_approval_workflow_and_views_count'),
+('0013_add_document_shares_table'),
+('0014_add_color_to_doc_categories'),
+('0015_create_document_favorites_table'),
+('0016_add_rejected_by_to_documents'),
+('0017_add_new_modules_tables'),
+('0018_create_logs_table'),
+('0019_add_resolved_by_to_comments'),
+('0020_create_document_followers');
