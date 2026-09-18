@@ -13,6 +13,8 @@ var Approvals = (function () {
   var SEARCH_TIMER = null;
   var CURRENT_PREVIEW_DOC = null;
   var CURRENT_REJECT_ID = null;
+  var CURRENT_PAGE = 1;
+  var PER_PAGE = 10;
 
   var ICONS_MAP = {
     folder: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tree-svg-icon"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
@@ -55,6 +57,14 @@ var Approvals = (function () {
   function init() {
     applyViewMode(VIEW_MODE, false);
     bindEvents();
+    var tableEl = document.getElementById('approvalsTable');
+    if (tableEl && typeof TableSort !== 'undefined') {
+      TableSort.init(tableEl, {
+        onSort: function () {
+          renderTable();
+        }
+      });
+    }
     loadApprovals();
   }
 
@@ -87,18 +97,17 @@ var Approvals = (function () {
     var btnCard = document.getElementById('approvalsBtnCard');
     var btnList = document.getElementById('approvalsBtnList');
     var grid = document.getElementById('approvalsGrid');
+    var tableWrapper = document.getElementById('approvalsTableWrapper');
 
     if (btnCard) btnCard.classList.toggle('active', mode === 'card');
     if (btnList) btnList.classList.toggle('active', mode === 'list');
 
-    if (grid) {
-      if (mode === 'list') {
-        grid.classList.add('approvals-list-view');
-        grid.classList.remove('approvals-grid-view');
-      } else {
-        grid.classList.remove('approvals-list-view');
-        grid.classList.add('approvals-grid-view');
-      }
+    if (mode === 'list') {
+      if (grid) grid.hidden = true;
+      if (tableWrapper) tableWrapper.hidden = false;
+    } else {
+      if (grid) grid.hidden = false;
+      if (tableWrapper) tableWrapper.hidden = true;
     }
 
     if (rerender) renderView();
@@ -165,18 +174,25 @@ var Approvals = (function () {
   function renderView() {
     var emptyState = document.getElementById('approvalsEmptyState');
     var grid = document.getElementById('approvalsGrid');
+    var tableWrapper = document.getElementById('approvalsTableWrapper');
     if (!grid) return;
 
     if (!ALL_DOCS.length) {
       grid.innerHTML = '';
+      grid.hidden = true;
+      if (tableWrapper) tableWrapper.hidden = true;
       if (emptyState) emptyState.hidden = false;
       return;
     }
     if (emptyState) emptyState.hidden = true;
 
     if (VIEW_MODE === 'list') {
-      renderTable(grid);
+      grid.hidden = true;
+      if (tableWrapper) tableWrapper.hidden = false;
+      renderTable();
     } else {
+      if (tableWrapper) tableWrapper.hidden = true;
+      grid.hidden = false;
       renderCards(grid);
     }
   }
@@ -261,56 +277,79 @@ var Approvals = (function () {
 
   /* ─── RENDER: TABLE (LIST VIEW) ─────────────────────────────── */
 
-  function renderTable(grid) {
-    var html = '<div class="table-responsive">'
-      + '<table class="table" id="approvalsTable">'
-      + '<thead><tr>'
-      + '<th style="min-width:260px">Título</th>'
-      + '<th style="min-width:140px">Pasta</th>'
-      + '<th style="min-width:130px">Autor</th>'
-      + '<th style="min-width:130px">Status</th>'
-      + '<th style="min-width:130px">Enviado em</th>'
-      + '<th style="min-width:110px;text-align:right">Ações</th>'
-      + '</tr></thead>'
-      + '<tbody>';
+  function renderTable() {
+    var tbody = document.getElementById('approvalsTableBody');
+    if (!tbody) return;
 
-    for (var i = 0; i < ALL_DOCS.length; i++) {
-      var d = ALL_DOCS[i];
+    var docsToRender = ALL_DOCS.slice();
+
+    // Ordenação com TableSort se ativa
+    if (typeof TableSort !== 'undefined' && TableSort.getSort) {
+      var sortState = TableSort.getSort('approvalsTable');
+      if (sortState && sortState.col) {
+        docsToRender = TableSort.sortArray(docsToRender, sortState.col, sortState.dir, function (d, col) {
+          if (col === 'title') return d.title || '';
+          if (col === 'category') return d.category_name || '';
+          if (col === 'author') return d.author_name || '';
+          if (col === 'status') return d.status || '';
+          if (col === 'updated') return d.updated_at || '';
+          return d.id;
+        });
+      }
+    }
+
+    var totalItems = docsToRender.length;
+    var totalPages = Math.ceil(totalItems / PER_PAGE) || 1;
+    if (CURRENT_PAGE > totalPages) CURRENT_PAGE = totalPages;
+    if (CURRENT_PAGE < 1) CURRENT_PAGE = 1;
+
+    var startIndex = (CURRENT_PAGE - 1) * PER_PAGE;
+    var endIndex = Math.min(startIndex + PER_PAGE, totalItems);
+    var pageDocs = docsToRender.slice(startIndex, endIndex);
+
+    var html = '';
+    for (var i = 0; i < pageDocs.length; i++) {
+      var d = pageDocs[i];
       var catIcon = d.category_icon && ICONS_MAP[d.category_icon] ? ICONS_MAP[d.category_icon] : ICONS_MAP['folder'];
+      var catColor = d.category_color || 'var(--docs-primary, #1abb9c)';
       var catHtml = d.category_name
-        ? '<span class="doc-category-badge" style="font-size:0.72rem;padding:0.15rem 0.5rem;">' + catIcon + ' ' + esc(d.category_name) + '</span>'
+        ? '<span class="doc-category-badge" style="font-size:0.75rem;padding:0.18rem 0.55rem;border-left:3px solid ' + esc(catColor) + ';"><span style="color:' + esc(catColor) + '">' + catIcon + '</span> ' + esc(d.category_name) + '</span>'
         : '<span style="color:var(--docs-text-mut);font-size:0.75rem">—</span>';
 
       var rejNote = (d.status === 'rejeitado' && d.rejection_reason)
-        ? '<div style="font-size:0.7rem;color:var(--danger,#d63939);margin-top:2px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(d.rejection_reason) + '">↩ ' + esc(d.rejection_reason) + '</div>'
+        ? '<div style="font-size:0.7rem;color:var(--danger,#d63939);margin-top:2px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(d.rejection_reason) + '">↩ ' + esc(d.rejection_reason) + '</div>'
         : '';
 
+      var docIcon = '<span style="color:' + esc(catColor) + '">' + (d.category_icon && ICONS_MAP[d.category_icon] ? ICONS_MAP[d.category_icon] : ICONS_MAP['doc']) + '</span>';
+
       html += '<tr>'
+        + '<td style="width: 40px; text-align: center;"><span style="font-size:1.1rem;display:inline-flex;align-items:center;">' + docIcon + '</span></td>'
         + '<td>'
-        + '<div class="table-doc-cell" onclick="Approvals.openPreview(' + d.id + ')" style="cursor:pointer;" title="' + esc(d.title) + '">'
-        + '<span class="table-doc-icon">'
-        + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
-        + '</span>'
-        + '<div>'
-        + '<span class="table-doc-name">' + esc(d.title) + '</span>'
+        + '<div class="table-doc-title" onclick="Approvals.previewDoc(' + d.id + ')" style="cursor:pointer;font-weight:600;color:var(--docs-text);" title="Clique para revisar ' + esc(d.title) + '">'
+        + esc(d.title)
         + rejNote
-        + '</div>'
         + '</div>'
         + '</td>'
         + '<td>' + catHtml + '</td>'
-        + '<td style="font-size:0.82rem;color:var(--docs-text-mut)">' + esc(d.author_name || '—') + '</td>'
-        + '<td style="font-size:0.78rem;">' + buildStatusBadge(d.status) + (d.version_count > 0 ? ' <span style="font-size:0.7rem;color:var(--docs-text-mut);margin-left:2px;">v' + d.version_count + '</span>' : '') + '</td>'
-        + '<td style="font-size:0.8rem;color:var(--docs-text-mut);white-space:nowrap">' + formatDate(d.updated_at) + '</td>'
+        + '<td><span style="font-size:0.78rem;color:var(--docs-text-mut);font-weight:500;display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' + esc(d.author_name || 'Admin') + '</span></td>'
+        + '<td>' + buildStatusBadge(d.status) + (d.version_count > 0 ? ' <span style="font-size:0.7rem;color:var(--docs-text-mut);margin-left:2px;">v' + d.version_count + '</span>' : '') + '</td>'
+        + '<td><span style="font-size:0.8rem;color:var(--docs-text-mut);white-space:nowrap">' + formatDate(d.updated_at) + '</span></td>'
         + '<td style="text-align:right;white-space:nowrap">'
-        + '<div style="display:inline-flex;gap:2px;align-items:center">'
+        + '<div class="table-actions">'
         + buildActionsHtml(d)
         + '</div>'
         + '</td>'
         + '</tr>';
     }
 
-    html += '</tbody></table></div>';
-    grid.innerHTML = html;
+    tbody.innerHTML = html;
+
+    if (typeof renderPagination === 'function') {
+      renderPagination('approvalsPagination', totalItems, CURRENT_PAGE, totalPages, function (p) {
+        CURRENT_PAGE = p;
+        renderTable();
+      });
+    }
   }
 
   /* ─── MODAL: PREVIEW E COMPARAÇÃO DE VERSÕES (GIT DIFF) ──────── */

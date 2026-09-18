@@ -109,6 +109,31 @@ $user = $user ?? [];
     <!-- Renderizado via JS -->
   </div>
 
+  <!-- ─── TABLE VIEW (PADRONIZADA COM DOCS) ──────────────── -->
+  <div class="card" id="approvalsTableWrapper" hidden>
+    <div class="table-responsive">
+      <table class="table" id="approvalsTable">
+        <thead>
+          <tr>
+            <th style="width: 40px"></th>
+            <th data-sort="title" class="sortable-th">Título <span class="sort-icon"></span></th>
+            <th data-sort="category" class="sortable-th">Pasta <span class="sort-icon"></span></th>
+            <th data-sort="author" class="sortable-th">Autor <span class="sort-icon"></span></th>
+            <th data-sort="status" class="sortable-th">Status <span class="sort-icon"></span></th>
+            <th data-sort="updated" class="sortable-th">Enviado em <span class="sort-icon"></span></th>
+            <th class="th-actions">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="approvalsTableBody">
+          <!-- Linhas renderizadas dinamicamente via JS -->
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer">
+      <div class="pagination-footer" id="approvalsPagination"></div>
+    </div>
+  </div>
+
   <!-- ─── EMPTY STATE ──────────────────────────────────── -->
   <div class="approvals-empty-state" id="approvalsEmptyState" hidden>
     <div class="empty-icon" style="display:flex;align-items:center;justify-content:center;">

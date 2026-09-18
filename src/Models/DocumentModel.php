@@ -15,7 +15,7 @@ class DocumentModel extends Repository
     public function search(
         string $query = '',
         ?int $categoryId = null,
-        string $tag = '',
+        string|array $tag = '',
         string $sort = 'updated_desc',
         bool $trash = false,
         ?string $status = null,
@@ -102,9 +102,17 @@ class DocumentModel extends Repository
             }
         }
 
-        if ($tag !== '') {
-            $conditions[] = 't.name = ?';
-            $params[] = $tag;
+        $tagList = [];
+        if (is_array($tag)) {
+            $tagList = $tag;
+        } elseif (is_string($tag) && trim($tag) !== '') {
+            $tagList = explode(',', $tag);
+        }
+        $tagList = array_unique(array_filter(array_map('trim', $tagList)));
+
+        foreach ($tagList as $tName) {
+            $conditions[] = 'EXISTS (SELECT 1 FROM cp_document_tags dt_t JOIN cp_doc_tags t_t ON dt_t.tag_id = t_t.id WHERE dt_t.document_id = d.id AND t_t.name = ?)';
+            $params[] = $tName;
         }
 
         $sql .= ' WHERE ' . implode(' AND ', $conditions);

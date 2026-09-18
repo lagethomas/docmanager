@@ -14,7 +14,7 @@ var Docs = (function () {
   var CURRENT_DOC = null;
   var CURRENT_TAGS = [];
   var ACTIVE_FOLDER = null;
-  var ACTIVE_TAG = null;
+  var ACTIVE_TAGS = [];
   var IS_TRASH = false;
   var IS_FAVORITES = false;
   var IS_SHARED = false;
@@ -154,18 +154,143 @@ var Docs = (function () {
       });
     }
 
-    // Input de Tags no Editor
+    // Input de Tags no Editor com Autocomplete de tags existentes
     var tagInput = document.getElementById('tagInput');
+    var tagSuggestionsDropdown = document.getElementById('tagSuggestionsDropdown');
+    var focusedSuggestionIndex = -1;
+
+    function renderTagSuggestions(query) {
+      if (!tagSuggestionsDropdown) return;
+      var q = (query || '').trim().toLowerCase();
+      if (!q) {
+        tagSuggestionsDropdown.hidden = true;
+        tagSuggestionsDropdown.innerHTML = '';
+        focusedSuggestionIndex = -1;
+        return;
+      }
+
+      var matches = ALL_TAGS.filter(function (t) {
+        var name = (t.name || '').toLowerCase();
+        return name.indexOf(q) !== -1 && CURRENT_TAGS.indexOf(t.name) === -1;
+      });
+
+      if (!matches.length) {
+        tagSuggestionsDropdown.hidden = true;
+        tagSuggestionsDropdown.innerHTML = '';
+        focusedSuggestionIndex = -1;
+        return;
+      }
+
+      var html = '';
+      for (var i = 0; i < matches.length; i++) {
+        var m = matches[i];
+        html += '<button type="button" class="tag-suggestion-item" data-tag-name="' + esc(m.name) + '">'
+          + '<span>#' + esc(m.name) + '</span>'
+          + '<span class="tag-suggestion-badge">' + (m.usage_count || 0) + ' docs</span>'
+          + '</button>';
+      }
+      tagSuggestionsDropdown.innerHTML = html;
+      tagSuggestionsDropdown.hidden = false;
+      focusedSuggestionIndex = -1;
+
+      var items = tagSuggestionsDropdown.querySelectorAll('.tag-suggestion-item');
+      items.forEach(function (btn) {
+        btn.addEventListener('mousedown', function (e) {
+          e.preventDefault();
+          var name = btn.getAttribute('data-tag-name');
+          selectTagSuggestion(name);
+        });
+      });
+    }
+
+    function selectTagSuggestion(tagName) {
+      if (tagName && CURRENT_TAGS.indexOf(tagName) === -1) {
+        CURRENT_TAGS.push(tagName);
+        renderTags();
+      }
+      if (tagInput) tagInput.value = '';
+      if (tagSuggestionsDropdown) {
+        tagSuggestionsDropdown.hidden = true;
+        tagSuggestionsDropdown.innerHTML = '';
+      }
+      focusedSuggestionIndex = -1;
+      if (tagInput) tagInput.focus();
+    }
+
     if (tagInput) {
+      tagInput.addEventListener('input', function () {
+        renderTagSuggestions(tagInput.value);
+      });
+
+      tagInput.addEventListener('focus', function () {
+        if (tagInput.value.trim()) {
+          renderTagSuggestions(tagInput.value);
+        }
+      });
+
+      tagInput.addEventListener('blur', function () {
+        setTimeout(function () {
+          if (tagSuggestionsDropdown) {
+            tagSuggestionsDropdown.hidden = true;
+            focusedSuggestionIndex = -1;
+          }
+        }, 200);
+      });
+
       tagInput.addEventListener('keydown', function (e) {
+        var items = tagSuggestionsDropdown ? tagSuggestionsDropdown.querySelectorAll('.tag-suggestion-item') : [];
+
+        if (e.key === 'ArrowDown') {
+          if (items.length) {
+            e.preventDefault();
+            focusedSuggestionIndex = (focusedSuggestionIndex + 1) % items.length;
+            items.forEach(function (el, idx) {
+              el.classList.toggle('focused', idx === focusedSuggestionIndex);
+            });
+            items[focusedSuggestionIndex].scrollIntoView({ block: 'nearest' });
+          }
+          return;
+        }
+
+        if (e.key === 'ArrowUp') {
+          if (items.length) {
+            e.preventDefault();
+            focusedSuggestionIndex = (focusedSuggestionIndex - 1 + items.length) % items.length;
+            items.forEach(function (el, idx) {
+              el.classList.toggle('focused', idx === focusedSuggestionIndex);
+            });
+            items[focusedSuggestionIndex].scrollIntoView({ block: 'nearest' });
+          }
+          return;
+        }
+
+        if (e.key === 'Escape') {
+          if (tagSuggestionsDropdown) {
+            tagSuggestionsDropdown.hidden = true;
+            focusedSuggestionIndex = -1;
+          }
+          return;
+        }
+
         if (e.key === 'Enter' || e.key === ',') {
           e.preventDefault();
+          if (focusedSuggestionIndex >= 0 && items[focusedSuggestionIndex]) {
+            var selectedName = items[focusedSuggestionIndex].getAttribute('data-tag-name');
+            selectTagSuggestion(selectedName);
+            return;
+          }
+
           var val = tagInput.value.trim().replace(/,/g, '');
           if (val && CURRENT_TAGS.indexOf(val) === -1) {
             CURRENT_TAGS.push(val);
             renderTags();
           }
           tagInput.value = '';
+          if (tagSuggestionsDropdown) {
+            tagSuggestionsDropdown.hidden = true;
+            tagSuggestionsDropdown.innerHTML = '';
+          }
+          focusedSuggestionIndex = -1;
         } else if (e.key === 'Backspace' && !tagInput.value && CURRENT_TAGS.length) {
           CURRENT_TAGS.pop();
           renderTags();
@@ -330,7 +455,7 @@ var Docs = (function () {
       params.set('shared_by_me', '1');
     } else {
       if (ACTIVE_FOLDER !== null) params.set('category_id', ACTIVE_FOLDER);
-      if (ACTIVE_TAG) params.set('tag', ACTIVE_TAG);
+      if (ACTIVE_TAGS.length) params.set('tags', ACTIVE_TAGS.join(','));
     }
     if (CURRENT_SORT) params.set('sort', CURRENT_SORT);
 
@@ -353,7 +478,9 @@ var Docs = (function () {
       txt = count + (count === 1 ? ' documento favorito' : ' documentos favoritos');
     } else {
       txt = count + (count === 1 ? ' documento encontrado' : ' documentos encontrados');
-      if (ACTIVE_TAG) txt += ' com a tag #' + ACTIVE_TAG;
+      if (ACTIVE_TAGS.length) {
+        txt += ' com as tags ' + ACTIVE_TAGS.map(function (t) { return '#' + t; }).join(', ');
+      }
     }
     subtitle.textContent = txt;
   }
@@ -368,7 +495,7 @@ var Docs = (function () {
     var totalSharedWithMeCount = STATS.shared_with_me !== undefined ? STATS.shared_with_me : 0;
     var totalSharedByMeCount = STATS.shared_by_me !== undefined ? STATS.shared_by_me : 0;
 
-    var html = '<div class="folder-nav-item' + (ACTIVE_FOLDER === null && !ACTIVE_TAG && !IS_TRASH && !IS_FAVORITES && !IS_SHARED && !IS_SHARED_BY_ME ? ' active' : '') + '" onclick="Docs.filterFolder(null)">'
+    var html = '<div class="folder-nav-item' + (ACTIVE_FOLDER === null && !ACTIVE_TAGS.length && !IS_TRASH && !IS_FAVORITES && !IS_SHARED && !IS_SHARED_BY_ME ? ' active' : '') + '" onclick="Docs.filterFolder(null)">'
       + '<span class="folder-nav-icon">' + SVG_DOC + '</span>'
       + '<span class="folder-nav-name">Todos os Documentos</span>'
       + '<span class="folder-nav-count">' + totalDocsCount + '</span>'
@@ -462,9 +589,10 @@ var Docs = (function () {
     }
 
     var html = '';
-    for (var i = 0; i < ALL_TAGS.length; i++) {
-      var t = ALL_TAGS[i];
-      var isActive = ACTIVE_TAG === t.name;
+    var displayTags = ALL_TAGS.slice(0, 10);
+    for (var i = 0; i < displayTags.length; i++) {
+      var t = displayTags[i];
+      var isActive = ACTIVE_TAGS.indexOf(t.name) !== -1;
       html += '<button type="button" class="tag-cloud-chip' + (isActive ? ' active' : '') + '" onclick="Docs.filterTag(\'' + esc(t.name) + '\')">'
         + '#' + esc(t.name)
         + ' <span class="tag-cloud-count">' + (t.usage_count || 0) + '</span>'
@@ -513,7 +641,7 @@ var Docs = (function () {
     if (trashBanner) trashBanner.hidden = true;
 
     ACTIVE_FOLDER = catId !== null ? intVal(catId) : null;
-    ACTIVE_TAG = null;
+    ACTIVE_TAGS = [];
     updateFilterIndicator();
     renderFolderTree();
     renderTagCloud();
@@ -546,7 +674,7 @@ var Docs = (function () {
     if (trashBanner) trashBanner.hidden = true;
 
     ACTIVE_FOLDER = null;
-    ACTIVE_TAG = null;
+    ACTIVE_TAGS = [];
     updateFilterIndicator();
     renderFolderTree();
     renderTagCloud();
@@ -569,7 +697,7 @@ var Docs = (function () {
     if (trashBanner) trashBanner.hidden = true;
 
     ACTIVE_FOLDER = null;
-    ACTIVE_TAG = null;
+    ACTIVE_TAGS = [];
     updateFilterIndicator();
     renderFolderTree();
     renderTagCloud();
@@ -592,7 +720,7 @@ var Docs = (function () {
     if (trashBanner) trashBanner.hidden = true;
 
     ACTIVE_FOLDER = null;
-    ACTIVE_TAG = null;
+    ACTIVE_TAGS = [];
     updateFilterIndicator();
     renderFolderTree();
     renderTagCloud();
@@ -614,14 +742,32 @@ var Docs = (function () {
     var trashBanner = document.getElementById('docsTrashBanner');
     if (trashBanner) trashBanner.hidden = true;
 
-    if (ACTIVE_TAG === tagName) {
-      ACTIVE_TAG = null;
+    var idx = ACTIVE_TAGS.indexOf(tagName);
+    if (idx !== -1) {
+      ACTIVE_TAGS.splice(idx, 1);
     } else {
-      ACTIVE_TAG = tagName;
+      ACTIVE_TAGS.push(tagName);
     }
     updateFilterIndicator();
     renderTagCloud();
     loadDocs();
+  }
+
+  function removeFilterTag(tagName) {
+    var idx = ACTIVE_TAGS.indexOf(tagName);
+    if (idx !== -1) {
+      ACTIVE_TAGS.splice(idx, 1);
+    }
+    CURRENT_PAGE = 1;
+    updateFilterIndicator();
+    renderTagCloud();
+    loadDocs();
+  }
+
+  function clearAllTagFilters() {
+    ACTIVE_TAGS = [];
+    ACTIVE_FOLDER = null;
+    clearFilter();
   }
 
   function filterTrash() {
@@ -631,7 +777,7 @@ var Docs = (function () {
     IS_SHARED_BY_ME = false;
     CURRENT_PAGE = 1;
     ACTIVE_FOLDER = null;
-    ACTIVE_TAG = null;
+    ACTIVE_TAGS = [];
     updateFilterIndicator();
     renderFolderTree();
     renderTagCloud();
@@ -657,7 +803,7 @@ var Docs = (function () {
     if (trashBanner) trashBanner.hidden = true;
 
     ACTIVE_FOLDER = null;
-    ACTIVE_TAG = null;
+    ACTIVE_TAGS = [];
     updateFilterIndicator();
     renderFolderTree();
     renderTagCloud();
@@ -668,34 +814,51 @@ var Docs = (function () {
 
   function updateFilterIndicator() {
     var bar = document.getElementById('activeFilterBar');
-    var chip = document.getElementById('filterChipText');
-    if (!bar || !chip) return;
+    var chipsContainer = document.getElementById('activeFilterChips');
+    if (!bar) return;
+
+    var hasActiveFilter = false;
+    var chipsHtml = '';
 
     if (IS_TRASH) {
-      bar.hidden = false;
-      chip.textContent = 'Lixeira de Documentos';
+      hasActiveFilter = true;
+      chipsHtml += '<span class="filter-chip">Lixeira de Documentos</span>';
     } else if (IS_FAVORITES) {
-      bar.hidden = false;
-      chip.textContent = '⭐ Documentos Favoritos';
+      hasActiveFilter = true;
+      chipsHtml += '<span class="filter-chip">⭐ Documentos Favoritos</span>';
     } else if (IS_SHARED) {
-      bar.hidden = false;
-      chip.textContent = '👥 Compartilhados Comigo';
+      hasActiveFilter = true;
+      chipsHtml += '<span class="filter-chip">👥 Compartilhados Comigo</span>';
     } else if (IS_SHARED_BY_ME) {
-      bar.hidden = false;
-      chip.textContent = '📤 Compartilhados por Mim';
-    } else if (ACTIVE_TAG) {
-      bar.hidden = false;
-      chip.textContent = 'Tag #' + ACTIVE_TAG;
-    } else if (ACTIVE_FOLDER !== null) {
-      bar.hidden = false;
-      if (ACTIVE_FOLDER === -1) {
-        chip.textContent = 'Sem Pasta (Raiz)';
-      } else {
-        var cat = findCat(ALL_CATS, ACTIVE_FOLDER);
-        chip.textContent = 'Pasta: ' + (cat ? cat.name : '#' + ACTIVE_FOLDER);
+      hasActiveFilter = true;
+      chipsHtml += '<span class="filter-chip">📤 Compartilhados por Mim</span>';
+    } else {
+      if (ACTIVE_FOLDER !== null) {
+        hasActiveFilter = true;
+        if (ACTIVE_FOLDER === -1) {
+          chipsHtml += '<span class="filter-chip">Sem Pasta (Raiz)</span>';
+        } else {
+          var cat = findCat(ALL_CATS, ACTIVE_FOLDER);
+          chipsHtml += '<span class="filter-chip">Pasta: ' + (cat ? esc(cat.name) : '#' + ACTIVE_FOLDER) + '</span>';
+        }
       }
+
+      if (ACTIVE_TAGS.length) {
+        hasActiveFilter = true;
+        for (var i = 0; i < ACTIVE_TAGS.length; i++) {
+          var t = ACTIVE_TAGS[i];
+          chipsHtml += '<span class="filter-tag-chip">#' + esc(t)
+            + ' <button type="button" class="filter-tag-chip-remove" onclick="Docs.removeFilterTag(\'' + esc(t) + '\')" title="Remover tag #' + esc(t) + '">✕</button></span>';
+        }
+      }
+    }
+
+    if (hasActiveFilter) {
+      bar.hidden = false;
+      if (chipsContainer) chipsContainer.innerHTML = chipsHtml;
     } else {
       bar.hidden = true;
+      if (chipsContainer) chipsContainer.innerHTML = '';
     }
   }
 
@@ -1519,6 +1682,8 @@ var Docs = (function () {
     var existing = container.querySelectorAll('.meta-tag-chip');
     for (var i = 0; i < existing.length; i++) existing[i].remove();
 
+    var targetEl = input.closest('.tag-input-autocomplete-wrapper') || input;
+
     for (var j = 0; j < CURRENT_TAGS.length; j++) {
       var tag = CURRENT_TAGS[j];
       var el = document.createElement('span');
@@ -1528,7 +1693,7 @@ var Docs = (function () {
       } else {
         el.innerHTML = '#' + esc(tag) + ' <span class="remove-tag" onclick="Docs.removeTag(\'' + esc(tag) + '\')">×</span>';
       }
-      container.insertBefore(el, input);
+      container.insertBefore(el, targetEl);
     }
   }
 
@@ -2173,6 +2338,8 @@ var Docs = (function () {
     filterShared: filterShared,
     filterSharedByMe: filterSharedByMe,
     filterTag: filterTag,
+    removeFilterTag: removeFilterTag,
+    clearAllTagFilters: clearAllTagFilters,
     filterTrash: filterTrash,
     clearFilter: clearFilter,
     toggleFavorite: toggleFavorite,

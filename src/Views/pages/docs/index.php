@@ -72,7 +72,7 @@ $user = $user ?? [];
 
     <!-- Sidebar de Pastas & Tags -->
     <aside class="docs-nav-sidebar" id="docsSidebar">
-      <div class="sidebar-section">
+      <div class="sidebar-section sidebar-nav-section">
         <div class="sidebar-section-header">
           <span>NAVEGAÇÃO</span>
           <button type="button" class="sidebar-action-btn" onclick="Docs.openCatModal()" title="Adicionar pasta">+</button>
@@ -116,9 +116,9 @@ $user = $user ?? [];
       <div class="active-filter-bar" id="activeFilterBar" hidden>
         <div class="active-filter-info">
           <span>Filtrando por:</span>
-          <span class="filter-chip" id="filterChipText"></span>
+          <div class="active-filter-chips" id="activeFilterChips"></div>
         </div>
-        <button type="button" class="btn-clear-filter" onclick="Docs.clearFilter()">Remover filtro ✕</button>
+        <button type="button" class="btn-clear-filter" onclick="Docs.clearAllTagFilters()">Limpar filtros ✕</button>
       </div>
 
       <!-- Banner Informativo da Lixeira -->
@@ -350,7 +350,10 @@ $user = $user ?? [];
       <div class="meta-tags-section">
         <span class="meta-label">Tags:</span>
         <div class="meta-tags-container" id="tagsContainer">
-          <input type="text" id="tagInput" class="meta-tag-input" placeholder="+ tag (pressione Enter)" />
+          <div class="tag-input-autocomplete-wrapper" style="position:relative;display:inline-flex;align-items:center;">
+            <input type="text" id="tagInput" class="meta-tag-input" placeholder="+ tag (pressione Enter)" autocomplete="off" />
+            <div id="tagSuggestionsDropdown" class="tag-suggestions-dropdown" hidden></div>
+          </div>
         </div>
       </div>
       <div class="meta-version-note-section">

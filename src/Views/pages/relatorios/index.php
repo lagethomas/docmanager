@@ -120,9 +120,14 @@ use App\Core\Controller;
   <div class="reports-main-split">
     <!-- Tabela Principal de Logs -->
     <div class="card">
-      <div class="card-header" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color);">
+      <div class="card-header" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color, #e2e8f0);">
         <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);"><line x1="18" y1="20" x2      <div class="table-responsive">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span style="font-weight: 700; font-size: 0.95rem; color: var(--text);">Histórico de Auditoria</span>
+        </div>
+        <span id="logsFilteredCount" style="font-size: 0.8rem; color: var(--text-muted);"></span>
+      </div>
+      <div class="table-responsive">
         <table class="table" id="auditLogsTable">
           <thead>
             <tr>
@@ -191,138 +196,5 @@ use App\Core\Controller;
 </div>
 
 <script>
-var ALL_LOGS = <?php echo json_encode($logs, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?> || [];
-
-var ReportsApp = (function () {
-  'use strict';
-
-  var currentFiltered = [];
-
-  function getBadgeClass(act) {
-    if (!act) return 'action-badge-delete';
-    if (act.indexOf('login') !== -1) return 'action-badge-login';
-    if (act.indexOf('approve') !== -1) return 'action-badge-approve';
-    if (act.indexOf('reject') !== -1) return 'action-badge-reject';
-    if (act.indexOf('create') !== -1) return 'action-badge-create';
-    if (act.indexOf('update') !== -1 || act.indexOf('edit') !== -1) return 'action-badge-edit';
-    return 'action-badge-delete';
-  }
-
-  function formatDate(dtStr) {
-    if (!dtStr) return '—';
-    var d = new Date(dtStr);
-    if (isNaN(d.getTime())) return dtStr;
-    var day = String(d.getDate()).padStart(2, '0');
-    var month = String(d.getMonth() + 1).padStart(2, '0');
-    var year = d.getFullYear();
-    var hours = String(d.getHours()).padStart(2, '0');
-    var mins = String(d.getMinutes()).padStart(2, '0');
-    return day + '/' + month + '/' + year + ' ' + hours + ':' + mins;
-  }
-
-  function render() {
-    var actVal = document.getElementById('filterAction').value;
-    var userVal = document.getElementById('filterUser').value;
-    var searchVal = document.getElementById('filterSearch').value.trim().toLowerCase();
-
-    // 1. Filtragem dos registros
-    currentFiltered = ALL_LOGS.filter(function (log) {
-      var matchAct = !actVal || log.action === actVal;
-      var matchUser = !userVal || log.user_login === userVal;
-      var logText = ((log.description || '') + ' ' + (log.user_name || '') + ' ' + (log.user_login || '') + ' ' + (log.ip || '')).toLowerCase();
-      var matchSearch = !searchVal || logText.indexOf(searchVal) !== -1;
-      return matchAct && matchUser && matchSearch;
-    });
-
-    // 2. Ordenação por coluna (TableSort)
-    var sortState = TableSort.getSort('auditLogsTable');
-    if (sortState.col) {
-      currentFiltered = TableSort.sortArray(currentFiltered, sortState.col, sortState.dir, function (log, col) {
-        if (col === 'id') return parseInt(log.id, 10);
-        if (col === 'action') return log.action || '';
-        if (col === 'description') return log.description || '';
-        if (col === 'user') return log.user_name || log.user_login || '';
-        if (col === 'ip') return log.ip || '';
-        if (col === 'created_at') return log.created_at || '';
-        return log.id;
-      });
-    }
-
-    // 3. Paginação (utilitário padronizado global paginated)
-    var pg = paginated('audit_logs', currentFiltered);
-    var tbody = document.getElementById('auditLogsBody');
-
-    if (!pg.total) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2.5rem 1rem;">' +
-        '<div class="empty-state">' +
-        '<div class="empty-state-title">Nenhum registro de auditoria encontrado</div>' +
-        '</div></td></tr>';
-    } else {
-      tbody.innerHTML = pg.page.map(function (log) {
-        var badgeCls = getBadgeClass(log.action);
-        var uName = esc(log.user_name || log.user_login || '—');
-        var uLogin = log.user_login ? ('@' + esc(log.user_login)) : '—';
-        var ip = esc(log.ip || '127.0.0.1');
-
-        return '<tr>' +
-          '<td style="font-weight: 600; color: var(--text-muted);">#' + esc(log.id) + '</td>' +
-          '<td><span class="action-badge ' + badgeCls + '">' + esc(log.action) + '</span></td>' +
-          '<td style="font-weight: 500; color: var(--text);">' + esc(log.description) + '</td>' +
-          '<td>' +
-            '<div style="font-size: 0.85rem; font-weight: 600; color: var(--text);">' + uName + '</div>' +
-            '<div style="font-size: 0.75rem; color: var(--text-muted);">' + uLogin + '</div>' +
-          '</td>' +
-          '<td style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">' + ip + '</td>' +
-          '<td style="text-align: right; font-size: 0.8rem; color: var(--text-muted); white-space: nowrap;">' + formatDate(log.created_at) + '</td>' +
-          '</tr>';
-      }).join('');
-    }
-
-    // 4. Atualização de indicadores de filtro e rodapé de paginação
-    var countEl = document.getElementById('logsFilteredCount');
-    if (countEl) {
-      countEl.textContent = 'Mostrando ' + pg.total + ' registros';
-    }
-
-    renderPagination('logsPagination', pg.total, pg.current, pg.pages, function (p) {
-      PAGINATION.audit_logs = p;
-      render();
-    });
-  }
-
-  function applyFilters() {
-    PAGINATION.audit_logs = 1;
-    render();
-  }
-
-  function resetFilters() {
-    document.getElementById('filterAction').value = '';
-    document.getElementById('filterUser').value = '';
-    document.getElementById('filterSearch').value = '';
-    PAGINATION.audit_logs = 1;
-    render();
-  }
-
-  function init() {
-    var tableEl = document.getElementById('auditLogsTable');
-    if (tableEl) {
-      TableSort.init(tableEl, {
-        onSort: function () {
-          render();
-        }
-      });
-    }
-    render();
-  }
-
-  return {
-    init: init,
-    applyFilters: applyFilters,
-    resetFilters: resetFilters
-  };
-})();
-
-document.addEventListener('DOMContentLoaded', function () {
-  ReportsApp.init();
-});
+window.ALL_LOGS = <?php echo json_encode($logs, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?> || [];
 </script>

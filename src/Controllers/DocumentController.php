@@ -141,7 +141,13 @@ class DocumentController extends Controller
         $user = Auth::user();
         $q = trim((string) ($_GET['q'] ?? ''));
         $catId = isset($_GET['category_id']) && $_GET['category_id'] !== '' ? (int) $_GET['category_id'] : null;
-        $tag = trim((string) ($_GET['tag'] ?? ''));
+        $rawTags = $_GET['tags'] ?? $_GET['tag'] ?? '';
+        $tags = [];
+        if (is_array($rawTags)) {
+            $tags = array_values(array_filter(array_map('trim', $rawTags)));
+        } elseif (is_string($rawTags) && trim($rawTags) !== '') {
+            $tags = array_values(array_filter(array_map('trim', explode(',', $rawTags))));
+        }
         $sort = trim((string) ($_GET['sort'] ?? 'updated_desc'));
         $status = isset($_GET['status']) && $_GET['status'] !== '' ? trim((string) $_GET['status']) : null;
         $trash = isset($_GET['trash']) && $_GET['trash'] !== '' && $_GET['trash'] !== '0' && $_GET['trash'] !== 'false';
@@ -153,7 +159,7 @@ class DocumentController extends Controller
         $docs = $model->search(
             query: $q,
             categoryId: $catId,
-            tag: $tag,
+            tag: $tags,
             sort: $sort,
             trash: $trash,
             status: $status,
