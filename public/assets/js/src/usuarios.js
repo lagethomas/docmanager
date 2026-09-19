@@ -5,6 +5,7 @@
 
 var USERS = [];
 var ROLES = [];
+var LOCATIONS = [];
 var deleteTarget = { type: null, id: null };
 
 var ICON_PENCIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>';
@@ -21,6 +22,13 @@ function loadRoles() {
   });
 }
 
+function loadLocations() {
+  return api('GET', '/api/locations').then(function (data) {
+    LOCATIONS = data || [];
+    renderLocationOptions();
+  }).catch(function () {});
+}
+
 function renderRoleOptions(selectedRole) {
   var select = document.getElementById('fUserRole');
   if (!select) return;
@@ -34,6 +42,18 @@ function renderRoleOptions(selectedRole) {
   }).join('');
 }
 
+function renderLocationOptions(selectedLocId) {
+  var select = document.getElementById('fUserLocation');
+  if (!select) return;
+  var selId = selectedLocId ? Number(selectedLocId) : null;
+  var html = '<option value="">Nenhuma / Sem restrição</option>';
+  html += LOCATIONS.map(function (loc) {
+    var isSel = selId === Number(loc.id);
+    return '<option value="' + loc.id + '"' + (isSel ? ' selected' : '') + '>' + esc(loc.name) + '</option>';
+  }).join('');
+  select.innerHTML = html;
+}
+
 function renderAdminUsers() {
   var sortState = TableSort.getSort('userTable');
   var users = USERS.slice();
@@ -43,6 +63,7 @@ function renderAdminUsers() {
       if (col === 'username') return u.login;
       if (col === 'name') return u.name;
       if (col === 'role') return u.role;
+      if (col === 'location') return u.location_name || '';
       if (col === 'status') return u.status;
       return u.login;
     });
@@ -55,10 +76,15 @@ function renderAdminUsers() {
     var roleLabel = '<span class="kanban-label kanban-label-purple">' + esc(u.role) + '</span>';
     var statusCls = u.status === 'ativo' ? 'status status-green' : 'status status-red';
     var statusLabel = u.status === 'ativo' ? 'Ativo' : 'Inativo';
+    var locBadge = u.location_name
+      ? '<span class="badge" style="background:rgba(26,187,156,0.1);color:#1abb9c;font-weight:600;padding:3px 8px;border-radius:6px;font-size:0.75rem;display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' + esc(u.location_name) + '</span>'
+      : '<span style="opacity:0.4;font-size:0.8rem;">—</span>';
+
     var row = '<tr data-id="' + esc(login) + '">';
     row += '<td class="cell-mono">' + esc(login) + '</td>';
     row += '<td class="cell-strong">' + esc(u.name) + '</td>';
     row += '<td>' + roleLabel + '</td>';
+    row += '<td>' + locBadge + '</td>';
     row += '<td><span class="' + statusCls + '">' + statusLabel + '</span></td>';
     row += '<td><div class="table-actions">'
       + '<button class="table-action-btn" title="Editar" aria-label="Editar '
@@ -66,12 +92,12 @@ function renderAdminUsers() {
       + ICON_PENCIL + '</button>';
     if (login !== 'admin') {
       row += '<button class="table-action-btn del" title="Excluir" aria-label="Excluir '
-        + esc(login) + '" onclick="confirmDeleteUser(\'' + esc(login) + '\')">'
-        + ICON_TRASH + '</button>';
+      + esc(login) + '" onclick="confirmDeleteUser(\'' + esc(login) + '\')">'
+      + ICON_TRASH + '</button>';
     }
     row += '</div></td></tr>';
     return row;
-  }).join('') : '<tr><td colspan="5">'
+  }).join('') : '<tr><td colspan="6">'
     + '<div class="empty-state"><div class="empty-state-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>'
     + '<div class="empty-state-title">Nenhum usuário encontrado</div>'
     + '</div></td></tr>';
@@ -96,6 +122,7 @@ function abrirModalUsuario(login) {
   document.getElementById('fUserNome').value = isEdit ? user.name : '';
   document.getElementById('fUserPass').value = '';
   renderRoleOptions(isEdit ? user.role : (ROLES[0] ? ROLES[0].name : 'Admin'));
+  renderLocationOptions(isEdit ? user.location_id : null);
   document.getElementById('fUserRole').disabled = isAdminPrincipal;
   document.getElementById('fUserStatus').value = isEdit ? user.status : 'ativo';
   document.getElementById('fUserStatus').disabled = isAdminPrincipal;
@@ -119,6 +146,8 @@ function salvarUsuario() {
   var isAdminPrincipal = login === 'admin';
   var role = isAdminPrincipal ? 'Admin' : document.getElementById('fUserRole').value;
   var status = isAdminPrincipal ? 'ativo' : document.getElementById('fUserStatus').value;
+  var locVal = document.getElementById('fUserLocation') ? document.getElementById('fUserLocation').value : '';
+  var locationId = locVal ? parseInt(locVal, 10) : null;
   var btn = document.getElementById('btnSalvarUser');
 
   if (!login || !nome || (!isEdit && !pass)) {
@@ -129,10 +158,10 @@ function salvarUsuario() {
     return;
   }
 
-  var payload = { name: nome, password: pass, role: role, status: status };
+  var payload = { name: nome, password: pass, role: role, status: status, location_id: locationId };
   var req = isEdit
     ? api('PUT', '/api/users/' + encodeURIComponent(login), payload)
-    : api('POST', '/api/users', { login: login, name: nome, password: pass, role: role, status: status });
+    : api('POST', '/api/users', Object.assign({ login: login }, payload));
 
   if (btn) {
     btn.disabled = true;
@@ -188,6 +217,7 @@ function confirmDelete() {
 
 document.addEventListener('DOMContentLoaded', function () {
   loadRoles().catch(function () {});
+  loadLocations().catch(function () {});
   loadUsers().catch(function (e) { toast(e.message, 'error'); });
 
   var userTable = document.getElementById('userTable');

@@ -92,7 +92,7 @@ $serverError = !empty($error ?? '') ? ($errorMessageMap[$error] ?? 'Ocorreu um e
           <div style="margin-top: 1.25rem; text-align: center;">
             <a href="/public-docs" class="btn btn-block" style="display: flex; align-items: center; justify-content: center; gap: 0.65rem; background: rgba(26, 187, 156, 0.1); color: #1abb9c; border: 1px solid rgba(26, 187, 156, 0.35); text-decoration: none; border-radius: 8px; padding: 0.75rem 1rem; font-weight: 600; font-size: 0.9rem; transition: all 0.2s; box-shadow: 0 2px 6px rgba(26, 187, 156, 0.08);" onmouseover="this.style.background='rgba(26, 187, 156, 0.2)'; this.style.borderColor='#1abb9c';" onmouseout="this.style.background='rgba(26, 187, 156, 0.1)'; this.style.borderColor='rgba(26, 187, 156, 0.35)';">
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-              <span>Base de Conhecimento (Pública)</span>
+              <span>Biblioteca</span>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: auto; opacity: 0.85;"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </a>
           </div>

@@ -11,7 +11,7 @@ use App\Core\Auth\PermissionManager;
 final class Auth
 {
     /**
-     * @return array{id: int, login: string, name: string, role: string, status: string}|null
+     * @return array{id: int, login: string, name: string, role: string, status: string, location_id?: int|null, location_name?: string|null}|null
      */
     public static function user(): ?array
     {
@@ -43,6 +43,12 @@ final class Auth
         return $user !== null ? (string) $user['role'] : null;
     }
 
+    public static function locationId(): ?int
+    {
+        $user = self::user();
+        return ($user !== null && !empty($user['location_id'])) ? (int) $user['location_id'] : null;
+    }
+
     public static function isLoggedIn(): bool
     {
         return self::user() !== null;
@@ -65,6 +71,8 @@ final class Auth
             'name' => (string) $user['name'],
             'role' => (string) $user['role'],
             'status' => (string) ($user['status'] ?? 'ativo'),
+            'location_id' => !empty($user['location_id']) ? (int) $user['location_id'] : null,
+            'location_name' => !empty($user['location_name']) ? (string) $user['location_name'] : null,
         ];
     }
 

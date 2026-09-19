@@ -46,4 +46,87 @@ final class SecurityHelper
     {
         // Funções globais já declaradas em globals.php; nada a fazer.
     }
+
+    /**
+     * Deriva uma chave binária de 256 bits a partir de APP_KEY.
+     */
+    private static function getPskKey(): string
+    {
+        $appKey = defined('APP_KEY') ? (string) constant('APP_KEY') : '';
+        if ($appKey === '') {
+            $appKey = (string) ($_ENV['APP_KEY'] ?? 'docmanager-salt-fallback-key-2026');
+        }
+        return hash('sha256', $appKey, true);
+    }
+
+    /**
+     * Criptografa uma senha/PSK usando AES-256-CBC com HMAC-SHA256 derivado de APP_KEY.
+     */
+    public static function encryptPsk(string $plaintext): string
+    {
+        $key = self::getPskKey();
+        $iv = random_bytes(16);
+        $ciphertext = openssl_encrypt($plaintext, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+        if ($ciphertext === false) {
+            return '';
+        }
+        $mac = hash_hmac('sha256', $iv . $ciphertext, $key, true);
+        return rtrim(strtr(base64_encode($iv . $mac . $ciphertext), '+/', '-_'), '=');
+    }
+
+    /**
+     * Descriptografa uma senha/PSK criptografada. Retorna null se corrompido ou chave inválida.
+     */
+    public static function decryptPsk(string $payload): ?string
+    {
+        $raw = base64_decode(strtr($payload, '-_', '+/'), true);
+        if ($raw === false || strlen($raw) < 48) { // 16 bytes IV + 32 bytes MAC
+            return null;
+        }
+
+        $key = self::getPskKey();
+        $iv = substr($raw, 0, 16);
+        $mac = substr($raw, 16, 32);
+        $ciphertext = substr($raw, 48);
+
+        $expectedMac = hash_hmac('sha256', $iv . $ciphertext, $key, true);
+        if (!hash_equals($mac, $expectedMac)) {
+            return null;
+        }
+
+        $decrypted = openssl_decrypt($ciphertext, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+        return $decrypted === false ? null : $decrypted;
+    }
+
+    /**
+     * Encontra todas as tags !psk=MinhaSenha! e as substitui por !psk_enc=BASE64! para gravação segura.
+     */
+    public static function encryptPskTags(string $content): string
+    {
+        if (!str_contains($content, '!psk=')) {
+            return $content;
+        }
+
+        return (string) preg_replace_callback('/!psk=([^!\r\n]+)!/', static function (array $matches): string {
+            $psk = (string) $matches[1];
+            $encrypted = self::encryptPsk($psk);
+            return '!psk_enc=' . $encrypted . '!';
+        }, $content);
+    }
+
+    /**
+     * Encontra todas as tags !psk_enc=BASE64! e as substitui por !psk=MinhaSenha! após leitura do banco.
+     */
+    public static function decryptPskTags(string $content): string
+    {
+        if (!str_contains($content, '!psk_enc=')) {
+            return $content;
+        }
+
+        return (string) preg_replace_callback('/!psk_enc=([A-Za-z0-9\-_]+)!/', static function (array $matches): string {
+            $payload = (string) $matches[1];
+            $decrypted = self::decryptPsk($payload);
+            return '!psk=' . ($decrypted !== null ? $decrypted : '[ERRO_DESCRIPTOGRAFIA]') . '!';
+        }, $content);
+    }
 }

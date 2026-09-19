@@ -603,6 +603,9 @@ var Approvals = (function () {
 
   function parseMarkdown(md) {
     if (!md) return '';
+    if (typeof window.parseMarkdown === 'function' && window.parseMarkdown !== parseMarkdown) {
+      return window.parseMarkdown(md);
+    }
     if (typeof window.marked === 'function') {
       return window.marked.parse(md);
     }

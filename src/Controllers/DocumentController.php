@@ -54,6 +54,16 @@ class DocumentController extends Controller
             }
         }
 
+        // Restrição por localização: não-admin e não-autor deve pertencer a uma das localizações do documento
+        if ($userRole !== 'Admin' && (int) ($doc['is_restricted'] ?? 0) === 1 && (int) ($doc['created_by'] ?? 0) !== $userId) {
+            $userLocId = Auth::locationId();
+            $allowedLocIds = (new \App\Models\LocationModel())->getDocumentLocationIds($intId);
+            if ($userLocId === null || !in_array($userLocId, $allowedLocIds, true)) {
+                $this->redirect('/docs');
+                return;
+            }
+        }
+
         $model->incrementViews($intId);
         $doc['views_count'] = ((int) ($doc['views_count'] ?? 0)) + 1;
 
@@ -167,7 +177,8 @@ class DocumentController extends Controller
             userRole: $user['role'] ?? null,
             favorites: $favorites,
             sharedWithMe: $sharedWithMe,
-            sharedByMe: $sharedByMe
+            sharedByMe: $sharedByMe,
+            userLocationId: Auth::locationId()
         );
         $this->jsonOk(['docs' => $docs]);
     }
@@ -253,6 +264,8 @@ class DocumentController extends Controller
         $content = (string) ($input['content'] ?? '');
         $categoryId = isset($input['category_id']) && $input['category_id'] !== '' ? (int) $input['category_id'] : null;
         $isPublic = !empty($input['is_public']) ? 1 : 0;
+        $isRestricted = !empty($input['is_restricted']) ? 1 : 0;
+        $locationIds = isset($input['location_ids']) && is_array($input['location_ids']) ? array_map('intval', $input['location_ids']) : [];
         $tags = $input['tags'] ?? [];
 
         if ($title === '') {
@@ -267,7 +280,7 @@ class DocumentController extends Controller
         $approvedBy = $isApprover ? (int) $user['id'] : null;
 
         $model = new DocumentModel();
-        $docId = $model->create($title, $content, $categoryId, (int) $user['id'], $status, $approvedBy, $isPublic);
+        $docId = $model->create($title, $content, $categoryId, (int) $user['id'], $status, $approvedBy, $isPublic, $isRestricted, $locationIds);
 
         // Tags
         if (is_array($tags) && $tags !== []) {
@@ -333,6 +346,12 @@ class DocumentController extends Controller
             ? ($input['category_id'] !== null && $input['category_id'] !== '' ? (int) $input['category_id'] : null)
             : ($doc['category_id'] !== null ? (int) $doc['category_id'] : null);
         $isPublic = array_key_exists('is_public', $input) ? (!empty($input['is_public']) ? 1 : 0) : (int) ($doc['is_public'] ?? 0);
+        $isRestricted = array_key_exists('is_restricted', $input)
+            ? (!empty($input['is_restricted']) ? 1 : 0)
+            : (int) ($doc['is_restricted'] ?? 0);
+        $locationIds = array_key_exists('location_ids', $input) && is_array($input['location_ids'])
+            ? array_map('intval', $input['location_ids'])
+            : null;
         $versionNote = sanitize_input((string) ($input['version_note'] ?? ''));
         $tags = $input['tags'] ?? null;
 
@@ -341,7 +360,7 @@ class DocumentController extends Controller
         $status = $isApprover ? 'aprovado' : 'pendente';
         $approvedBy = $isApprover ? (int) $user['id'] : null;
 
-        $model->update($intId, $title, $content, $categoryId, $userId, $versionNote, $status, $approvedBy, $isPublic);
+        $model->update($intId, $title, $content, $categoryId, $userId, $versionNote, $status, $approvedBy, $isPublic, $isRestricted, $locationIds);
 
         if (is_array($tags)) {
             $tagModel = new TagModel();

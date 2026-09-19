@@ -28,6 +28,9 @@ return [
     // Módulo Usuários (somente Admin)
     ['GET', '/usuarios', [UsersController::class, 'index'], [AuthMiddleware::class, AdminMiddleware::class]],
 
+    // Módulo Localizações (somente Admin)
+    ['GET', '/localizacoes', [App\Controllers\LocationController::class, 'index'], [AuthMiddleware::class, AdminMiddleware::class]],
+
     // Módulo Configurações (somente Admin)
     ['GET', '/configuracoes', [SettingsController::class, 'index'], [AuthMiddleware::class, AdminMiddleware::class]],
 

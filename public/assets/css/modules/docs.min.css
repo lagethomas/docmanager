@@ -55,13 +55,18 @@ a, a:hover, a:focus, a:visited,
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem 1.75rem;
+  padding: 0 1.5rem;
+  height: 56px;
+  min-height: 56px;
+  max-height: 56px;
   background-color: var(--docs-surface);
   border-bottom: 1px solid var(--docs-border);
   position: sticky;
   top: 0;
   z-index: 20;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .docs-header-left {
@@ -69,6 +74,7 @@ a, a:hover, a:focus, a:visited,
   align-items: center;
   gap: 0.75rem;
   min-width: 200px;
+  flex-shrink: 0;
 }
 
 .docs-header-title-wrap {
@@ -78,9 +84,9 @@ a, a:hover, a:focus, a:visited,
 }
 
 .docs-header-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   background-color: var(--docs-primary-lt);
   color: var(--docs-primary);
   display: flex;
@@ -90,12 +96,12 @@ a, a:hover, a:focus, a:visited,
 }
 
 .docs-header-icon svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 .docs-header-title {
-  font-size: 1.2rem;
+  font-size: 1.05rem;
   font-weight: 700;
   margin: 0;
   color: var(--docs-text);
@@ -103,9 +109,9 @@ a, a:hover, a:focus, a:visited,
 }
 
 .docs-header-subtitle {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--docs-text-mut);
-  margin-top: 0.15rem;
+  margin-top: 0.1rem;
 }
 
 /* Header Search */
@@ -113,6 +119,7 @@ a, a:hover, a:focus, a:visited,
   flex: 1;
   max-width: 480px;
   min-width: 220px;
+  margin: 0 auto;
 }
 
 .docs-search-wrapper {
@@ -133,12 +140,14 @@ a, a:hover, a:focus, a:visited,
 
 .docs-search-input {
   width: 100%;
-  padding: 0.5rem 2.2rem 0.5rem 2.4rem;
+  height: 34px;
+  padding: 0.35rem 2.2rem 0.35rem 2.4rem;
   background-color: var(--docs-bg);
   border: 1px solid var(--docs-border);
   border-radius: 8px;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   color: var(--docs-text);
+  box-sizing: border-box;
   font-family: inherit;
   transition: all 0.2s ease;
   outline: none;
@@ -188,7 +197,8 @@ a, a:hover, a:focus, a:visited,
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
   margin-left: auto;
   justify-content: flex-end;
 }
@@ -247,15 +257,17 @@ a, a:hover, a:focus, a:visited,
 }
 
 .docs-sort-select {
-  height: 36px;
-  padding: 0 0.75rem;
+  height: 32px;
+  padding: 0 0.65rem;
   background-color: var(--docs-surface);
   border: 1px solid var(--docs-border);
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--docs-text);
   outline: none;
   cursor: pointer;
+  flex-shrink: 0;
+  box-sizing: border-box;
   font-family: inherit;
 }
 
@@ -1775,8 +1787,8 @@ a, a:hover, a:focus, a:visited,
 /* Color Selector Grid */
 .color-selector-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 0.5rem;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.45rem;
   padding: 0.25rem 0;
 }
 
@@ -3643,6 +3655,104 @@ a, a:hover, a:focus, a:visited,
 [data-theme="dark"] .shared-by-me-count-badge {
   background-color: rgba(14, 165, 233, 0.25);
   color: #38bdf8;
+}
+
+/* PSK Hidden Password Elements */
+.psk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  margin: 0 0.2rem;
+  border-radius: 6px;
+  background-color: var(--docs-surface-2, rgba(15, 23, 42, 0.05));
+  border: 1px solid var(--docs-border, rgba(15, 23, 42, 0.15));
+  font-size: 0.85em;
+  line-height: 1.4;
+  vertical-align: middle;
+  transition: all 0.2s ease;
+  user-select: none;
+  cursor: pointer;
+  color: var(--docs-text, #1e293b);
+}
+
+.psk-badge:hover {
+  background-color: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.45);
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.15);
+}
+
+.psk-icon {
+  font-size: 0.75rem;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.psk-masked {
+  display: inline;
+  letter-spacing: 2px;
+  font-weight: 700;
+  color: var(--docs-text-mut, #64748b);
+  font-family: monospace;
+}
+
+.psk-revealed {
+  display: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 600;
+  color: #d97706;
+  user-select: text;
+}
+
+.psk-badge:hover .psk-masked {
+  display: none;
+}
+
+.psk-badge:hover .psk-revealed {
+  display: inline;
+}
+
+.psk-copy-btn {
+  background: transparent;
+  border: none;
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--docs-text-mut, #94a3b8);
+  font-size: 0.75rem;
+  transition: all 0.15s ease;
+}
+
+.psk-copy-btn:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+  color: #d97706;
+}
+
+[data-theme="dark"] .psk-badge,
+body.dark-mode .psk-badge {
+  background-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .psk-badge:hover,
+body.dark-mode .psk-badge:hover {
+  background-color: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+[data-theme="dark"] .psk-revealed,
+body.dark-mode .psk-revealed {
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .psk-copy-btn:hover,
+body.dark-mode .psk-copy-btn:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #fbbf24;
 }
 
 

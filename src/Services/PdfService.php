@@ -53,10 +53,17 @@ class PdfService
         $createdAt = !empty($doc['created_at']) ? date('d/m/Y \à\s H:i', strtotime((string) $doc['created_at'])) : date('d/m/Y H:i');
         $status = (string) ($doc['status'] ?? 'aprovado');
 
+        // Mascarar tags de senhas !psk=...! no PDF impresso
+        $processedContent = (string) preg_replace(
+            '/!psk=([^!\r\n]+)!/',
+            '<span class="pdf-psk-badge">&#128273; [SENHA PROTEGIDA: &bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;]</span>',
+            $rawContent
+        );
+
         // Converter Markdown em HTML via Parsedown
         $parsedown = new Parsedown();
         $parsedown->setSafeMode(false);
-        $htmlContent = $parsedown->text($rawContent);
+        $htmlContent = $parsedown->text($processedContent);
 
         // Status badge color & text
         $statusColor = match (mb_strtolower($status)) {
@@ -277,6 +284,17 @@ class PdfService
             padding: 2px 4px;
             border-radius: 3px;
             font-size: 9pt;
+        }
+
+        .pdf-psk-badge {
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 8.5pt;
+            color: #475569;
+            font-weight: bold;
         }
 
         .markdown-body pre code {

@@ -7,7 +7,7 @@
   <!-- Header de Navegação Voltar -->
   <div style="margin-bottom: 1.5rem;">
     <a href="/public-docs" style="display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 600; color: var(--docs-primary, #1abb9c); text-decoration: none; padding: 6px 14px; border-radius: 8px; background: rgba(26, 187, 156, 0.08);">
-      &larr; Voltar para a Base de Conhecimento
+      &larr; Voltar para a Biblioteca
     </a>
   </div>
 
@@ -28,7 +28,7 @@
           <span>•</span>
           <span>Atualizado em <?php echo date('d/m/Y \à\s H:i', strtotime((string)$doc['updated_at'])); ?></span>
           <span>•</span>
-          <span>👁️ <?php echo (int)($doc['views_count'] ?? 0); ?> visualizações</span>
+          <span style="display: inline-flex; align-items: center; gap: 4px;"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> <?php echo (int)($doc['views_count'] ?? 0); ?> visualizações</span>
         </div>
       </div>
 

@@ -14,7 +14,12 @@ class UserModel extends Repository
      */
     public function findByLogin(string $login): ?array
     {
-        $stmt = $this->db->prepare('SELECT * FROM `cp_users` WHERE login = ? LIMIT 1');
+        $stmt = $this->db->prepare(
+            'SELECT u.*, l.name AS location_name 
+             FROM `cp_users` u 
+             LEFT JOIN `cp_locations` l ON u.location_id = l.id 
+             WHERE u.login = ? LIMIT 1'
+        );
         $stmt->execute([mb_strtolower(trim($login))]);
         $row = $stmt->fetch();
         return $row === false ? null : $row;
@@ -30,28 +35,34 @@ class UserModel extends Repository
      */
     public function all(string $orderBy = 'name', string $direction = 'ASC'): array
     {
-        return parent::all($orderBy, $direction);
+        $sql = "SELECT u.*, l.name AS location_name 
+                FROM `cp_users` u 
+                LEFT JOIN `cp_locations` l ON u.location_id = l.id 
+                ORDER BY u.name ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll();
     }
 
-    public function create(string $login, string $name, string $passwordHash, string $role, string $status): int
+    public function create(string $login, string $name, string $passwordHash, string $role, string $status, ?int $locationId = null): int
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO `cp_users` (login, name, password, role, status) VALUES (?, ?, ?, ?, ?)'
+            'INSERT INTO `cp_users` (login, name, password, role, status, location_id) VALUES (?, ?, ?, ?, ?, ?)'
         );
-        $stmt->execute([mb_strtolower(trim($login)), trim($name), $passwordHash, $role, $status]);
+        $stmt->execute([mb_strtolower(trim($login)), trim($name), $passwordHash, $role, $status, $locationId]);
         return (int) $this->db->lastInsertId();
     }
 
-    public function update(string $login, string $name, string $role, string $status, ?string $passwordHash = null): bool
+    public function update(string $login, string $name, string $role, string $status, ?string $passwordHash = null, ?int $locationId = null): bool
     {
         if ($passwordHash !== null) {
             $stmt = $this->db->prepare(
-                'UPDATE `cp_users` SET name = ?, role = ?, status = ?, password = ? WHERE login = ?'
+                'UPDATE `cp_users` SET name = ?, role = ?, status = ?, password = ?, location_id = ? WHERE login = ?'
             );
-            return $stmt->execute([trim($name), $role, $status, $passwordHash, mb_strtolower(trim($login))]);
+            return $stmt->execute([trim($name), $role, $status, $passwordHash, $locationId, mb_strtolower(trim($login))]);
         }
-        $stmt = $this->db->prepare('UPDATE `cp_users` SET name = ?, role = ?, status = ? WHERE login = ?');
-        return $stmt->execute([trim($name), $role, $status, mb_strtolower(trim($login))]);
+        $stmt = $this->db->prepare('UPDATE `cp_users` SET name = ?, role = ?, status = ?, location_id = ? WHERE login = ?');
+        return $stmt->execute([trim($name), $role, $status, $locationId, mb_strtolower(trim($login))]);
     }
 
     public function updatePassword(string $login, string $passwordHash): bool

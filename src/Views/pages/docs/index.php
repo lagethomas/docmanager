@@ -47,7 +47,7 @@ $user = $user ?? [];
       </div>
 
       <!-- Seletor de Ordenação -->
-      <select id="docsSort" class="docs-sort-select" onchange="Docs.handleSortChange(this.value)" title="Ordenar documentos">
+      <select id="docsSort" class="docs-sort-select no-searchable" onchange="Docs.handleSortChange(this.value)" title="Ordenar documentos">
         <option value="updated_desc">Recentes primeiro</option>
         <option value="updated_asc">Antigos primeiro</option>
         <option value="title_asc">Título (A-Z)</option>
@@ -124,7 +124,7 @@ $user = $user ?? [];
       <!-- Banner Informativo da Lixeira -->
       <div class="docs-trash-banner" id="docsTrashBanner" hidden>
         <div class="trash-banner-info">
-          <span class="trash-banner-icon">🗑️</span>
+          <span class="trash-banner-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>
           <div>
             <strong>Lixeira de Documentos</strong>
             <p>Itens na lixeira podem ser restaurados ou permanentemente excluídos.</p>
@@ -204,11 +204,35 @@ $user = $user ?? [];
           <select id="docCategory" class="doceditor-select" title="Pasta do Documento"></select>
         </div>
 
-        <label class="toggle-switch" title="Tornar documento livremente visível na Base de Conhecimento Pública sem login">
+        <label class="toggle-switch" title="Tornar documento livremente visível na Biblioteca sem login">
           <input type="checkbox" id="chkDocIsPublic" />
           <span class="toggle-slider"></span>
-          <span>🌐 Público</span>
+          <span style="display:flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> Público</span>
         </label>
+
+        <label class="toggle-switch" title="Restringir acesso por localização/unidade">
+          <input type="checkbox" id="chkDocIsRestricted" onchange="Docs.toggleRestricted(this.checked)" />
+          <span class="toggle-slider"></span>
+          <span style="display:flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Restringir</span>
+        </label>
+
+        <div id="docLocationPicker" class="doceditor-dropdown-wrap" hidden style="position: relative;">
+          <button type="button" class="btn btn-sm btn-outline" id="btnDocLocations" onclick="Docs.toggleLocationDropdown()" title="Selecionar localizações permitidas" style="display: flex; align-items: center; gap: 4px; border-color: rgba(239, 68, 68, 0.4); color: #ef4444;">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span id="docLocationsLabel">Localizações (0)</span>
+          </button>
+          <div id="docLocationsDropdown" class="doceditor-dropdown-menu" hidden style="min-width: 250px; max-width: 320px; padding: 10px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.25); z-index: 1050;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: var(--docs-text-mut); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--docs-border); display: flex; align-items: center; justify-content: space-between;">
+              <span>LOCALIZAÇÕES AUTORIZADAS</span>
+              <span id="docLocationsCountBadge" style="font-size: 0.7rem; color: #ef4444; font-weight: 600;"></span>
+            </div>
+            <div style="position: relative; margin-bottom: 8px;">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--docs-text-mut); pointer-events: none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="docLocationSearchInput" placeholder="Buscar localização..." autocomplete="off" style="width: 100%; height: 30px; font-size: 0.8rem; padding: 2px 8px 2px 28px; border: 1px solid var(--docs-border); border-radius: 6px; background: var(--docs-bg); color: var(--docs-text); outline: none; box-sizing: border-box;" oninput="Docs.filterLocations(this.value)" />
+            </div>
+            <div id="docLocationsList" style="display: flex; flex-direction: column; gap: 2px; max-height: 238px; overflow-y: auto; scrollbar-width: thin; padding-right: 2px;"></div>
+          </div>
+        </div>
 
         <button type="button" class="btn btn-sm btn-outline" id="btnDocUpload" onclick="Docs.openUploadModal()" title="Anexar arquivo ou imagem">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
@@ -243,7 +267,7 @@ $user = $user ?? [];
         </div>
 
         <button type="button" class="btn btn-sm btn-outline" id="btnShareDoc" onclick="Docs.openShareModal()" hidden title="Compartilhar documento com outros usuários">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          <i class="fa-solid fa-share-nodes" style="font-size: 13px; margin-right: 4px;"></i>
           <span>Compartilhar</span>
         </button>
 
@@ -325,6 +349,9 @@ $user = $user ?? [];
         </button>
         <button type="button" class="toolbar-btn" onclick="Docs.openUploadModal()" title="Inserir Imagem / Anexo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </button>
+        <button type="button" class="toolbar-btn" onclick="Docs.insertFormat('psk')" title="Inserir Senha Oculta / PSK (Revela no hover e criptografa ao salvar)">
+          <i class="fa-solid fa-key" style="font-size: 13px;"></i>
         </button>
       </div>
 
@@ -578,16 +605,38 @@ $user = $user ?? [];
       <div class="form-group-custom">
         <label>Cor da Pasta</label>
         <div class="color-selector-grid" id="colorSelectorGrid">
+          <!-- Linha 1: Verdes e Teals -->
           <button type="button" class="color-opt active" data-color="#1abb9c" style="--c: #1abb9c" onclick="Docs.selectCatColor('#1abb9c', this)" title="Verde Água"></button>
-          <button type="button" class="color-opt" data-color="#3b82f6" style="--c: #3b82f6" onclick="Docs.selectCatColor('#3b82f6', this)" title="Azul"></button>
-          <button type="button" class="color-opt" data-color="#6366f1" style="--c: #6366f1" onclick="Docs.selectCatColor('#6366f1', this)" title="Índigo"></button>
-          <button type="button" class="color-opt" data-color="#8b5cf6" style="--c: #8b5cf6" onclick="Docs.selectCatColor('#8b5cf6', this)" title="Roxo"></button>
-          <button type="button" class="color-opt" data-color="#ec4899" style="--c: #ec4899" onclick="Docs.selectCatColor('#ec4899', this)" title="Rosa"></button>
-          <button type="button" class="color-opt" data-color="#ef4444" style="--c: #ef4444" onclick="Docs.selectCatColor('#ef4444', this)" title="Vermelho"></button>
-          <button type="button" class="color-opt" data-color="#f59e0b" style="--c: #f59e0b" onclick="Docs.selectCatColor('#f59e0b', this)" title="Âmbar"></button>
+          <button type="button" class="color-opt" data-color="#0d9488" style="--c: #0d9488" onclick="Docs.selectCatColor('#0d9488', this)" title="Teal Escuro"></button>
+          <button type="button" class="color-opt" data-color="#14b8a6" style="--c: #14b8a6" onclick="Docs.selectCatColor('#14b8a6', this)" title="Teal Vibrante"></button>
           <button type="button" class="color-opt" data-color="#10b981" style="--c: #10b981" onclick="Docs.selectCatColor('#10b981', this)" title="Esmeralda"></button>
+          <button type="button" class="color-opt" data-color="#059669" style="--c: #059669" onclick="Docs.selectCatColor('#059669', this)" title="Verde Floresta"></button>
+          <button type="button" class="color-opt" data-color="#22c55e" style="--c: #22c55e" onclick="Docs.selectCatColor('#22c55e', this)" title="Verde Claro"></button>
+          <button type="button" class="color-opt" data-color="#84cc16" style="--c: #84cc16" onclick="Docs.selectCatColor('#84cc16', this)" title="Lima"></button>
+          <!-- Linha 2: Cianos e Azuis -->
           <button type="button" class="color-opt" data-color="#06b6d4" style="--c: #06b6d4" onclick="Docs.selectCatColor('#06b6d4', this)" title="Ciano"></button>
-          <button type="button" class="color-opt" data-color="#64748b" style="--c: #64748b" onclick="Docs.selectCatColor('#64748b', this)" title="Cinza"></button>
+          <button type="button" class="color-opt" data-color="#0891b2" style="--c: #0891b2" onclick="Docs.selectCatColor('#0891b2', this)" title="Ciano Escuro"></button>
+          <button type="button" class="color-opt" data-color="#0284c7" style="--c: #0284c7" onclick="Docs.selectCatColor('#0284c7', this)" title="Azul Céu"></button>
+          <button type="button" class="color-opt" data-color="#3b82f6" style="--c: #3b82f6" onclick="Docs.selectCatColor('#3b82f6', this)" title="Azul Royal"></button>
+          <button type="button" class="color-opt" data-color="#2563eb" style="--c: #2563eb" onclick="Docs.selectCatColor('#2563eb', this)" title="Azul Cobalto"></button>
+          <button type="button" class="color-opt" data-color="#1d4ed8" style="--c: #1d4ed8" onclick="Docs.selectCatColor('#1d4ed8', this)" title="Azul Marinho"></button>
+          <button type="button" class="color-opt" data-color="#6366f1" style="--c: #6366f1" onclick="Docs.selectCatColor('#6366f1', this)" title="Índigo"></button>
+          <!-- Linha 3: Violetas, Roxos e Rosas -->
+          <button type="button" class="color-opt" data-color="#8b5cf6" style="--c: #8b5cf6" onclick="Docs.selectCatColor('#8b5cf6', this)" title="Violeta"></button>
+          <button type="button" class="color-opt" data-color="#7c3aed" style="--c: #7c3aed" onclick="Docs.selectCatColor('#7c3aed', this)" title="Violeta Profundo"></button>
+          <button type="button" class="color-opt" data-color="#a855f7" style="--c: #a855f7" onclick="Docs.selectCatColor('#a855f7', this)" title="Roxo"></button>
+          <button type="button" class="color-opt" data-color="#c026d3" style="--c: #c026d3" onclick="Docs.selectCatColor('#c026d3', this)" title="Fúcsia"></button>
+          <button type="button" class="color-opt" data-color="#d946ef" style="--c: #d946ef" onclick="Docs.selectCatColor('#d946ef', this)" title="Magenta"></button>
+          <button type="button" class="color-opt" data-color="#ec4899" style="--c: #ec4899" onclick="Docs.selectCatColor('#ec4899', this)" title="Rosa"></button>
+          <button type="button" class="color-opt" data-color="#db2777" style="--c: #db2777" onclick="Docs.selectCatColor('#db2777', this)" title="Rosa Escuro"></button>
+          <!-- Linha 4: Vermelhos, Âmbar, Laranjas e Neutros -->
+          <button type="button" class="color-opt" data-color="#f43f5e" style="--c: #f43f5e" onclick="Docs.selectCatColor('#f43f5e', this)" title="Carmim"></button>
+          <button type="button" class="color-opt" data-color="#ef4444" style="--c: #ef4444" onclick="Docs.selectCatColor('#ef4444', this)" title="Vermelho"></button>
+          <button type="button" class="color-opt" data-color="#dc2626" style="--c: #dc2626" onclick="Docs.selectCatColor('#dc2626', this)" title="Rubi"></button>
+          <button type="button" class="color-opt" data-color="#ea580c" style="--c: #ea580c" onclick="Docs.selectCatColor('#ea580c', this)" title="Laranja"></button>
+          <button type="button" class="color-opt" data-color="#f59e0b" style="--c: #f59e0b" onclick="Docs.selectCatColor('#f59e0b', this)" title="Âmbar"></button>
+          <button type="button" class="color-opt" data-color="#64748b" style="--c: #64748b" onclick="Docs.selectCatColor('#64748b', this)" title="Ardósia"></button>
+          <button type="button" class="color-opt" data-color="#334155" style="--c: #334155" onclick="Docs.selectCatColor('#334155', this)" title="Chumbo"></button>
         </div>
         <input type="hidden" id="catColor" value="#1abb9c" />
       </div>
@@ -611,7 +660,7 @@ $user = $user ?? [];
   <div class="modal-dialog-custom">
     <div class="modal-header-custom">
       <div class="modal-header-title">
-        <span class="modal-icon-badge">📎</span>
+        <span class="modal-icon-badge"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></span>
         <h3>Enviar Arquivos & Imagens</h3>
       </div>
       <button type="button" class="modal-btn-close" onclick="Docs.closeUploadModal()">×</button>

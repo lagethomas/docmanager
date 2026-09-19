@@ -338,6 +338,37 @@ $migrations = [
         ALTER TABLE cp_documents ADD COLUMN is_public TINYINT(1) NOT NULL DEFAULT 0;
         CREATE INDEX idx_docs_is_public ON cp_documents (is_public, status, deleted_at);
     ",
+
+    '0022_create_locations_table' => "
+        CREATE TABLE IF NOT EXISTS cp_locations (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            name VARCHAR(150) NOT NULL,
+            description VARCHAR(255) NULL,
+            status ENUM('ativo', 'inativo') NOT NULL DEFAULT 'ativo',
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uq_locations_name (name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ",
+
+    '0023_add_location_id_to_users' => "
+        ALTER TABLE cp_users ADD COLUMN location_id INT UNSIGNED DEFAULT NULL AFTER role;
+        ALTER TABLE cp_users ADD CONSTRAINT fk_users_location FOREIGN KEY (location_id) REFERENCES cp_locations(id) ON DELETE SET NULL;
+    ",
+
+    '0024_add_restrictions_to_documents' => "
+        ALTER TABLE cp_documents ADD COLUMN is_restricted TINYINT(1) NOT NULL DEFAULT 0 AFTER is_public;
+        CREATE INDEX idx_docs_is_restricted ON cp_documents (is_restricted, status, deleted_at);
+
+        CREATE TABLE IF NOT EXISTS cp_document_locations (
+            document_id INT UNSIGNED NOT NULL,
+            location_id INT UNSIGNED NOT NULL,
+            PRIMARY KEY (document_id, location_id),
+            CONSTRAINT fk_docloc_doc FOREIGN KEY (document_id) REFERENCES cp_documents(id) ON DELETE CASCADE,
+            CONSTRAINT fk_docloc_loc FOREIGN KEY (location_id) REFERENCES cp_locations(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ",
 ];
 
 $stmt = $db->query('SELECT name FROM cp_migrations');
@@ -382,6 +413,9 @@ function isIgnorableMigrationError(\PDOException $e): bool
 
 // Verificações de integridade estrutural (garante que colunas essenciais existam mesmo se cp_migrations já possuir o registro)
 $integrityChecks = [
+    'cp_users' => [
+        'location_id' => "ALTER TABLE cp_users ADD COLUMN location_id INT UNSIGNED DEFAULT NULL AFTER role",
+    ],
     'cp_comments' => [
         'resolved_by' => "ALTER TABLE cp_comments ADD COLUMN resolved_by INT UNSIGNED DEFAULT NULL AFTER resolved_at",
     ],
@@ -391,6 +425,7 @@ $integrityChecks = [
         'rejected_by' => "ALTER TABLE cp_documents ADD COLUMN rejected_by INT UNSIGNED DEFAULT NULL AFTER approved_by",
         'confidentiality_level' => "ALTER TABLE cp_documents ADD COLUMN confidentiality_level ENUM('publico', 'interno', 'confidencial', 'restrito') NOT NULL DEFAULT 'interno'",
         'views_count' => "ALTER TABLE cp_documents ADD COLUMN views_count INT UNSIGNED NOT NULL DEFAULT 0",
+        'is_restricted' => "ALTER TABLE cp_documents ADD COLUMN is_restricted TINYINT(1) NOT NULL DEFAULT 0 AFTER is_public",
     ],
     'cp_doc_categories' => [
         'color' => "ALTER TABLE cp_doc_categories ADD COLUMN color VARCHAR(20) NOT NULL DEFAULT '#1abb9c'",

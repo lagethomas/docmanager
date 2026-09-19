@@ -38,7 +38,7 @@ class PublicDocController extends Controller
         $categories = $catModel->withPublicCounts();
 
         $this->render('docs/public_catalog', [
-            'title' => 'Base de Conhecimento — Documentos Públicos',
+            'title' => 'Biblioteca — Documentos Públicos',
             'docs' => $docs,
             'categories' => $categories,
             'publicStats' => $publicStats,
@@ -71,7 +71,7 @@ class PublicDocController extends Controller
         $doc['views_count'] = ((int) ($doc['views_count'] ?? 0)) + 1;
 
         $this->render('docs/public_view', [
-            'title' => ($doc['title'] ?? 'Documento') . ' — Base de Conhecimento',
+            'title' => ($doc['title'] ?? 'Documento') . ' — Biblioteca',
             'doc' => $doc,
             'page' => 'public_view',
         ], 'public_header');

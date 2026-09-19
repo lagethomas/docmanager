@@ -39,6 +39,13 @@
           </select>
         </div>
       </div>
+      <div class="form-group">
+        <label class="form-label" for="fUserLocation">Localização / Unidade</label>
+        <select id="fUserLocation" class="form-control">
+          <option value="">Nenhuma / Sem restrição</option>
+        </select>
+        <div class="form-help">Usuários associados a uma localização terão acesso aos documentos restritos da mesma unidade.</div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="fecharModalUsuario()">Cancelar</button>

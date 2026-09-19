@@ -17,3 +17,6 @@ define('DB_NAME', 'portal_quebras');
 define('DB_USER', 'portal_quebras');
 define('DB_PASS', '');
 define('DB_CHARSET', 'utf8mb4');
+define('SYSTEM_NAME', 'DocManager');
+define('SMTP_FROM', 'no-reply@docmanager.local');
+define('SMTP_FROM_NAME', 'DocManager');

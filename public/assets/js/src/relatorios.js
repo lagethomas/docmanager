@@ -83,7 +83,7 @@ var ReportsApp = (function () {
       if (!total) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem 1rem;">' +
           '<div class="empty-state">' +
-          '<div style="font-size: 2rem; margin-bottom: 0.5rem;">📋</div>' +
+          '<div style="margin-bottom: 0.75rem; color: var(--text-muted);"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg></div>' +
           '<div style="font-weight: 600; font-size: 0.95rem; color: var(--text);">Nenhum registro de auditoria encontrado</div>' +
           '<div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Tente alterar os filtros de busca acima.</div>' +
           '</div></td></tr>';

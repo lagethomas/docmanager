@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Repository;
+use App\Helpers\SecurityHelper;
 
 class DocumentModel extends Repository
 {
@@ -23,7 +24,8 @@ class DocumentModel extends Repository
         ?string $userRole = null,
         bool $favorites = false,
         bool $sharedWithMe = false,
-        bool $sharedByMe = false
+        bool $sharedByMe = false,
+        ?int $userLocationId = null
     ): array {
         $uid = $userId !== null ? (int) $userId : 0;
         $sql = "SELECT d.*, u.name AS author_name,
@@ -31,6 +33,7 @@ class DocumentModel extends Repository
                        rej_u.name AS rejected_by_name,
                        c.name AS category_name, c.icon AS category_icon, c.color AS category_color,
                        GROUP_CONCAT(DISTINCT t.name ORDER BY t.name ASC SEPARATOR ',') AS tag_names,
+                       GROUP_CONCAT(DISTINCT loc_t.name ORDER BY loc_t.name ASC SEPARATOR ', ') AS location_names,
                        (SELECT COUNT(*) FROM cp_document_versions WHERE document_id = d.id) AS version_count,
                        (SELECT COUNT(*) FROM cp_document_favorites df WHERE df.document_id = d.id AND df.user_id = {$uid}) AS is_favorite,
                        (SELECT COUNT(*) FROM cp_document_shares ds_cnt WHERE ds_cnt.document_id = d.id) AS shares_count,
@@ -42,7 +45,9 @@ class DocumentModel extends Repository
                 LEFT JOIN cp_users rej_u ON d.rejected_by = rej_u.id
                 LEFT JOIN cp_doc_categories c ON d.category_id = c.id
                 LEFT JOIN cp_document_tags dt ON d.id = dt.document_id
-                LEFT JOIN cp_doc_tags t ON dt.tag_id = t.id";
+                LEFT JOIN cp_doc_tags t ON dt.tag_id = t.id
+                LEFT JOIN cp_document_locations dl_join ON d.id = dl_join.document_id
+                LEFT JOIN cp_locations loc_t ON dl_join.location_id = loc_t.id";
 
         $conditions = [];
         $params = [];
@@ -84,6 +89,18 @@ class DocumentModel extends Repository
             $params[] = $userId;
         }
 
+        // Filtro por restrição de localização (para usuários não-Admin)
+        if ($userRole !== 'Admin') {
+            if ($userLocationId !== null) {
+                $conditions[] = '(d.is_restricted = 0 OR d.created_by = ? OR EXISTS (SELECT 1 FROM cp_document_locations dl_sec WHERE dl_sec.document_id = d.id AND dl_sec.location_id = ?))';
+                $params[] = $userId;
+                $params[] = $userLocationId;
+            } else {
+                $conditions[] = '(d.is_restricted = 0 OR d.created_by = ?)';
+                $params[] = $userId;
+            }
+        }
+
         if ($query !== '') {
             $conditions[] = '(MATCH(d.title, d.content) AGAINST(? IN BOOLEAN MODE) OR d.title LIKE ? OR d.content LIKE ? OR EXISTS (SELECT 1 FROM cp_document_tags dt2 JOIN cp_doc_tags t2 ON dt2.tag_id = t2.id WHERE dt2.document_id = d.id AND t2.name LIKE ?))';
             $params[] = $query;
@@ -105,7 +122,7 @@ class DocumentModel extends Repository
         $tagList = [];
         if (is_array($tag)) {
             $tagList = $tag;
-        } elseif (is_string($tag) && trim($tag) !== '') {
+        } elseif (trim($tag) !== '') {
             $tagList = explode(',', $tag);
         }
         $tagList = array_unique(array_filter(array_map('trim', $tagList)));
@@ -191,6 +208,10 @@ class DocumentModel extends Repository
             return null;
         }
 
+        if (isset($row['content'])) {
+            $row['content'] = SecurityHelper::decryptPskTags((string) $row['content']);
+        }
+
         $row['is_favorite'] = !empty($row['is_favorite']);
 
         // Tags
@@ -211,7 +232,14 @@ class DocumentModel extends Repository
              ORDER BY v.edited_at DESC, v.id DESC"
         );
         $stmt3->execute([$id]);
-        $row['versions'] = $stmt3->fetchAll() ?: [];
+        $versions = $stmt3->fetchAll() ?: [];
+        foreach ($versions as &$v) {
+            if (isset($v['content'])) {
+                $v['content'] = SecurityHelper::decryptPskTags((string) $v['content']);
+            }
+        }
+        unset($v);
+        $row['versions'] = $versions;
 
         // Shares
         $stmt4 = $this->db->prepare(
@@ -225,6 +253,17 @@ class DocumentModel extends Repository
         $stmt4->execute([$id]);
         $row['shares'] = $stmt4->fetchAll() ?: [];
 
+        // Locations (Restrições geográficas)
+        $stmtLoc = $this->db->prepare(
+            'SELECT l.id, l.name FROM cp_locations l
+             JOIN cp_document_locations dl ON l.id = dl.location_id
+             WHERE dl.document_id = ? ORDER BY l.name ASC'
+        );
+        $stmtLoc->execute([$id]);
+        $locs = $stmtLoc->fetchAll() ?: [];
+        $row['locations'] = $locs;
+        $row['location_ids'] = array_map(static fn($l) => (int) $l['id'], $locs);
+
         return $row;
     }
 
@@ -235,22 +274,29 @@ class DocumentModel extends Repository
         int $createdBy,
         string $status = 'pendente',
         ?int $approvedBy = null,
-        int $isPublic = 0
+        int $isPublic = 0,
+        int $isRestricted = 0,
+        array $locationIds = []
     ): int {
         $categoryId = ($categoryId !== null && $categoryId > 0) ? $categoryId : null;
         $approvedAt = ($status === 'aprovado') ? date('Y-m-d H:i:s') : null;
+        $encryptedContent = SecurityHelper::encryptPskTags($content);
 
         $stmt = $this->db->prepare(
-            'INSERT INTO cp_documents (title, content, category_id, created_by, status, approved_by, approved_at, is_public) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO cp_documents (title, content, category_id, created_by, status, approved_by, approved_at, is_public, is_restricted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->execute([trim($title), $content, $categoryId, $createdBy, $status, $approvedBy, $approvedAt, $isPublic]);
+        $stmt->execute([trim($title), $encryptedContent, $categoryId, $createdBy, $status, $approvedBy, $approvedAt, $isPublic, $isRestricted]);
         $id = (int) $this->db->lastInsertId();
+
+        if ($isRestricted && !empty($locationIds)) {
+            (new \App\Models\LocationModel())->setDocumentLocations($id, $locationIds);
+        }
 
         // Versão inicial
         $stmt2 = $this->db->prepare(
             'INSERT INTO cp_document_versions (document_id, content, version_note, edited_by) VALUES (?, ?, ?, ?)'
         );
-        $stmt2->execute([$id, $content, 'Criação inicial', $createdBy]);
+        $stmt2->execute([$id, $encryptedContent, 'Criação inicial', $createdBy]);
 
         $this->pruneVersions($id, $this->getMaxVersions());
 
@@ -266,12 +312,15 @@ class DocumentModel extends Repository
         string $versionNote = '',
         ?string $status = null,
         ?int $approvedBy = null,
-        ?int $isPublic = null
+        ?int $isPublic = null,
+        ?int $isRestricted = null,
+        ?array $locationIds = null
     ): bool {
         $categoryId = ($categoryId !== null && $categoryId > 0) ? $categoryId : null;
+        $encryptedContent = SecurityHelper::encryptPskTags($content);
 
         $fields = ['title = ?', 'content = ?', 'category_id = ?'];
-        $params = [trim($title), $content, $categoryId];
+        $params = [trim($title), $encryptedContent, $categoryId];
 
         if ($status !== null) {
             $fields[] = 'status = ?';
@@ -294,17 +343,26 @@ class DocumentModel extends Repository
             $params[] = $isPublic;
         }
 
+        if ($isRestricted !== null) {
+            $fields[] = 'is_restricted = ?';
+            $params[] = $isRestricted;
+        }
+
         $params[] = $id;
         $sql = 'UPDATE cp_documents SET ' . implode(', ', $fields) . ' WHERE id = ?';
         $stmt = $this->db->prepare($sql);
         $ok = (bool) $stmt->execute($params);
+
+        if ($ok && $locationIds !== null) {
+            (new \App\Models\LocationModel())->setDocumentLocations($id, $isRestricted ? $locationIds : []);
+        }
 
         if ($ok) {
             $note = trim($versionNote) !== '' ? trim($versionNote) : 'Atualização de conteúdo';
             $stmt2 = $this->db->prepare(
                 'INSERT INTO cp_document_versions (document_id, content, version_note, edited_by) VALUES (?, ?, ?, ?)'
             );
-            $stmt2->execute([$id, $content, $note, $userId]);
+            $stmt2->execute([$id, $encryptedContent, $note, $userId]);
 
             $this->pruneVersions($id, $this->getMaxVersions());
         }
@@ -326,7 +384,7 @@ class DocumentModel extends Repository
                 FROM cp_documents d
                 LEFT JOIN cp_users u ON d.created_by = u.id
                 LEFT JOIN cp_doc_categories c ON d.category_id = c.id
-                WHERE d.deleted_at IS NULL AND d.status = 'aprovado' AND d.is_public = 1";
+                WHERE d.deleted_at IS NULL AND d.status = 'aprovado' AND d.is_public = 1 AND d.is_restricted = 0";
         $params = [];
 
         if ($query !== '') {
@@ -362,14 +420,21 @@ class DocumentModel extends Repository
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll() ?: [];
+        $rows = $stmt->fetchAll() ?: [];
+        foreach ($rows as &$row) {
+            if (isset($row['content'])) {
+                $row['content'] = SecurityHelper::decryptPskTags((string) $row['content']);
+            }
+        }
+        unset($row);
+        return $rows;
     }
 
     public function countPublicDocs(string $query = '', ?int $categoryId = null): int
     {
         $sql = "SELECT COUNT(*)
                 FROM cp_documents d
-                WHERE d.deleted_at IS NULL AND d.status = 'aprovado' AND d.is_public = 1";
+                WHERE d.deleted_at IS NULL AND d.status = 'aprovado' AND d.is_public = 1 AND d.is_restricted = 0";
         $params = [];
 
         if ($query !== '') {
@@ -397,9 +462,9 @@ class DocumentModel extends Repository
      */
     public function getPublicStats(): array
     {
-        $totalDocs = (int) $this->db->query("SELECT COUNT(*) FROM cp_documents WHERE deleted_at IS NULL AND status = 'aprovado' AND is_public = 1")->fetchColumn();
-        $totalCategories = (int) $this->db->query("SELECT COUNT(DISTINCT category_id) FROM cp_documents WHERE deleted_at IS NULL AND status = 'aprovado' AND is_public = 1 AND category_id IS NOT NULL")->fetchColumn();
-        $totalViews = (int) $this->db->query("SELECT COALESCE(SUM(views_count), 0) FROM cp_documents WHERE deleted_at IS NULL AND status = 'aprovado' AND is_public = 1")->fetchColumn();
+        $totalDocs = (int) $this->db->query("SELECT COUNT(*) FROM cp_documents WHERE deleted_at IS NULL AND status = 'aprovado' AND is_public = 1 AND is_restricted = 0")->fetchColumn();
+        $totalCategories = (int) $this->db->query("SELECT COUNT(DISTINCT category_id) FROM cp_documents WHERE deleted_at IS NULL AND status = 'aprovado' AND is_public = 1 AND is_restricted = 0 AND category_id IS NOT NULL")->fetchColumn();
+        $totalViews = (int) $this->db->query("SELECT COALESCE(SUM(views_count), 0) FROM cp_documents WHERE deleted_at IS NULL AND status = 'aprovado' AND is_public = 1 AND is_restricted = 0")->fetchColumn();
 
         return [
             'total_docs' => $totalDocs,
@@ -418,10 +483,13 @@ class DocumentModel extends Repository
              FROM cp_documents d
              LEFT JOIN cp_users u ON d.created_by = u.id
              LEFT JOIN cp_doc_categories c ON d.category_id = c.id
-             WHERE d.id = ? AND d.deleted_at IS NULL AND d.status = 'aprovado' AND d.is_public = 1"
+             WHERE d.id = ? AND d.deleted_at IS NULL AND d.status = 'aprovado' AND d.is_public = 1 AND d.is_restricted = 0"
         );
         $stmt->execute([$id]);
         $row = $stmt->fetch();
+        if ($row && isset($row['content'])) {
+            $row['content'] = SecurityHelper::decryptPskTags((string) $row['content']);
+        }
         return $row ?: null;
     }
 

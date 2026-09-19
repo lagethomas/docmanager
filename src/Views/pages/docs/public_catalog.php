@@ -68,7 +68,7 @@ if ($categoryId === -1) {
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
         </div>
         <div>
-          <h1 class="docs-header-title" style="font-size: 1.25rem; font-weight: 800; margin: 0; color: var(--docs-title, #0f172a);">Base de Conhecimento</h1>
+          <h1 class="docs-header-title" style="font-size: 1.25rem; font-weight: 800; margin: 0; color: var(--docs-title, #0f172a);">Biblioteca</h1>
           <div class="docs-header-subtitle" style="font-size: 0.85rem; color: var(--docs-text-mut, #64748b);">Documentação pública e acervo livre para consulta</div>
         </div>
       </div>
@@ -229,7 +229,8 @@ if ($categoryId === -1) {
 
                   </span>
                   <span style="font-size: 0.75rem; color: var(--docs-text-mut, #64748b); display: inline-flex; align-items: center; gap: 0.25rem;">
-                    👁️ <?php echo (int) ($doc['views_count'] ?? 0); ?>
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <?php echo (int) ($doc['views_count'] ?? 0); ?>
                   </span>
                 </div>
 
@@ -277,19 +278,23 @@ if ($categoryId === -1) {
                   ?>
                   <tr style="border-bottom: 1px solid var(--docs-border, #f1f5f9); font-size: 0.875rem;">
                     <td style="padding: 0.85rem 1rem;">
-                      <a href="/public-docs/view/<?php echo (int) $doc['id']; ?>" style="font-weight: 600; color: var(--docs-title, #0f172a); text-decoration: none;">
-                        📄 <?php echo e($doc['title']); ?>
-
+                      <a href="/public-docs/view/<?php echo (int) $doc['id']; ?>" style="font-weight: 600; color: var(--docs-title, #0f172a); text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--docs-primary, #1abb9c);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        <span><?php echo e($doc['title']); ?></span>
                       </a>
                     </td>
                     <td style="padding: 0.85rem 1rem;">
                       <span style="font-size: 0.75rem; padding: 2px 8px; border-radius: 6px; background: rgba(26, 187, 156, 0.1); color: <?php echo e($catColor); ?>;">
                         <?php echo e($doc['category_name'] ?? 'Geral'); ?>
-
                       </span>
                     </td>
                     <td style="padding: 0.85rem 1rem; color: var(--docs-text-mut, #64748b);"><?php echo e($doc['author_name'] ?? 'Autor'); ?></td>
-                    <td style="padding: 0.85rem 1rem; color: var(--docs-text-mut, #64748b);">👁️ <?php echo (int) ($doc['views_count'] ?? 0); ?></td>
+                    <td style="padding: 0.85rem 1rem; color: var(--docs-text-mut, #64748b);">
+                      <span style="display: inline-flex; align-items: center; gap: 4px;">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <?php echo (int) ($doc['views_count'] ?? 0); ?>
+                      </span>
+                    </td>
                     <td style="padding: 0.85rem 1rem; color: var(--docs-text-mut, #64748b);"><?php echo $formattedDate; ?></td>
                     <td style="padding: 0.85rem 1rem; text-align: right;">
                       <a href="/public-docs/view/<?php echo (int) $doc['id']; ?>" class="btn btn-sm btn-secondary" style="font-size: 0.75rem; border-radius: 6px; text-decoration: none; padding: 0.35rem 0.7rem;">

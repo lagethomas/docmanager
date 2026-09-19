@@ -11,6 +11,8 @@ var Docs = (function () {
   var ALL_CATS = [];
   var ALL_TAGS = [];
   var STATS = {};
+  var ALL_LOCATIONS = [];
+  var SELECTED_DOC_LOCATIONS = [];
   var CURRENT_DOC = null;
   var CURRENT_TAGS = [];
   var ACTIVE_FOLDER = null;
@@ -400,6 +402,10 @@ var Docs = (function () {
       if (expMenu && !expMenu.hidden && !e.target.closest('.doceditor-dropdown-wrap')) {
         expMenu.hidden = true;
       }
+      var locMenu = document.getElementById('docLocationsDropdown');
+      if (locMenu && !locMenu.hidden && !e.target.closest('#docLocationPicker')) {
+        locMenu.hidden = true;
+      }
     });
   }
 
@@ -409,8 +415,101 @@ var Docs = (function () {
       loadCategories(),
       loadTags(),
       loadStats(),
+      loadLocations(),
       loadDocs()
     ]);
+  }
+
+  function loadLocations() {
+    return api('GET', '/api/locations').then(function (data) {
+      ALL_LOCATIONS = data || [];
+      renderDocLocationsList();
+    }).catch(function () {});
+  }
+
+  function toggleRestricted(checked) {
+    var picker = document.getElementById('docLocationPicker');
+    if (picker) picker.hidden = !checked;
+    if (!checked) {
+      var dropdown = document.getElementById('docLocationsDropdown');
+      if (dropdown) dropdown.hidden = true;
+    }
+  }
+
+  var CURRENT_LOCATION_QUERY = '';
+
+  function toggleLocationDropdown() {
+    var dropdown = document.getElementById('docLocationsDropdown');
+    if (!dropdown) return;
+    dropdown.hidden = !dropdown.hidden;
+    if (!dropdown.hidden) {
+      CURRENT_LOCATION_QUERY = '';
+      var searchInput = document.getElementById('docLocationSearchInput');
+      if (searchInput) {
+        searchInput.value = '';
+        setTimeout(function () { searchInput.focus(); }, 40);
+      }
+      renderDocLocationsList();
+    }
+  }
+
+  function filterLocations(query) {
+    CURRENT_LOCATION_QUERY = (query || '').trim().toLowerCase();
+    renderDocLocationsList();
+  }
+
+  function renderDocLocationsList() {
+    var list = document.getElementById('docLocationsList');
+    if (!list) return;
+    if (!ALL_LOCATIONS.length) {
+      list.innerHTML = '<div style="font-size:0.75rem;color:var(--docs-text-mut);padding:8px;text-align:center;">Nenhuma localização cadastrada.</div>';
+      updateDocLocationsLabel();
+      return;
+    }
+
+    var filtered = ALL_LOCATIONS;
+    if (CURRENT_LOCATION_QUERY) {
+      filtered = ALL_LOCATIONS.filter(function (loc) {
+        return (loc.name && loc.name.toLowerCase().indexOf(CURRENT_LOCATION_QUERY) !== -1);
+      });
+    }
+
+    if (!filtered.length) {
+      list.innerHTML = '<div style="font-size:0.75rem;color:var(--docs-text-mut);padding:14px 8px;text-align:center;">Nenhuma localização encontrada.</div>';
+      updateDocLocationsLabel();
+      return;
+    }
+
+    list.innerHTML = filtered.map(function (loc) {
+      var isChecked = SELECTED_DOC_LOCATIONS.indexOf(Number(loc.id)) !== -1;
+      return '<label class="doc-location-item" style="display:flex;align-items:center;gap:8px;min-height:34px;height:34px;padding:0 8px;border-radius:4px;font-size:0.82rem;cursor:pointer;user-select:none;box-sizing:border-box;transition:background 0.1s;" onmouseover="this.style.background=\'rgba(0,0,0,0.05)\'" onmouseout="this.style.background=\'transparent\'">'
+        + '<input type="checkbox" value="' + loc.id + '"' + (isChecked ? ' checked' : '') + ' onchange="Docs.onLocationChange(this)" style="margin:0;cursor:pointer;flex-shrink:0;" /> '
+        + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(loc.name) + '</span>'
+        + '</label>';
+    }).join('');
+    updateDocLocationsLabel();
+  }
+
+  function onLocationChange(input) {
+    var id = Number(input.value);
+    if (input.checked) {
+      if (SELECTED_DOC_LOCATIONS.indexOf(id) === -1) SELECTED_DOC_LOCATIONS.push(id);
+    } else {
+      var idx = SELECTED_DOC_LOCATIONS.indexOf(id);
+      if (idx !== -1) SELECTED_DOC_LOCATIONS.splice(idx, 1);
+    }
+    updateDocLocationsLabel();
+  }
+
+  function updateDocLocationsLabel() {
+    var lbl = document.getElementById('docLocationsLabel');
+    if (lbl) {
+      lbl.textContent = 'Localizações (' + SELECTED_DOC_LOCATIONS.length + ')';
+    }
+    var badge = document.getElementById('docLocationsCountBadge');
+    if (badge) {
+      badge.textContent = SELECTED_DOC_LOCATIONS.length + ' sel.';
+    }
   }
 
   function loadStats() {
@@ -964,7 +1063,7 @@ var Docs = (function () {
         }
 
         if (canManageShares) {
-          actionsHtml += '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Docs.openShareModal(' + d.id + ')" title="Compartilhar Documento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>'
+          actionsHtml += '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Docs.openShareModal(' + d.id + ')" title="Compartilhar Documento"><i class="fa-solid fa-share-nodes" style="font-size:13px"></i></button>'
             + '<button type="button" class="table-action-btn del" onclick="event.stopPropagation();Docs.deleteDocDirect(' + d.id + ')" title="Mover para a Lixeira"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>';
         }
       }
@@ -974,6 +1073,12 @@ var Docs = (function () {
         statusBadge = '<span class="doc-status-badge pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;margin-right:2px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Pendente</span>';
       } else if (d.status === 'rejeitado') {
         statusBadge = '<span class="doc-status-badge rejected"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;margin-right:2px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Rejeitado</span>';
+      }
+
+      var restrictedBadge = '';
+      if (parseInt(d.is_restricted, 10)) {
+        var locTitle = d.location_names ? ('Restrito para: ' + d.location_names) : 'Documento restrito';
+        restrictedBadge = '<span class="doc-status-badge badge-restricted" title="' + esc(locTitle) + '" style="background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25);font-size:0.68rem;padding:2px 7px;border-radius:6px;display:inline-flex;align-items:center;gap:3px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:10px;height:10px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' + esc(d.location_names || 'Restrito') + '</span>';
       }
 
       var sharedBadge = '';
@@ -989,7 +1094,7 @@ var Docs = (function () {
       html += '<div class="doc-card-pro">'
         + '<div>'
         + '<div class="doc-card-header">'
-        + '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">' + catBadge + statusBadge + sharedBadge + '</div>'
+        + '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">' + catBadge + statusBadge + restrictedBadge + sharedBadge + '</div>'
         + '<div class="table-actions">'
         + actionsHtml
         + '</div>'
@@ -1051,6 +1156,10 @@ var Docs = (function () {
       } else if (d.status === 'rejeitado') {
         statusBadgeTable += ' <span class="doc-status-badge rejected" style="font-size:0.65rem;padding:0.1rem 0.35rem;">Rejeitado</span>';
       }
+      if (parseInt(d.is_restricted, 10)) {
+        var locTitle = d.location_names ? ('Restrito para: ' + d.location_names) : 'Documento restrito';
+        statusBadgeTable += ' <span class="doc-status-badge badge-restricted" style="font-size:0.65rem;padding:0.1rem 0.35rem;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25);" title="' + esc(locTitle) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:9px;height:9px;vertical-align:-1px;margin-right:2px"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' + esc(d.location_names || 'Restrito') + '</span>';
+      }
       if (d.is_shared_by_me) {
         statusBadgeTable += ' <span class="doc-status-badge badge-sharing" style="font-size:0.65rem;padding:0.1rem 0.35rem;" title="Você está compartilhando este documento com ' + (d.shares_count || 1) + ' usuário(s)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:10px;height:10px;vertical-align:-1px;margin-right:2px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>Compartilhando (' + (d.shares_count || 1) + ')</span>';
       } else if (d.is_shared_with_me) {
@@ -1083,7 +1192,7 @@ var Docs = (function () {
         }
 
         if (canManageShares) {
-          actionsHtml += '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Docs.openShareModal(' + d.id + ')" title="Compartilhar Documento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>'
+          actionsHtml += '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Docs.openShareModal(' + d.id + ')" title="Compartilhar Documento"><i class="fa-solid fa-share-nodes" style="font-size:13px"></i></button>'
             + '<button type="button" class="table-action-btn del" onclick="event.stopPropagation();Docs.deleteDocDirect(' + d.id + ')" title="Mover para a Lixeira"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>';
         }
       }
@@ -1171,11 +1280,16 @@ var Docs = (function () {
     var catSelect = document.getElementById('docCategory');
     var verNoteInput = document.getElementById('docVersionNote');
     var chkPublic = document.getElementById('chkDocIsPublic');
+    var chkRestricted = document.getElementById('chkDocIsRestricted');
 
     if (titleInput) titleInput.value = '';
     if (contentInput) contentInput.value = '';
     if (verNoteInput) verNoteInput.value = '';
     if (chkPublic) chkPublic.checked = false;
+    if (chkRestricted) chkRestricted.checked = false;
+    SELECTED_DOC_LOCATIONS = [];
+    toggleRestricted(false);
+    renderDocLocationsList();
     if (catSelect) {
       if (initialCatId) catSelect.value = initialCatId;
       else if (ACTIVE_FOLDER && ACTIVE_FOLDER > 0) catSelect.value = ACTIVE_FOLDER;
@@ -1217,12 +1331,19 @@ var Docs = (function () {
       var catSelect = document.getElementById('docCategory');
       var verNoteInput = document.getElementById('docVersionNote');
       var chkPublic = document.getElementById('chkDocIsPublic');
+      var chkRestricted = document.getElementById('chkDocIsRestricted');
 
       if (titleInput) titleInput.value = CURRENT_DOC.title || '';
       if (contentInput) contentInput.value = CURRENT_DOC.content || '';
       if (verNoteInput) verNoteInput.value = '';
       if (catSelect) catSelect.value = CURRENT_DOC.category_id || '';
       if (chkPublic) chkPublic.checked = !!(parseInt(CURRENT_DOC.is_public, 10));
+
+      var isRestricted = !!(parseInt(CURRENT_DOC.is_restricted, 10));
+      if (chkRestricted) chkRestricted.checked = isRestricted;
+      SELECTED_DOC_LOCATIONS = (CURRENT_DOC.location_ids || []).map(Number);
+      toggleRestricted(isRestricted);
+      renderDocLocationsList();
 
       setViewOnlyMode(isView);
       renderTags();
@@ -1279,12 +1400,23 @@ var Docs = (function () {
     var verNote = (document.getElementById('docVersionNote').value || '').trim();
     var chkPublic = document.getElementById('chkDocIsPublic');
     var isPublic = chkPublic && chkPublic.checked ? 1 : 0;
+    var chkRestricted = document.getElementById('chkDocIsRestricted');
+    var isRestricted = chkRestricted && chkRestricted.checked ? 1 : 0;
+
+    if (isRestricted && !SELECTED_DOC_LOCATIONS.length) {
+      toast('Selecione pelo menos uma localização para restringir o documento.', 'warning');
+      var dropdown = document.getElementById('docLocationsDropdown');
+      if (dropdown) dropdown.hidden = false;
+      return;
+    }
 
     var payload = {
       title: title,
       content: content,
       category_id: catVal ? parseInt(catVal, 10) : null,
       is_public: isPublic,
+      is_restricted: isRestricted,
+      location_ids: SELECTED_DOC_LOCATIONS,
       version_note: verNote,
       tags: CURRENT_TAGS,
     };
@@ -1661,11 +1793,21 @@ var Docs = (function () {
       case 'link':
         replacement = '[' + (sel || 'Texto do link') + '](https://exemplo.com)';
         break;
+      case 'psk':
+        replacement = '!psk=' + (sel || 'MinhaSenha123') + '!';
+        newCursor = start + 5;
+        break;
     }
 
     ta.value = ta.value.substring(0, start) + replacement + ta.value.substring(end);
     ta.focus();
-    ta.setSelectionRange(start + replacement.length, start + replacement.length);
+    if (type === 'psk') {
+      var selStart = start + 5;
+      var selEnd = selStart + (sel ? sel.length : 'MinhaSenha123'.length);
+      ta.setSelectionRange(selStart, selEnd);
+    } else {
+      ta.setSelectionRange(start + replacement.length, start + replacement.length);
+    }
 
     updateWordStats();
     if (EDITOR_MODE === 'split' || EDITOR_MODE === 'preview') {
@@ -2382,6 +2524,10 @@ var Docs = (function () {
     clearSelectedUser: clearSelectedShareUser,
     addSelectedUser: addSelectedUser,
     removeShareUser: removeShareUser,
+    toggleRestricted: toggleRestricted,
+    toggleLocationDropdown: toggleLocationDropdown,
+    filterLocations: filterLocations,
+    onLocationChange: onLocationChange,
   };
 })();
 
