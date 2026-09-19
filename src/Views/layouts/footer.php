@@ -20,6 +20,7 @@ window.ME = <?php echo json_encode($user ?? null, JSON_UNESCAPED_UNICODE | JSON_
 window.CSRF_TOKEN = <?php echo json_encode($csrfToken ?? '', JSON_UNESCAPED_SLASHES); ?>;
 window.SETTINGS = <?php echo json_encode($settings, JSON_UNESCAPED_SLASHES); ?>;
 </script>
+<script src="<?php echo Controller::asset('/assets/js/src/icons.js'); ?>"></script>
 <script src="<?php echo Controller::asset('/assets/js/src/common.js'); ?>"></script>
 <?php if (in_array($page, ['docs', 'docs_view', 'aprovacoes', 'home'], true)): ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>

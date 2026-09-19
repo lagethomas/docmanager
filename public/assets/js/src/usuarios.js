@@ -8,8 +8,8 @@ var ROLES = [];
 var LOCATIONS = [];
 var deleteTarget = { type: null, id: null };
 
-var ICON_PENCIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>';
-var ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
+var ICON_PENCIL = Icons.pencil;
+var ICON_TRASH = Icons.trash;
 
 function loadUsers() {
   return api('GET', '/api/users').then(function (data) { USERS = data || []; renderAdminUsers(); });
@@ -77,7 +77,7 @@ function renderAdminUsers() {
     var statusCls = u.status === 'ativo' ? 'status status-green' : 'status status-red';
     var statusLabel = u.status === 'ativo' ? 'Ativo' : 'Inativo';
     var locBadge = u.location_name
-      ? '<span class="badge" style="background:rgba(26,187,156,0.1);color:#1abb9c;font-weight:600;padding:3px 8px;border-radius:6px;font-size:0.75rem;display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' + esc(u.location_name) + '</span>'
+      ? '<span class="badge" style="background:rgba(26,187,156,0.1);color:#1abb9c;font-weight:600;padding:3px 8px;border-radius:6px;font-size:0.75rem;display:inline-flex;align-items:center;gap:4px;">' + Icons.get('location', { size: 11 }) + esc(u.location_name) + '</span>'
       : '<span style="opacity:0.4;font-size:0.8rem;">—</span>';
 
     var row = '<tr data-id="' + esc(login) + '">';
@@ -89,11 +89,11 @@ function renderAdminUsers() {
     row += '<td><div class="table-actions">'
       + '<button class="table-action-btn" title="Editar" aria-label="Editar '
       + esc(login) + '" onclick="abrirModalUsuario(\'' + esc(login) + '\')">'
-      + ICON_PENCIL + '</button>';
+      + Icons.pencil + '</button>';
     if (login !== 'admin') {
       row += '<button class="table-action-btn del" title="Excluir" aria-label="Excluir '
       + esc(login) + '" onclick="confirmDeleteUser(\'' + esc(login) + '\')">'
-      + ICON_TRASH + '</button>';
+      + Icons.trash + '</button>';
     }
     row += '</div></td></tr>';
     return row;

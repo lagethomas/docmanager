@@ -133,7 +133,7 @@ $status = $doc['status'] ?? 'aprovado';
 
         <?php if (!empty($doc['shares']) && (int)($doc['created_by'] ?? 0) === (int)($user['id'] ?? 0)): ?>
         <span class="doc-status-badge badge-sharing" title="Você está compartilhando este documento com outros usuários">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="badge-svg"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          <i class="fa-solid fa-share-nodes" style="font-size: 11px; margin-right: 4px;"></i>
           Compartilhando (<?php echo count($doc['shares']); ?>)
         </span>
         <?php elseif (!empty($doc['is_shared_with_me'])): ?>

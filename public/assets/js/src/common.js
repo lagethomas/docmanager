@@ -148,35 +148,51 @@ function paginated(key, items) {
 function renderPagination(key, total, current, pages, onPage) {
   var el = document.getElementById(key);
   if (!el) return;
-  if (pages <= 1) { el.innerHTML = ''; return; }
 
-  var from = total === 0 ? 0 : (current - 1) * PAGE_SIZE + 1;
-  var to = Math.min(current * PAGE_SIZE, total);
-  var html = '<div class="pagination-info">' + from + '–' + to + ' de ' + total + '</div>';
+  var totalCount = Number(total || 0);
+  var totalPages = Math.max(1, parseInt(pages, 10) || 1);
+  var curPage = Math.max(1, Math.min(parseInt(current, 10) || 1, totalPages));
+
+  var from = totalCount === 0 ? 0 : (curPage - 1) * PAGE_SIZE + 1;
+  var to = totalCount === 0 ? 0 : Math.min(curPage * PAGE_SIZE, totalCount);
+
+  var html = '<div class="pagination-info">Mostrando <strong>' + from + '</strong> a <strong>' + to + '</strong> de <strong>' + totalCount + '</strong></div>';
   html += '<div class="pagination-controls">';
-  html += '<button class="pg-btn" data-pg="' + (current - 1) + '"' + (current === 1 ? ' disabled' : '') + ' title="Anterior">‹</button>';
 
-  var seen = {};
-  for (var p = 1; p <= pages; p++) {
-    if (p === 1 || p === pages || Math.abs(p - current) <= 1) {
-      seen[p] = true;
-      html += '<button class="pg-btn' + (p === current ? ' active' : '') + '" data-pg="' + p + '">' + p + '</button>';
-    } else if (!seen[p]) {
-      var prevShown = p - 1;
-      if (!seen[prevShown] || (p < pages && !seen[p + 1])) {
+  // Botão Anterior
+  var prevDisabled = curPage <= 1 ? ' disabled' : '';
+  html += '<button type="button" class="pg-btn' + prevDisabled + '" data-pg="' + (curPage - 1) + '"' + prevDisabled + ' title="Anterior">‹</button>';
+
+  if (totalPages <= 1) {
+    html += '<button type="button" class="pg-btn active" data-pg="1">1</button>';
+  } else {
+    var seen = {};
+    for (var p = 1; p <= totalPages; p++) {
+      if (p === 1 || p === totalPages || Math.abs(p - curPage) <= 1) {
         seen[p] = true;
-        html += '<span class="pg-ellipsis">…</span>';
+        html += '<button type="button" class="pg-btn' + (p === curPage ? ' active' : '') + '" data-pg="' + p + '">' + p + '</button>';
+      } else if (!seen[p]) {
+        var prevShown = p - 1;
+        if (!seen[prevShown] || (p < totalPages && !seen[p + 1])) {
+          seen[p] = true;
+          html += '<span class="pg-ellipsis">…</span>';
+        }
       }
     }
   }
-  html += '<button class="pg-btn" data-pg="' + (current + 1) + '"' + (current === pages ? ' disabled' : '') + ' title="Próxima">›</button>';
+
+  // Botão Próximo
+  var nextDisabled = curPage >= totalPages ? ' disabled' : '';
+  html += '<button type="button" class="pg-btn' + nextDisabled + '" data-pg="' + (curPage + 1) + '"' + nextDisabled + ' title="Próxima">›</button>';
   html += '</div>';
   el.innerHTML = html;
 
-  el.querySelectorAll('[data-pg]').forEach(function (btn) {
+  el.querySelectorAll('[data-pg]:not([disabled])').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      var p = parseInt(btn.getAttribute('data-pg'), 10);
-      if (p >= 1 && p <= pages && p !== current) { onPage(p); }
+      var targetPage = parseInt(btn.getAttribute('data-pg'), 10);
+      if (targetPage >= 1 && targetPage <= totalPages && targetPage !== curPage && typeof onPage === 'function') {
+        onPage(targetPage);
+      }
     });
   });
 }

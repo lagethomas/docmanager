@@ -201,28 +201,28 @@ var Approvals = (function () {
 
   function buildStatusBadge(status) {
     if (status === 'aprovado') {
-      return '<span class="approval-badge approved"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;margin-right:2px"><polyline points="20 6 9 17 4 12"/></svg>Publicado</span>';
+      return '<span class="approval-badge approved" style="display:inline-flex;align-items:center;gap:3px;">' + Icons.get('check', { size: 11 }) + 'Publicado</span>';
     }
     if (status === 'rejeitado') {
-      return '<span class="approval-badge rejected"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;margin-right:2px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Rejeitado</span>';
+      return '<span class="approval-badge rejected" style="display:inline-flex;align-items:center;gap:3px;">' + Icons.get('close', { size: 11 }) + 'Rejeitado</span>';
     }
-    return '<span class="approval-badge pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;margin-right:2px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Aguardando</span>';
+    return '<span class="approval-badge pending" style="display:inline-flex;align-items:center;gap:3px;">' + Icons.get('clock', { size: 11 }) + 'Aguardando</span>';
   }
 
   function buildActionsHtml(d) {
     if (d.status === 'pendente') {
       return '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Approvals.previewDoc(' + d.id + ')" title="Revisar documento">'
-        + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>'
+        + Icons.eye + '</button>'
         + '<button type="button" class="table-action-btn" style="color:var(--danger,#d63939)" onclick="event.stopPropagation();Approvals.openRejectModal(' + d.id + ')" title="Rejeitar">'
-        + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'
+        + Icons.close + '</button>'
         + '<button type="button" class="table-action-btn" style="color:var(--docs-primary,#1abb9c)" onclick="event.stopPropagation();Approvals.approveDoc(' + d.id + ')" title="Aprovar e publicar">'
-        + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="20 6 9 17 4 12"/></svg></button>';
+        + Icons.check + '</button>';
     }
     var html = '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Approvals.previewDoc(' + d.id + ')" title="Visualizar / Revisar">'
-      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>';
+      + Icons.eye + '</button>';
     if (d.status === 'rejeitado') {
       html += '<button type="button" class="table-action-btn" style="color:var(--docs-primary,#1abb9c)" onclick="event.stopPropagation();Approvals.approveDoc(' + d.id + ')" title="Reavaliar e Aprovar">'
-        + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="20 6 9 17 4 12"/></svg></button>';
+        + Icons.check + '</button>';
     }
     return html;
   }

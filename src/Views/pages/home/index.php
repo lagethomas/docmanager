@@ -250,7 +250,7 @@ $pendingCount = (int) ($stats['total_pending'] ?? $stats['my_pending'] ?? 0);
       <a href="<?php echo e(Controller::url('/docs?filter=shared')); ?>" class="metric-card accent-indigo">
         <div class="metric-top-row">
           <div class="metric-icon bg-indigo">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            <i class="fa-solid fa-share-nodes" style="font-size: 18px;"></i>
           </div>
           <span class="metric-badge-tag neutral">Colaboração</span>
         </div>

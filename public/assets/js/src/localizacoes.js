@@ -6,9 +6,6 @@
 var LOCATIONS = [];
 var FILTERED_LOCATIONS = [];
 
-var ICON_PENCIL = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>';
-var ICON_TRASH = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
-
 function loadLocations() {
   return api('GET', '/api/locations/admin').then(function (data) {
     LOCATIONS = data || [];
@@ -58,7 +55,7 @@ function renderLocationsTable() {
   if (!pg.total) {
     tbody.innerHTML = '<tr><td colspan="6">'
       + '<div class="empty-state" style="padding: 2.5rem 1rem; text-align: center;">'
-      + '<div class="empty-state-icon" style="margin-bottom: 0.5rem; color: var(--text-muted);"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>'
+      + '<div class="empty-state-icon" style="margin-bottom: 0.5rem; color: var(--text-muted);">' + Icons.get('location', { size: 32 }) + '</div>'
       + '<div style="font-weight: 600; color: var(--text);">Nenhuma localização encontrada</div>'
       + '<div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Clique em "Nova Localização" para cadastrar uma unidade ou filial.</div>'
       + '</div></td></tr>';
@@ -76,7 +73,7 @@ function renderLocationsTable() {
 
     var row = '<tr data-id="' + loc.id + '">';
     row += '<td class="cell-strong" style="display:flex;align-items:center;gap:8px;">'
-      + '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);flex-shrink:0;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'
+      + Icons.get('location', { size: 14, color: 'var(--primary)', style: 'flex-shrink:0;' })
       + '<span>' + esc(loc.name) + '</span></td>';
     row += '<td style="color:var(--text-muted);font-size:0.85rem;">' + (loc.description ? esc(loc.description) : '<span style="opacity:0.5;">—</span>') + '</td>';
     row += '<td style="text-align:center;"><span class="badge" style="background:rgba(99, 102, 241, 0.1);color:#6366f1;font-weight:600;padding:2px 8px;border-radius:12px;font-size:0.75rem;">' + Number(loc.users_count || 0) + '</span></td>';
@@ -85,24 +82,19 @@ function renderLocationsTable() {
     row += '<td style="text-align:right;"><div class="table-actions" style="justify-content:flex-end;">'
       + '<button class="table-action-btn" title="Editar" aria-label="Editar '
       + esc(loc.name) + '" onclick="abrirModalLocalizacao(' + loc.id + ')">'
-      + ICON_PENCIL + '</button>'
+      + Icons.pencil + '</button>'
       + '<button class="table-action-btn del" title="Excluir" aria-label="Excluir '
       + esc(loc.name) + '" onclick="excluirLocalizacao(' + loc.id + ', \'' + esc(loc.name).replace(/'/g, "\\'") + '\')">'
-      + ICON_TRASH + '</button>'
+      + Icons.trash + '</button>'
       + '</div></td></tr>';
     return row;
   }).join('');
 
-  var pagContainer = document.getElementById('locationPagination');
-  if (pagContainer) {
-    pagContainer.innerHTML = renderPagination(pg.current, pg.pages, 'loc', 'goToLocPage');
-  }
+  renderPagination('locationPagination', pg.total, pg.current, pg.pages, function (p) {
+    PAGINATION.loc = p;
+    renderLocationsTable();
+  });
 }
-
-window.goToLocPage = function (page) {
-  setPaginationPage('loc', page);
-  renderLocationsTable();
-};
 
 function abrirModalLocalizacao(id) {
   var titulo = document.getElementById('modalLocationTitulo');
@@ -114,7 +106,7 @@ function abrirModalLocalizacao(id) {
   if (id) {
     var loc = LOCATIONS.find(function (x) { return Number(x.id) === Number(id); });
     if (loc) {
-      if (titulo) titulo.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary);"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Editar Localização</span>';
+      if (titulo) titulo.innerHTML = Icons.get('location', { size: 18, color: 'var(--primary)', style: 'margin-right:6px;' }) + '<span>Editar Localização</span>';
       if (fId) fId.value = loc.id;
       if (fName) fName.value = loc.name || '';
       if (fDesc) fDesc.value = loc.description || '';
@@ -124,7 +116,7 @@ function abrirModalLocalizacao(id) {
       }
     }
   } else {
-    if (titulo) titulo.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary);"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Nova Localização</span>';
+    if (titulo) titulo.innerHTML = Icons.get('location', { size: 18, color: 'var(--primary)', style: 'margin-right:6px;' }) + '<span>Nova Localização</span>';
     if (fId) fId.value = '';
     if (fName) fName.value = '';
     if (fDesc) fDesc.value = '';
@@ -211,7 +203,6 @@ window.fecharModalLocalizacao = fecharModalLocalizacao;
 window.salvarLocalizacao = salvarLocalizacao;
 window.excluirLocalizacao = excluirLocalizacao;
 window.filtrarLocalizacoes = filtrarLocalizacoes;
-window.goToLocPage = goToLocPage;
 
 document.addEventListener('DOMContentLoaded', function () {
   var tableEl = document.getElementById('locationTable');

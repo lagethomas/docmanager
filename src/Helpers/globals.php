@@ -26,3 +26,13 @@ if (!function_exists('csrf_field')) {
         return \App\Core\CSRF::field();
     }
 }
+
+if (!function_exists('icon')) {
+    /**
+     * @param array{size?: int|string, color?: string, class?: string, style?: string, title?: string} $options
+     */
+    function icon(string $name, array $options = []): string
+    {
+        return \App\Helpers\IconHelper::get($name, $options);
+    }
+}
