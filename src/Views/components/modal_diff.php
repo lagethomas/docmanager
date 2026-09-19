@@ -160,7 +160,7 @@ declare(strict_types=1);
     <div class="modal-header-custom" style="justify-content: space-between;">
       <div class="modal-header-title">
         <span class="modal-icon-badge" id="previewIcon" style="display:inline-flex;align-items:center;justify-content:center;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          <?php echo \App\Helpers\IconHelper::get('code', ['size' => 16]); ?>
         </span>
         <div>
           <h3 id="previewTitle" style="font-size: 1.15rem; margin: 0;">Título do Documento</h3>
@@ -177,15 +177,15 @@ declare(strict_types=1);
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--docs-border, #e2e8f0); flex-wrap: wrap; gap: 0.75rem;">
         <div style="display: inline-flex; background: var(--docs-bg, #f1f5f9); padding: 3px; border-radius: 8px; border: 1px solid var(--docs-border, #e2e8f0);" role="tablist">
           <button type="button" class="btn btn-sm btn-primary" id="btnTabDiff" onclick="DocDiff.switchTab('diff')" style="font-weight: 600; font-size: 0.8rem; border: none; padding: 5px 12px; border-radius: 6px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:4px;"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <?php echo \App\Helpers\IconHelper::get('code', ['size' => 14, 'style' => 'margin-right:4px']); ?>
             <span>Comparar Alterações (Diff)</span>
           </button>
           <button type="button" class="btn btn-sm btn-secondary" id="btnTabRendered" onclick="DocDiff.switchTab('rendered')" style="font-weight: 600; font-size: 0.8rem; border: none; padding: 5px 12px; border-radius: 6px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:4px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <?php echo \App\Helpers\IconHelper::get('eye', ['size' => 14, 'style' => 'margin-right:4px']); ?>
             <span>Visualização Final (Markdown)</span>
           </button>
           <button type="button" class="btn btn-sm btn-secondary" id="btnTabHistory" onclick="DocDiff.switchTab('history')" style="font-weight: 600; font-size: 0.8rem; border: none; padding: 5px 12px; border-radius: 6px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:4px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <?php echo \App\Helpers\IconHelper::get('clock', ['size' => 14, 'style' => 'margin-right:4px']); ?>
             <span>Histórico de Versões</span>
           </button>
         </div>
@@ -216,11 +216,11 @@ declare(strict_types=1);
       <button type="button" class="btn btn-secondary" onclick="DocDiff.close()">Fechar</button>
       <div style="display: flex; gap: 0.5rem;" id="previewModalActions" hidden>
         <button type="button" class="btn btn-danger" id="btnPreviewReject" onclick="Approvals.openRejectFromPreview()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <?php echo \App\Helpers\IconHelper::get('xmark', ['size' => 14, 'style' => 'margin-right:4px']); ?>
           <span>Rejeitar</span>
         </button>
         <button type="button" class="btn btn-primary" id="btnPreviewApprove" onclick="Approvals.approveFromPreview()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><polyline points="20 6 9 17 4 12"/></svg>
+          <?php echo \App\Helpers\IconHelper::get('check', ['size' => 14, 'style' => 'margin-right:4px']); ?>
           <span>Aprovar & Publicar</span>
         </button>
       </div>

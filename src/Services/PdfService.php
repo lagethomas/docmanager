@@ -65,18 +65,20 @@ class PdfService
         $parsedown->setSafeMode(false);
         $htmlContent = $parsedown->text($processedContent);
 
-        // Status badge color & text
-        $statusColor = match (mb_strtolower($status)) {
-            'aprovado' => '#10b981',
-            'pendente' => '#f59e0b',
-            'rejeitado' => '#ef4444',
-            default => '#6b7280'
-        };
-        $statusLabel = mb_strtoupper($status);
+        // Versão do documento para exibição
+        if (!empty($doc['version'])) {
+            $versionStr = (string) $doc['version'];
+        } elseif (!empty($doc['versions']) && is_array($doc['versions'])) {
+            $versionStr = 'v' . count($doc['versions']) . '.0';
+        } else {
+            $versionStr = 'v1.0';
+        }
 
+        $statusText = mb_strtoupper($status);
         $escapedTitle = e($title);
         $escapedAuthor = e($authorName);
         $escapedCategory = e($categoryName);
+        $escapedVersion = e($versionStr);
         $generatedAt = date('d/m/Y H:i');
 
         $html = <<<HTML
@@ -136,7 +138,7 @@ class PdfService
             text-align: right;
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             font-size: 9pt;
-            color: #3b82f6;
+            color: #475569;
             font-weight: bold;
         }
 
@@ -148,40 +150,36 @@ class PdfService
         }
 
         .doc-header-box {
-            background-color: #f8fafc;
+            background-color: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 6px;
+            border-left: 4px solid #475569;
+            border-radius: 4px;
             padding: 16px 20px;
             margin-bottom: 24px;
         }
 
         .doc-title {
-            font-size: 18pt;
+            font-size: 16pt;
             font-weight: bold;
             color: #0f172a;
             margin: 0 0 10px 0;
-            line-height: 1.25;
+            line-height: 1.3;
         }
 
         .meta-line {
             font-size: 8.5pt;
             color: #64748b;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 10px;
         }
 
         .meta-item {
             display: inline-block;
-            margin-right: 18px;
+            margin-right: 20px;
         }
 
-        .status-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            color: #ffffff;
-            font-size: 7.5pt;
-            font-weight: bold;
-            text-transform: uppercase;
-            background-color: {$statusColor};
+        .meta-item strong {
+            color: #1e293b;
         }
 
         .markdown-body h1 {
@@ -340,7 +338,7 @@ class PdfService
                     Gerado em {$generatedAt} — Documento Oficial DocManager
                 </td>
                 <td style="text-align: right;">
-                    Confidencial • Uso Interno
+                    Confidencial • Versão {$escapedVersion}
                 </td>
             </tr>
         </table>
@@ -351,8 +349,9 @@ class PdfService
             <h1 class="doc-title">{$escapedTitle}</h1>
             <div class="meta-line">
                 <span class="meta-item"><strong>Autor:</strong> {$escapedAuthor}</span>
+                <span class="meta-item"><strong>Versão:</strong> {$escapedVersion}</span>
                 <span class="meta-item"><strong>Criado em:</strong> {$createdAt}</span>
-                <span class="meta-item"><strong>Status:</strong> <span class="status-badge">{$statusLabel}</span></span>
+                <span class="meta-item"><strong>Status:</strong> {$statusText}</span>
             </div>
         </div>
 

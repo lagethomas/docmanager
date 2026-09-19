@@ -17,7 +17,7 @@ $user = $user ?? [];
     <div class="docs-header-left">
       <div class="docs-header-title-wrap">
         <div class="docs-header-icon" id="currentViewIcon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <?php echo icon('document', ['size' => 20]); ?>
         </div>
         <div>
           <h1 class="docs-header-title" id="listTitle">Todos os Documentos</h1>
@@ -28,7 +28,7 @@ $user = $user ?? [];
 
     <div class="docs-header-center">
       <div class="docs-search-wrapper">
-        <svg class="docs-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <?php echo icon('search', ['class' => 'docs-search-icon', 'size' => 16]); ?>
         <input type="text" id="docsSearch" class="docs-search-input" placeholder="Buscar por título, conteúdo ou tag..." autocomplete="off" />
         <span class="docs-search-shortcut" title="Atalho de busca">/</span >
         <button type="button" class="docs-search-clear" id="docsSearchClear" hidden title="Limpar busca">×</button>
@@ -39,10 +39,10 @@ $user = $user ?? [];
       <!-- Alternador de visualização (Cards / Tabela) -->
       <div class="docs-view-switcher" role="group" aria-label="Modo de visualização">
         <button type="button" class="view-btn active" id="btnViewGrid" onclick="Docs.setViewMode('grid')" title="Visualização em Grade">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <?php echo icon('grid', ['size' => 16]); ?>
         </button>
         <button type="button" class="view-btn" id="btnViewList" onclick="Docs.setViewMode('list')" title="Visualização em Lista / Tabela">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          <?php echo icon('list', ['size' => 16]); ?>
         </button>
       </div>
 
@@ -56,12 +56,12 @@ $user = $user ?? [];
       </select>
 
       <button type="button" class="btn btn-secondary btn-sm" id="btnHeaderNewFolder" onclick="Docs.openCatModal()" title="Criar nova pasta de organização">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+        <?php echo icon('folderPlus', ['class' => 'btn-svg', 'size' => 14]); ?>
         <span>Nova Pasta</span>
       </button>
 
       <button type="button" class="btn btn-primary btn-sm" id="btnHeaderNewDoc" onclick="Docs.newDoc()" title="Criar novo documento (Atalho: N)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <?php echo icon('plus', ['class' => 'btn-svg', 'size' => 14]); ?>
         <span>Novo Documento</span>
       </button>
     </div>
@@ -124,7 +124,7 @@ $user = $user ?? [];
       <!-- Banner Informativo da Lixeira -->
       <div class="docs-trash-banner" id="docsTrashBanner" hidden>
         <div class="trash-banner-info">
-          <span class="trash-banner-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>
+          <span class="trash-banner-icon"><?php echo icon('trash', ['size' => 20]); ?></span>
           <div>
             <strong>Lixeira de Documentos</strong>
             <p>Itens na lixeira podem ser restaurados ou permanentemente excluídos.</p>
@@ -132,7 +132,7 @@ $user = $user ?? [];
         </div>
         <div class="trash-banner-actions">
           <button type="button" class="btn btn-sm btn-danger" onclick="Docs.emptyTrashModal()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+            <?php echo icon('trash', ['class' => 'btn-svg', 'size' => 14]); ?>
             <span>Esvaziar Lixeira</span>
           </button>
         </div>
@@ -172,7 +172,7 @@ $user = $user ?? [];
       <!-- Estado Vazio -->
       <div class="docs-empty-state" id="docsEmptyState" hidden>
         <div class="empty-state-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          <?php echo icon('document', ['size' => 48]); ?>
         </div>
         <h3 class="empty-state-title" id="emptyTitle">Nenhum documento encontrado</h3>
         <p class="empty-state-desc" id="emptyDesc">Crie um novo documento ou selecione outra pasta no menu lateral.</p>
@@ -191,7 +191,7 @@ $user = $user ?? [];
     <header class="doceditor-topbar">
       <div class="doceditor-topbar-left">
         <button type="button" class="doceditor-btn-back" onclick="Docs.closeEditor()" title="Voltar (Esc)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          <?php echo icon('arrowLeft', ['size' => 16]); ?>
           <span>Fechar</span>
         </button>
         <div class="doceditor-divider"></div>
@@ -200,25 +200,25 @@ $user = $user ?? [];
 
       <div class="doceditor-topbar-right">
         <div class="doceditor-cat-select-wrap">
-          <svg class="select-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <?php echo icon('folder', ['class' => 'select-icon', 'size' => 15]); ?>
           <select id="docCategory" class="doceditor-select" title="Pasta do Documento"></select>
         </div>
 
         <label class="toggle-switch" title="Tornar documento livremente visível na Biblioteca sem login">
           <input type="checkbox" id="chkDocIsPublic" />
           <span class="toggle-slider"></span>
-          <span style="display:flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> Público</span>
+          <span style="display:flex;align-items:center;gap:4px;"><?php echo icon('globe', ['size' => 13]); ?> Público</span>
         </label>
 
         <label class="toggle-switch" title="Restringir acesso por localização/unidade">
           <input type="checkbox" id="chkDocIsRestricted" onchange="Docs.toggleRestricted(this.checked)" />
           <span class="toggle-slider"></span>
-          <span style="display:flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Restringir</span>
+          <span style="display:flex;align-items:center;gap:4px;"><?php echo icon('location', ['size' => 13]); ?> Restringir</span>
         </label>
 
         <div id="docLocationPicker" class="doceditor-dropdown-wrap" hidden style="position: relative;">
           <button type="button" class="btn btn-sm btn-outline" id="btnDocLocations" onclick="Docs.toggleLocationDropdown()" title="Selecionar localizações permitidas" style="display: flex; align-items: center; gap: 4px; border-color: rgba(239, 68, 68, 0.4); color: #ef4444;">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <?php echo icon('location', ['size' => 13]); ?>
             <span id="docLocationsLabel">Localizações (0)</span>
           </button>
           <div id="docLocationsDropdown" class="doceditor-dropdown-menu" hidden style="min-width: 250px; max-width: 320px; padding: 10px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.25); z-index: 1050;">
@@ -227,7 +227,7 @@ $user = $user ?? [];
               <span id="docLocationsCountBadge" style="font-size: 0.7rem; color: #ef4444; font-weight: 600;"></span>
             </div>
             <div style="position: relative; margin-bottom: 8px;">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--docs-text-mut); pointer-events: none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <?php echo icon('search', ['size' => 13, 'style' => 'position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--docs-text-mut); pointer-events: none;']); ?>
               <input type="text" id="docLocationSearchInput" placeholder="Buscar localização..." autocomplete="off" style="width: 100%; height: 30px; font-size: 0.8rem; padding: 2px 8px 2px 28px; border: 1px solid var(--docs-border); border-radius: 6px; background: var(--docs-bg); color: var(--docs-text); outline: none; box-sizing: border-box;" oninput="Docs.filterLocations(this.value)" />
             </div>
             <div id="docLocationsList" style="display: flex; flex-direction: column; gap: 2px; max-height: 238px; overflow-y: auto; scrollbar-width: thin; padding-right: 2px;"></div>
@@ -235,32 +235,32 @@ $user = $user ?? [];
         </div>
 
         <button type="button" class="btn btn-sm btn-outline" id="btnDocUpload" onclick="Docs.openUploadModal()" title="Anexar arquivo ou imagem">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          <?php echo icon('paperclip', ['class' => 'btn-svg', 'size' => 14]); ?>
           <span>Anexo</span>
         </button>
 
         <button type="button" class="btn btn-sm btn-outline" id="btnToggleVersions" onclick="Docs.toggleVersions()" title="Histórico de Versões">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+          <?php echo icon('history', ['class' => 'btn-svg', 'size' => 14]); ?>
           <span>Histórico</span>
         </button>
 
         <!-- Dropdown de Exportação -->
         <div class="doceditor-dropdown-wrap">
           <button type="button" class="btn btn-sm btn-outline" onclick="Docs.toggleExportMenu()" title="Opções de Exportação">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <?php echo icon('download', ['class' => 'btn-svg', 'size' => 14]); ?>
             <span>Exportar</span>
           </button>
           <div class="doceditor-dropdown-menu" id="exportDropdownMenu" hidden>
             <button type="button" class="dropdown-item" onclick="Docs.exportMarkdown()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <?php echo icon('file', ['size' => 14]); ?>
               <span>Baixar arquivo .MD</span>
             </button>
             <button type="button" class="dropdown-item" onclick="Docs.printDocument()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              <?php echo icon('printer', ['size' => 14]); ?>
               <span>Imprimir / Salvar PDF</span>
             </button>
             <button type="button" class="dropdown-item" onclick="Docs.copyMarkdown()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <?php echo icon('copy', ['size' => 14]); ?>
               <span>Copiar Markdown</span>
             </button>
           </div>
@@ -272,11 +272,11 @@ $user = $user ?? [];
         </button>
 
         <button type="button" class="btn btn-sm btn-danger-outline" id="btnDeleteDoc" onclick="Docs.deleteDoc()" hidden title="Excluir documento permanentemente">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          <?php echo icon('trash', ['class' => 'btn-svg', 'size' => 14]); ?>
         </button>
 
         <button type="button" class="btn btn-sm btn-primary" id="btnSaveDoc" onclick="Docs.saveDoc()" title="Salvar alterações (Ctrl+S)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          <?php echo icon('check', ['class' => 'btn-svg', 'size' => 14]); ?>
           <span>Salvar</span>
         </button>
       </div>
@@ -424,7 +424,7 @@ $user = $user ?? [];
   <aside class="doceditor-version-sidebar" id="versionSidebar" hidden>
     <div class="version-sidebar-header">
       <div class="version-sidebar-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+        <?php echo icon('history', ['size' => 18]); ?>
         <h3>Histórico de Versões</h3>
       </div>
       <button type="button" class="btn-close-sidebar" onclick="Docs.toggleVersions()" title="Fechar histórico">×</button>
@@ -441,7 +441,7 @@ $user = $user ?? [];
     <div class="modal-header-custom">
       <div class="modal-header-title">
         <span class="modal-icon-badge" id="catModalIconBadge" style="display:flex;align-items:center;justify-content:center;color:var(--docs-primary);">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <?php echo icon('folder', ['size' => 20]); ?>
         </span>
         <h3 id="catModalTitle">Nova Pasta</h3>
       </div>
@@ -660,7 +660,7 @@ $user = $user ?? [];
   <div class="modal-dialog-custom">
     <div class="modal-header-custom">
       <div class="modal-header-title">
-        <span class="modal-icon-badge"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></span>
+        <span class="modal-icon-badge"><?php echo icon('paperclip', ['size' => 16]); ?></span>
         <h3>Enviar Arquivos & Imagens</h3>
       </div>
       <button type="button" class="modal-btn-close" onclick="Docs.closeUploadModal()">×</button>
@@ -669,7 +669,7 @@ $user = $user ?? [];
     <div class="modal-body-custom">
       <div class="upload-dropzone" id="uploadZone">
         <div class="dropzone-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <?php echo icon('upload', ['size' => 36]); ?>
         </div>
         <p class="dropzone-main-text">Arraste e solte seus arquivos aqui</p>
         <p class="dropzone-sub-text">ou <span>clique para navegar no computador</span> (PNG, JPG, SVG, PDF, DOCX, TXT)</p>
@@ -697,7 +697,7 @@ $user = $user ?? [];
     <div class="modal-header-custom">
       <div class="modal-header-title">
         <span class="modal-icon-badge">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="badge-svg"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <?php echo icon('users', ['class' => 'badge-svg', 'size' => 16]); ?>
         </span>
         <div>
           <h3 id="shareModalDocTitle" style="margin:0;font-size:1.1rem;font-weight:700;">Compartilhar Documento</h3>

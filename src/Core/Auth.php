@@ -11,7 +11,7 @@ use App\Core\Auth\PermissionManager;
 final class Auth
 {
     /**
-     * @return array{id: int, login: string, name: string, role: string, status: string, location_id?: int|null, location_name?: string|null}|null
+     * @return array{id: int, login: string, username: string, email?: string|null, name: string, role: string, status: string, location_id?: int|null, location_name?: string|null}|null
      */
     public static function user(): ?array
     {
@@ -28,7 +28,19 @@ final class Auth
     public static function login(): ?string
     {
         $user = self::user();
-        return $user !== null ? (string) $user['login'] : null;
+        return $user !== null ? (string) $user['username'] : null;
+    }
+
+    public static function username(): ?string
+    {
+        $user = self::user();
+        return $user !== null ? (string) $user['username'] : null;
+    }
+
+    public static function email(): ?string
+    {
+        $user = self::user();
+        return ($user !== null && !empty($user['email'])) ? (string) $user['email'] : null;
     }
 
     public static function name(): ?string
@@ -65,9 +77,12 @@ final class Auth
     public static function loginUser(array $user): void
     {
         session_regenerate_id(true);
+        $uname = (string) ($user['username'] ?? $user['login'] ?? '');
         $_SESSION['user'] = [
             'id' => (int) $user['id'],
-            'login' => (string) $user['login'],
+            'login' => $uname,
+            'username' => $uname,
+            'email' => !empty($user['email']) ? (string) $user['email'] : null,
             'name' => (string) $user['name'],
             'role' => (string) $user['role'],
             'status' => (string) ($user['status'] ?? 'ativo'),

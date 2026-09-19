@@ -5,6 +5,7 @@ use App\Controllers\ApprovalController;
 use App\Controllers\AuthController;
 use App\Controllers\DocumentController;
 use App\Controllers\LocationController;
+use App\Controllers\ProfileController;
 use App\Controllers\SettingsController;
 use App\Controllers\UsersController;
 use App\Middlewares\AdminMiddleware;
@@ -15,6 +16,9 @@ return [
     ['POST', '/api/auth/login', [AuthController::class, 'login'], []],
     ['POST', '/api/auth/logout', [AuthController::class, 'logout'], [AuthMiddleware::class]],
     ['GET', '/api/auth/me', [AuthController::class, 'me'], [AuthMiddleware::class]],
+
+    // Perfil do Usuário
+    ['POST', '/api/perfil', [ProfileController::class, 'update'], [AuthMiddleware::class]],
 
     // Usuários (somente Admin)
     ['GET', '/api/users', [UsersController::class, 'users'], [AuthMiddleware::class, AdminMiddleware::class]],
@@ -57,10 +61,13 @@ return [
     ['POST', '/api/notifications/mark-all-read', [App\Controllers\NotificationController::class, 'markAllRead'], [AuthMiddleware::class]],
     ['POST', '/api/notifications/mark-read/{id}', [App\Controllers\NotificationController::class, 'markRead'], [AuthMiddleware::class]],
 
-    // Comentários
+    // Comentários & Issues
+    ['GET', '/api/issues', [App\Controllers\IssueController::class, 'list'], [AuthMiddleware::class]],
     ['GET', '/api/docs/{id}/comments', [App\Controllers\CommentController::class, 'getComments'], [AuthMiddleware::class]],
     ['POST', '/api/docs/{id}/comments', [App\Controllers\CommentController::class, 'addComment'], [AuthMiddleware::class]],
     ['POST', '/api/comments/{id}/resolve', [App\Controllers\CommentController::class, 'toggleResolve'], [AuthMiddleware::class]],
+    ['POST', '/api/comments/{id}/approve', [App\Controllers\CommentController::class, 'approveResolution'], [AuthMiddleware::class]],
+    ['POST', '/api/comments/{id}/reopen', [App\Controllers\CommentController::class, 'reopenComment'], [AuthMiddleware::class]],
     ['DELETE', '/api/comments/{id}', [App\Controllers\CommentController::class, 'deleteComment'], [AuthMiddleware::class]],
 
     // Links Públicos

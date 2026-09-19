@@ -5,6 +5,7 @@ namespace App\Controllers;
 
 use App\Core\Auth;
 use App\Core\Controller;
+use App\Core\Database;
 use App\Core\Logger;
 use App\Models\CommentModel;
 use App\Models\DocumentModel;
@@ -12,7 +13,7 @@ use App\Models\NotificationModel;
 
 class CommentController extends Controller
 {
-    private const ALLOWED_ROLES = ['Admin', 'Editor', 'Aprovador'];
+    private const ALLOWED_ROLES = ['Admin', 'Editor', 'Aprovador', 'Visualizador'];
 
     public function getComments(string $docId): void
     {
@@ -23,16 +24,27 @@ class CommentController extends Controller
         }
 
         $id = (int) $docId;
+        $docModel = new DocumentModel();
+        $doc = $docModel->find($id);
+
         $commentModel = new CommentModel();
         $comments = $commentModel->getByDocument($id);
 
         $userId = (int) $user['id'];
         $isAdmin = ((string) $user['role'] === 'Admin');
+        $docAuthorId = $doc ? (int) $doc['created_by'] : 0;
+        $isDocAuthor = ($docAuthorId === $userId);
 
         foreach ($comments as &$c) {
-            $isResolved = !(empty($c['resolved_at']));
-            $c['can_delete'] = $isAdmin || (!$isResolved && (int) $c['user_id'] === $userId);
-            $c['can_toggle_resolve'] = $isAdmin || !$isResolved;
+            $status = (string) ($c['status'] ?? 'aberto');
+            $isIssueCreator = ((int) $c['user_id'] === $userId);
+            $isLocked = ($status === 'concluido');
+
+            $c['is_locked'] = $isLocked;
+            $c['can_resolve'] = !$isLocked && $status === 'aberto' && ($isAdmin || $isDocAuthor || $isIssueCreator);
+            $c['can_approve'] = !$isLocked && $status === 'resolvido_pendente' && ($isIssueCreator || $isAdmin);
+            $c['can_reopen'] = !$isLocked && $status === 'resolvido_pendente' && ($isIssueCreator || $isDocAuthor || $isAdmin);
+            $c['can_delete'] = !$isLocked && ($isAdmin || ($status === 'aberto' && $isIssueCreator));
         }
         unset($c);
 
@@ -66,15 +78,35 @@ class CommentController extends Controller
         $commentModel = new CommentModel();
         $created = $commentModel->addComment($id, (int) $user['id'], $text);
 
-        Logger::log('add_comment', "Comentário adicionado ao documento #{$id}");
+        Logger::log('add_comment', "Issue #{$created['id']} adicionada ao documento #{$id}");
 
+        // Notificar o Autor do Documento E Todos os Administradores
         $notifModel = new NotificationModel();
-        if ((int) $doc['created_by'] !== (int) $user['id']) {
+        $db = Database::getInstance();
+        $stmtAdmins = $db->query("SELECT id FROM cp_users WHERE role = 'Admin' AND status = 'ativo'");
+        $adminIds = $stmtAdmins->fetchAll(\PDO::FETCH_COLUMN) ?: [];
+
+        $targets = [];
+        $docAuthorId = (int) $doc['created_by'];
+        $currentUserId = (int) $user['id'];
+
+        if ($docAuthorId !== $currentUserId) {
+            $targets[] = $docAuthorId;
+        }
+
+        foreach ($adminIds as $admId) {
+            $admIdInt = (int) $admId;
+            if ($admIdInt !== $currentUserId && !in_array($admIdInt, $targets, true)) {
+                $targets[] = $admIdInt;
+            }
+        }
+
+        foreach ($targets as $targetId) {
             $notifModel->notify(
-                (int) $doc['created_by'],
+                $targetId,
                 'comment',
-                'Novo comentário no seu documento',
-                (string) $user['name'] . ' comentou em "' . (string) $doc['title'] . '"',
+                'Nova Issue no documento',
+                (string) $user['name'] . ' abriu uma Issue no documento "' . (string) $doc['title'] . '"',
                 '/docs/view/' . $id
             );
         }
@@ -99,15 +131,135 @@ class CommentController extends Controller
             return;
         }
 
-        $isAdmin = ((string) $user['role'] === 'Admin');
-        $isResolved = !empty($comment['resolved_at']);
-
-        if ($isResolved && !$isAdmin) {
-            $this->jsonError('Apenas um Administrador pode reabrir um comentário resolvido.', 403);
+        if ((string) ($comment['status'] ?? '') === 'concluido') {
+            $this->jsonError('Esta Issue está concluída e travada. Não é possível alterar.', 403);
             return;
         }
 
-        $commentModel->toggleResolve($id, (int) $user['id']);
+        $docModel = new DocumentModel();
+        $doc = $docModel->find((int) $comment['document_id']);
+
+        $userId = (int) $user['id'];
+        $isAdmin = ((string) $user['role'] === 'Admin');
+        $isDocAuthor = $doc && ((int) $doc['created_by'] === $userId);
+        $isIssueCreator = ((int) $comment['user_id'] === $userId);
+
+        if (!$isAdmin && !$isDocAuthor && !$isIssueCreator) {
+            $this->jsonError('Apenas o autor do documento, um Administrador ou o criador da issue podem alterá-la.', 403);
+            return;
+        }
+
+        $commentModel->markResolved($id, $userId);
+
+        // Notificar o criador da issue sobre a marcação de resolução
+        $issueCreatorId = (int) $comment['user_id'];
+        if ($issueCreatorId !== $userId && $doc) {
+            $notifModel = new NotificationModel();
+            $notifModel->notify(
+                $issueCreatorId,
+                'comment',
+                'Issue marcada como resolvida',
+                (string) $user['name'] . ' marcou sua Issue no documento "' . (string) $doc['title'] . '" como resolvida. Por favor, confirme e aprova a resolução.',
+                '/docs/view/' . (int) $comment['document_id']
+            );
+        }
+
+        $this->jsonOk(['success' => true]);
+    }
+
+    public function approveResolution(string $commentId): void
+    {
+        $user = Auth::user();
+        if ($user === null || !in_array((string) $user['role'], self::ALLOWED_ROLES, true)) {
+            $this->jsonError('Acesso negado.', 403);
+            return;
+        }
+
+        $id = (int) $commentId;
+        $commentModel = new CommentModel();
+        $comment = $commentModel->find($id);
+
+        if ($comment === null) {
+            $this->jsonError('Comentário não encontrado.', 404);
+            return;
+        }
+
+        if ((string) ($comment['status'] ?? '') === 'concluido') {
+            $this->jsonError('Esta Issue já foi concluída e travada.', 400);
+            return;
+        }
+
+        $userId = (int) $user['id'];
+        $isAdmin = ((string) $user['role'] === 'Admin');
+        $isIssueCreator = ((int) $comment['user_id'] === $userId);
+
+        if (!$isIssueCreator && !$isAdmin) {
+            $this->jsonError('Apenas a pessoa que abriu a Issue pode aprovar a resolução.', 403);
+            return;
+        }
+
+        $commentModel->approveResolution($id, $userId);
+
+        // Notificar autor do documento e admins sobre a conclusão e travamento
+        $docModel = new DocumentModel();
+        $doc = $docModel->find((int) $comment['document_id']);
+        if ($doc) {
+            $notifModel = new NotificationModel();
+            $db = Database::getInstance();
+            $stmtAdmins = $db->query("SELECT id FROM cp_users WHERE role = 'Admin' AND status = 'ativo'");
+            $adminIds = $stmtAdmins->fetchAll(\PDO::FETCH_COLUMN) ?: [];
+
+            $targets = [];
+            $docAuthorId = (int) $doc['created_by'];
+
+            if ($docAuthorId !== $userId) {
+                $targets[] = $docAuthorId;
+            }
+
+            foreach ($adminIds as $admId) {
+                $admIdInt = (int) $admId;
+                if ($admIdInt !== $userId && !in_array($admIdInt, $targets, true)) {
+                    $targets[] = $admIdInt;
+                }
+            }
+
+            foreach ($targets as $targetId) {
+                $notifModel->notify(
+                    $targetId,
+                    'comment',
+                    'Resolução da Issue aprovada',
+                    (string) $user['name'] . ' aprovou a resolução da Issue no documento "' . (string) $doc['title'] . '" (Concluída).',
+                    '/docs/view/' . (int) $comment['document_id']
+                );
+            }
+        }
+
+        $this->jsonOk(['success' => true]);
+    }
+
+    public function reopenComment(string $commentId): void
+    {
+        $user = Auth::user();
+        if ($user === null || !in_array((string) $user['role'], self::ALLOWED_ROLES, true)) {
+            $this->jsonError('Acesso negado.', 403);
+            return;
+        }
+
+        $id = (int) $commentId;
+        $commentModel = new CommentModel();
+        $comment = $commentModel->find($id);
+
+        if ($comment === null) {
+            $this->jsonError('Comentário não encontrado.', 404);
+            return;
+        }
+
+        if ((string) ($comment['status'] ?? '') === 'concluido') {
+            $this->jsonError('Esta Issue está concluída e travada. Não é possível reabrir.', 403);
+            return;
+        }
+
+        $commentModel->reopenComment($id);
         $this->jsonOk(['success' => true]);
     }
 
@@ -125,7 +277,7 @@ class CommentController extends Controller
         if ($success) {
             $this->jsonOk(['success' => true]);
         } else {
-            $this->jsonError('Não foi possível excluir o comentário.', 403);
+            $this->jsonError('Não foi possível excluir a Issue (Issues concluídas estão travadas).', 403);
         }
     }
 
@@ -138,3 +290,4 @@ class CommentController extends Controller
         $commentModel->addComment($docId, $userId, $text);
     }
 }
+

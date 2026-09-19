@@ -643,7 +643,9 @@ function initNotifications() {
   });
 
   fetchNotifications();
+  fetchOpenIssuesCount();
   setInterval(fetchNotifications, 8000);
+  setInterval(fetchOpenIssuesCount, 15000);
 }
 
 function fetchPendingApprovalsCount() {
@@ -653,6 +655,21 @@ function fetchPendingApprovalsCount() {
     var docs = res.docs || [];
     if (docs.length > 0) {
       badge.textContent = docs.length;
+      badge.hidden = false;
+    } else {
+      badge.hidden = true;
+    }
+  }).catch(function () {});
+}
+
+function fetchOpenIssuesCount() {
+  var badge = document.getElementById('sidebarIssuesBadge');
+  if (!badge) return;
+  api('GET', '/api/issues?status=aberto&q=').then(function (res) {
+    var stats = res.stats || {};
+    var count = typeof stats.abertas !== 'undefined' ? stats.abertas : (res.issues ? res.issues.length : 0);
+    if (count > 0) {
+      badge.textContent = count;
       badge.hidden = false;
     } else {
       badge.hidden = true;

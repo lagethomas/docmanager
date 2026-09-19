@@ -18,15 +18,19 @@ final class PermissionManager
             'categories.create',
             'categories.edit',
             'categories.delete',
+            'issues.view',
         ],
         'Aprovador' => [
             'docs.view',
+            'docs.upload',
             'docs.approve',
             'docs.reject',
             'approvals.view',
+            'issues.view',
         ],
         'Visualizador' => [
             'docs.view',
+            'issues.view',
         ],
     ];
 

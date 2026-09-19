@@ -11,18 +11,25 @@
       <input type="hidden" id="uId" />
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label" for="fUserLogin">Usuário (login) <span class="required">*</span></label>
-          <input type="text" id="fUserLogin" class="form-control" />
+          <label class="form-label" for="fUserLogin">Usuário (Username) <span class="required">*</span></label>
+          <input type="text" id="fUserLogin" class="form-control" placeholder="ex: joao.silva" />
+          <div class="form-help">Username de login (inalterável após criação).</div>
         </div>
         <div class="form-group">
           <label class="form-label" for="fUserNome">Nome completo <span class="required">*</span></label>
-          <input type="text" id="fUserNome" class="form-control" />
+          <input type="text" id="fUserNome" class="form-control" placeholder="ex: João da Silva" />
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label" for="fUserPass">Senha <span class="required">*</span></label>
-        <input type="password" id="fUserPass" class="form-control" autocomplete="new-password" />
-        <div class="form-help">Ao editar, deixe em branco para manter a senha atual.</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="fUserEmail">E-mail de Contato</label>
+          <input type="email" id="fUserEmail" class="form-control" placeholder="ex: joao@empresa.com" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="fUserPass">Senha <span class="required">*</span></label>
+          <input type="password" id="fUserPass" class="form-control" autocomplete="new-password" />
+          <div class="form-help">Ao editar, deixe em branco para manter a senha.</div>
+        </div>
       </div>
       <div class="form-row">
         <div class="form-group">

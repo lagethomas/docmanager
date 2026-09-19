@@ -31,7 +31,7 @@ class ReportController extends Controller
         $actions = $actionsStmt->fetchAll(\PDO::FETCH_COLUMN) ?: [];
 
         // Lista de usuários para o filtro
-        $usersStmt = $db->query('SELECT id, login, name FROM cp_users ORDER BY name ASC');
+        $usersStmt = $db->query('SELECT id, username AS login, username, name FROM cp_users ORDER BY name ASC');
         $usersList = $usersStmt->fetchAll() ?: [];
 
         // Logs recentes (limite 500 para auditoria paginada)

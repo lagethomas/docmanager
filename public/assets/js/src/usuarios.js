@@ -112,7 +112,7 @@ function renderAdminUsers() {
 
 function abrirModalUsuario(login) {
   var isEdit = !!login;
-  var user = isEdit ? USERS.find(function (u) { return u.login === login; }) : null;
+  var user = isEdit ? USERS.find(function (u) { return u.login === login || u.username === login; }) : null;
   var isAdminPrincipal = login === 'admin';
 
   document.getElementById('modalUserTitulo').textContent = isEdit ? 'Editar Usuário' : 'Novo Usuário';
@@ -120,6 +120,9 @@ function abrirModalUsuario(login) {
   document.getElementById('fUserLogin').value = login || '';
   document.getElementById('fUserLogin').disabled = isEdit;
   document.getElementById('fUserNome').value = isEdit ? user.name : '';
+  if (document.getElementById('fUserEmail')) {
+    document.getElementById('fUserEmail').value = (isEdit && user.email) ? user.email : '';
+  }
   document.getElementById('fUserPass').value = '';
   renderRoleOptions(isEdit ? user.role : (ROLES[0] ? ROLES[0].name : 'Admin'));
   renderLocationOptions(isEdit ? user.location_id : null);
@@ -142,6 +145,7 @@ function salvarUsuario() {
   var isEdit = !!document.getElementById('uId').value;
   var login = document.getElementById('fUserLogin').value.trim().toLowerCase();
   var nome = document.getElementById('fUserNome').value.trim();
+  var email = document.getElementById('fUserEmail') ? document.getElementById('fUserEmail').value.trim().toLowerCase() : '';
   var pass = document.getElementById('fUserPass').value.trim();
   var isAdminPrincipal = login === 'admin';
   var role = isAdminPrincipal ? 'Admin' : document.getElementById('fUserRole').value;
@@ -151,14 +155,14 @@ function salvarUsuario() {
   var btn = document.getElementById('btnSalvarUser');
 
   if (!login || !nome || (!isEdit && !pass)) {
-    toast('Preencha usuário, nome e senha.', 'error');
+    toast('Preencha usuário (login), nome e senha.', 'error');
     if (!login) document.getElementById('fUserLogin').focus();
     else if (!nome) document.getElementById('fUserNome').focus();
     else if (!pass) document.getElementById('fUserPass').focus();
     return;
   }
 
-  var payload = { name: nome, password: pass, role: role, status: status, location_id: locationId };
+  var payload = { username: login, email: email, name: nome, password: pass, role: role, status: status, location_id: locationId };
   var req = isEdit
     ? api('PUT', '/api/users/' + encodeURIComponent(login), payload)
     : api('POST', '/api/users', Object.assign({ login: login }, payload));

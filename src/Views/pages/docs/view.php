@@ -87,7 +87,12 @@ $status = $doc['status'] ?? 'aprovado';
       </button>
       <?php endif; ?>
 
-           <?php if ($canEdit): ?>
+      <button type="button" class="btn btn-sm btn-outline-warning" onclick="DocsView.openIssueModal(<?php echo (int)$doc['id']; ?>)" title="Abrir uma Issue / Apontar correção para o autor do documento" style="display:inline-flex;align-items:center;gap:4px;color:#d97706;border-color:rgba(217,119,6,0.3);background:rgba(217,119,6,0.06);">
+        <?php echo icon('alert', ['size' => 13, 'style' => 'margin-right:2px']); ?>
+        <span>Abrir Issue / Correção</span>
+      </button>
+
+      <?php if ($canEdit): ?>
       <button type="button" class="btn btn-sm btn-primary" onclick="DocsView.editDoc(<?php echo (int)$doc['id']; ?>)" title="Editar este documento">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         <span>Editar</span>
@@ -191,8 +196,8 @@ $status = $doc['status'] ?? 'aprovado';
     </div>
     <?php endif; ?>
 
-    <!-- Histórico de Versões (Recolhível) -->
-    <?php if (!empty($doc['versions']) && count($doc['versions']) > 1): ?>
+    <!-- Histórico de Versões (Recolhível - Oculto via PHP para Visualizador) -->
+    <?php if (!empty($canViewVersions) && !empty($doc['versions']) && count($doc['versions']) > 1): ?>
     <div class="docs-single-versions-section">
       <details class="docs-versions-details">
         <summary class="docs-versions-summary" style="display:flex;align-items:center;justify-content:space-between;">
@@ -220,26 +225,22 @@ $status = $doc['status'] ?? 'aprovado';
     </div>
     <?php endif; ?>
 
-    <!-- Seção de Comentários e Discussão (Módulo 3) — Somente Admin, Editor, Aprovador -->
+    <!-- Seção de Issues do Documento — Somente usuários com permissão de comentário/issue -->
     <?php if ($canComment): ?>
     <div class="docs-comments-section" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--docs-border, #e2e8f0);">
-      <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--docs-text); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        Comentários e Discussão
-      </h3>
-
-      <div id="commentsList" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
-        <div style="font-size: 0.85rem; color: var(--docs-text-mut); text-align: center; padding: 1.5rem;">Carregando comentários...</div>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
+        <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--docs-text); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+          <?php echo icon('alert', ['size' => 20, 'style' => 'color:#d97706;']); ?>
+          Issues
+        </h3>
+        <button type="button" class="btn btn-sm btn-outline-warning" onclick="DocsView.openIssueModal(<?php echo (int)$doc['id']; ?>)" style="display:inline-flex;align-items:center;gap:4px;color:#d97706;border-color:rgba(217,119,6,0.3);background:rgba(217,119,6,0.06);font-weight:600;">
+          <?php echo icon('alert', ['size' => 13, 'style' => 'margin-right:2px']); ?>
+          <span>Abrir Nova Issue</span>
+        </button>
       </div>
 
-      <!-- Formulário para Novo Comentário -->
-      <div class="add-comment-box" style="background: var(--docs-surface-2, rgba(255,255,255,0.03)); border: 1px solid var(--docs-border); border-radius: 12px; padding: 1.25rem;">
-        <textarea id="txtNewComment" class="form-control" rows="3" placeholder="Escreva um comentário ou observação para a equipe (use @usuario para mencionar)..." style="width: 100%; border-radius: 8px; margin-bottom: 0.75rem; padding: 0.75rem; font-family: inherit; font-size: 0.9rem; background: var(--docs-surface); border: 1px solid var(--docs-border); color: var(--docs-text);"></textarea>
-        <div style="display: flex; justify-content: flex-end;">
-          <button type="button" class="btn btn-primary btn-sm" onclick="DocsView.submitComment(<?php echo (int)$doc['id']; ?>)">
-            <span>Enviar Comentário</span>
-          </button>
-        </div>
+      <div id="commentsList" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="font-size: 0.85rem; color: var(--docs-text-mut); text-align: center; padding: 1.5rem;">Carregando issues...</div>
       </div>
     </div>
     <?php endif; ?>
@@ -343,6 +344,39 @@ $status = $doc['status'] ?? 'aprovado';
 
     <div class="modal-footer-custom">
       <button type="button" class="btn btn-secondary" onclick="DocsView.closePublicLinkModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Abrir Issue / Apontar Correção -->
+<div class="modal-backdrop-custom" id="issueModalOverlay" hidden>
+  <div class="modal-dialog-custom" style="max-width: 540px;">
+    <div class="modal-header-custom">
+      <div class="modal-header-title">
+        <span class="modal-icon-badge" style="background: rgba(245, 158, 11, 0.15); color: #d97706; display: flex; align-items: center; justify-content: center;">
+          <?php echo icon('alert', ['size' => 16]); ?>
+        </span>
+        <div>
+          <h3 style="margin:0;font-size:1.1rem;font-weight:700;">Abrir Issue / Apontar Correção</h3>
+          <p style="font-size:0.78rem;color:var(--docs-text-mut);margin:2px 0 0;">Descreva a observação ou ajuste necessário no documento.</p>
+        </div>
+      </div>
+      <button type="button" class="modal-btn-close" onclick="DocsView.closeIssueModal()">×</button>
+    </div>
+
+    <div class="modal-body-custom">
+      <p style="font-size: 0.85rem; color: var(--docs-text-mut); margin-bottom: 0.85rem; line-height: 1.5;">
+        O autor do documento e os administradores receberão uma notificação referente a esta Issue para realizar os ajustes solicitados.
+      </p>
+      <div class="form-group-custom">
+        <label for="txtIssueModalText" style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:0.4rem;">Descrição do Apontamento / Erro *</label>
+        <textarea id="txtIssueModalText" class="form-input-custom" rows="4" placeholder="Ex: A seção 3 de instalação precisa ser atualizada com os novos parâmetros..." style="width:100%;resize:vertical;font-family:inherit;font-size:0.88rem;border-radius:8px;padding:0.75rem;background:var(--docs-surface);border:1px solid var(--docs-border);color:var(--docs-text);"></textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer-custom" style="display:flex;justify-content:flex-end;gap:0.5rem;">
+      <button type="button" class="btn btn-secondary" onclick="DocsView.closeIssueModal()">Cancelar</button>
+      <button type="button" class="btn btn-warning" onclick="DocsView.submitIssueFromModal(<?php echo (int)$doc['id']; ?>)">Enviar Issue</button>
     </div>
   </div>
 </div>

@@ -78,23 +78,35 @@ var DocsView = (function () {
     toast('Download do arquivo .md iniciado.', 'info');
   }
 
-  // ─── COMENTÁRIOS (MÓDULO 3) ───────────────────────────
+  // ─── COMENTÁRIOS & ISSUES (MÓDULO 3) ─────────────────
   function loadComments(docId) {
     var container = document.getElementById('commentsList');
     if (!container) return;
 
     api('GET', '/api/docs/' + docId + '/comments').then(function (comments) {
       if (!comments || comments.length === 0) {
-        container.innerHTML = '<div style="font-size:0.85rem;color:var(--docs-text-mut);text-align:center;padding:1.5rem;background:var(--docs-surface-2);border-radius:10px;border:1px dashed var(--docs-border);">Seja o primeiro a comentar sobre este documento!</div>';
+        container.innerHTML = '<div style="font-size:0.85rem;color:var(--docs-text-mut);text-align:center;padding:1.5rem;background:var(--docs-surface-2);border-radius:10px;border:1px dashed var(--docs-border);">Nenhuma Issue ou comentário registrado para este documento.</div>';
         return;
       }
 
       var html = '';
       comments.forEach(function (c) {
-        var resolvedStyle = c.resolved_at ? 'opacity: 0.65; background: rgba(34, 197, 94, 0.05);' : '';
-        var resolvedBadge = c.resolved_at
-          ? '<span style="font-size:0.7rem;color:#22c55e;font-weight:600;">&#10003; Resolvido' + (c.resolved_by_name ? ' por ' + esc(c.resolved_by_name) : '') + '</span>'
-          : '';
+        var status = c.status || (c.resolved_at ? 'resolvido_pendente' : 'aberto');
+        var isLocked = c.is_locked || status === 'concluido';
+
+        var statusBadge = '';
+        var statusBgStyle = '';
+
+        if (status === 'concluido') {
+          var lockIcon = (window.Icons && typeof window.Icons.get === 'function') ? window.Icons.get('lock', { size: 14 }) : '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+          statusBgStyle = 'border-color: rgba(34, 197, 94, 0.4); background: rgba(34, 197, 94, 0.04);';
+          statusBadge = '<span style="font-size:0.72rem;padding:2px 8px;border-radius:6px;background:rgba(34,197,94,0.15);color:#16a34a;font-weight:700;display:inline-flex;align-items:center;gap:4px;">' + lockIcon + ' Concluída & Travada</span>';
+        } else if (status === 'resolvido_pendente') {
+          statusBgStyle = 'border-color: rgba(234, 179, 8, 0.4); background: rgba(234, 179, 8, 0.04);';
+          statusBadge = '<span style="font-size:0.72rem;padding:2px 8px;border-radius:6px;background:rgba(234,179,8,0.15);color:#ca8a04;font-weight:700;display:inline-flex;align-items:center;gap:4px;">⏱️ Resolvido (Aguardando Aprovação do Criador)</span>';
+        } else {
+          statusBadge = '<span style="font-size:0.72rem;padding:2px 8px;border-radius:6px;background:rgba(59,130,246,0.12);color:#2563eb;font-weight:700;display:inline-flex;align-items:center;gap:4px;">💬 Issue Aberta</span>';
+        }
 
         var roleBadge = '';
         if (c.user_role === 'Admin') {
@@ -108,29 +120,39 @@ var DocsView = (function () {
           ? '<div style="font-size:0.82rem;color:var(--red);line-height:1.5;white-space:pre-wrap;font-style:italic;">' + esc(c.comment) + '</div>'
           : '<div style="font-size:0.92rem;color:var(--docs-text);line-height:1.5;white-space:pre-wrap;">' + esc(c.comment) + '</div>';
 
-        var actionsHtml = '<div style="display:flex;align-items:center;gap:0.75rem;">'
-          + resolvedBadge
-          + '<span style="font-size:0.75rem;color:var(--docs-text-mut);">' + fmt(c.created_at) + '</span>';
-
-        if (c.can_toggle_resolve) {
-          actionsHtml += '<button type="button" onclick="DocsView.toggleResolveComment(' + c.id + ', ' + docId + ')" style="background:none;border:none;color:var(--docs-primary);font-size:0.75rem;cursor:pointer;font-weight:600;" title="Alternar resolvido">' + (c.resolved_at ? 'Reabrir' : 'Resolver') + '</button>';
+        var actionsBtns = '';
+        if (c.can_resolve) {
+          actionsBtns += '<button type="button" class="btn btn-sm btn-outline-primary" onclick="DocsView.toggleResolveComment(' + c.id + ', ' + docId + ')" style="font-size:0.75rem;padding:3px 8px;font-weight:600;">✓ Marcar como Resolvido</button>';
         }
-
+        if (c.can_approve) {
+          actionsBtns += '<button type="button" onclick="DocsView.approveComment(' + c.id + ', ' + docId + ')" style="font-size:0.75rem;padding:4px 10px;font-weight:700;background:var(--success, #22c55e);color:#fff;border:none;border-radius:6px;cursor:pointer;">✓ Aprovar Resolução (Concluir & Travar)</button>';
+        }
+        if (c.can_reopen) {
+          actionsBtns += '<button type="button" onclick="DocsView.reopenComment(' + c.id + ', ' + docId + ')" style="background:none;border:1px solid var(--docs-border);padding:3px 8px;border-radius:6px;color:var(--docs-text);font-size:0.75rem;cursor:pointer;font-weight:600;">↩ Reabrir / Recusar</button>';
+        }
         if (c.can_delete) {
-          actionsHtml += '<button type="button" onclick="DocsView.deleteComment(' + c.id + ', ' + docId + ')" style="background:none;border:none;color:var(--red);font-size:0.75rem;cursor:pointer;font-weight:600;" title="Excluir comentário">Excluir</button>';
+          actionsBtns += '<button type="button" onclick="DocsView.deleteComment(' + c.id + ', ' + docId + ')" style="background:none;border:none;color:var(--red);font-size:0.75rem;cursor:pointer;font-weight:600;margin-left:4px;" title="Excluir Issue">Excluir</button>';
         }
 
-        actionsHtml += '</div>';
+        var metadataDetails = '';
+        if (c.resolved_by_name) {
+          metadataDetails += '<div style="font-size:0.75rem;color:var(--docs-text-mut);margin-top:6px;">Corrigido/Resolvido por <strong>' + esc(c.resolved_by_name) + '</strong>' + (c.approved_by_name ? ' • Aprovado e concluído por <strong>' + esc(c.approved_by_name) + '</strong>' : '') + '</div>';
+        }
 
-        html += '<div style="padding:1rem 1.25rem;background:var(--docs-surface);border:1px solid var(--docs-border);border-radius:12px;' + resolvedStyle + '">'
-          + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">'
+        html += '<div id="comment-' + c.id + '" style="padding:1rem 1.25rem;background:var(--docs-surface);border:1px solid var(--docs-border);border-radius:12px;margin-bottom:0.75rem;' + statusBgStyle + '">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;flex-wrap:wrap;gap:0.5rem;">'
           + '<div style="display:flex;align-items:center;gap:0.6rem;">'
           + '<div style="width:28px;height:28px;border-radius:50%;background:var(--docs-primary-lt);color:var(--docs-primary);font-weight:700;font-size:0.75rem;display:flex;align-items:center;justify-content:center;">' + esc((c.user_name || 'U').charAt(0).toUpperCase()) + '</div>'
           + '<div style="font-weight:600;font-size:0.88rem;color:var(--docs-text);">' + esc(c.user_name) + ' <span style="font-weight:normal;font-size:0.75rem;color:var(--docs-text-mut);">(@' + esc(c.user_login) + ')</span> ' + roleBadge + '</div>'
           + '</div>'
-          + actionsHtml
+          + '<div style="display:flex;align-items:center;gap:0.75rem;">'
+          + statusBadge
+          + '<span style="font-size:0.75rem;color:var(--docs-text-mut);">' + fmt(c.created_at) + '</span>'
+          + '</div>'
           + '</div>'
           + commentDisplay
+          + metadataDetails
+          + (actionsBtns ? '<div style="display:flex;align-items:center;justify-content:flex-end;gap:0.5rem;margin-top:0.75rem;padding-top:0.5rem;border-top:1px solid rgba(0,0,0,0.05);">' + actionsBtns + '</div>' : '')
           + '</div>';
       });
 
@@ -149,7 +171,7 @@ var DocsView = (function () {
 
     api('POST', '/api/docs/' + docId + '/comments', { comment: txt.value.trim() }).then(function () {
       txt.value = '';
-      toast('Comentário publicado!', 'success');
+      toast('Issue/Comentário publicado!', 'success');
       loadComments(docId);
     }).catch(function (err) {
       toast(err.message || 'Erro ao publicar comentário.', 'error');
@@ -158,21 +180,40 @@ var DocsView = (function () {
 
   function toggleResolveComment(commentId, docId) {
     api('POST', '/api/comments/' + commentId + '/resolve', {}).then(function () {
+      toast('Issue marcada como resolvida (Aguardando aprovação do criador).', 'info');
       loadComments(docId);
     }).catch(function (err) {
       toast(err.message || 'Erro ao alterar status do comentário.', 'error');
     });
   }
 
+  function approveComment(commentId, docId) {
+    api('POST', '/api/comments/' + commentId + '/approve', {}).then(function () {
+      toast('Resolução aprovada! A Issue foi concluída e travada.', 'success');
+      loadComments(docId);
+    }).catch(function (err) {
+      toast(err.message || 'Erro ao aprovar resolução.', 'error');
+    });
+  }
+
+  function reopenComment(commentId, docId) {
+    api('POST', '/api/comments/' + commentId + '/reopen', {}).then(function () {
+      toast('Issue reaberta para ajustes.', 'info');
+      loadComments(docId);
+    }).catch(function (err) {
+      toast(err.message || 'Erro ao reabrir issue.', 'error');
+    });
+  }
+
   function deleteComment(commentId, docId) {
     showConfirm({
-      title: 'Excluir Comentário?',
+      title: 'Excluir Issue?',
       message: 'Esta ação não pode ser desfeita.',
       confirmText: 'Excluir',
       confirmClass: 'btn btn-danger'
     }, function () {
       api('DELETE', '/api/comments/' + commentId).then(function () {
-        toast('Comentário excluído.', 'info');
+        toast('Issue excluída.', 'info');
         loadComments(docId);
       }).catch(function (err) {
         toast(err.message || 'Erro ao excluir comentário.', 'error');
@@ -470,6 +511,36 @@ var DocsView = (function () {
     });
   }
 
+  function openIssueModal(docId) {
+    var overlay = document.getElementById('issueModalOverlay');
+    var txt = document.getElementById('txtIssueModalText');
+    if (txt) txt.value = '';
+    if (overlay) overlay.hidden = false;
+  }
+
+  function closeIssueModal() {
+    var overlay = document.getElementById('issueModalOverlay');
+    if (overlay) overlay.hidden = true;
+  }
+
+  function submitIssueFromModal(docId) {
+    var txt = document.getElementById('txtIssueModalText');
+    if (!txt || !txt.value.trim()) {
+      toast('Por favor, informe a descrição da Issue antes de enviar.', 'info');
+      return;
+    }
+
+    var text = txt.value.trim();
+    api('POST', '/api/docs/' + docId + '/comments', { comment: text }).then(function () {
+      txt.value = '';
+      closeIssueModal();
+      toast('Issue/Apontamento enviado com sucesso! O autor e os administradores foram notificados.', 'success');
+      loadComments(docId);
+    }).catch(function (err) {
+      toast(err.message || 'Erro ao enviar Issue.', 'error');
+    });
+  }
+
   return {
     init: init,
     toggleFavorite: toggleFavorite,
@@ -490,7 +561,12 @@ var DocsView = (function () {
     removeShareUser: removeShareUser,
     submitComment: submitComment,
     toggleResolveComment: toggleResolveComment,
-    deleteComment: deleteComment
+    approveComment: approveComment,
+    reopenComment: reopenComment,
+    deleteComment: deleteComment,
+    openIssueModal: openIssueModal,
+    closeIssueModal: closeIssueModal,
+    submitIssueFromModal: submitIssueFromModal
   };
 })();
 

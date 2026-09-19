@@ -33,8 +33,10 @@ class DocumentSharingTest extends TestCase
     protected function tearDown(): void
     {
         // Cleanup test documents and users
-        $this->db->exec("DELETE FROM cp_documents WHERE created_by IN (SELECT id FROM cp_users WHERE login LIKE 'owner_%' OR login LIKE 'collab_%' OR login LIKE 'other_%') OR title LIKE 'Doc de Teste%' OR title LIKE 'Doc Compartilhado%' OR title LIKE 'Doc Eligible Test%'");
-        $this->db->exec("DELETE FROM cp_users WHERE login LIKE 'owner_%' OR login LIKE 'collab_%' OR login LIKE 'other_%' OR login LIKE 'viewer_%' OR login LIKE 'approver_%'");
+        $this->db->exec("SET FOREIGN_KEY_CHECKS=0");
+        $this->db->exec("DELETE FROM cp_documents WHERE created_by IN (SELECT id FROM cp_users WHERE username LIKE 'owner_%' OR username LIKE 'collab_%' OR username LIKE 'other_%') OR title LIKE 'Doc de Teste%' OR title LIKE 'Doc Compartilhado%' OR title LIKE 'Doc Eligible Test%'");
+        $this->db->exec("DELETE FROM cp_users WHERE username LIKE 'owner_%' OR username LIKE 'collab_%' OR username LIKE 'other_%' OR username LIKE 'viewer_%' OR username LIKE 'approver_%'");
+        $this->db->exec("SET FOREIGN_KEY_CHECKS=1");
     }
 
     public function testDocumentSharingAccessAndPermissions(): void

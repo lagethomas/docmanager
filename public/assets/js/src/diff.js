@@ -314,10 +314,17 @@ var DocDiff = (function () {
 
       if (title) title.textContent = CURRENT_DOC.title || '';
       if (meta) {
-        var cat    = CURRENT_DOC.category_name ? ('📁 ' + CURRENT_DOC.category_name) : '📂 Geral';
-        var author = '👤 ' + (CURRENT_DOC.author_name || 'Autor');
-        var date   = '🕒 ' + fmtFull(CURRENT_DOC.updated_at);
-        meta.textContent = author + ' • ' + cat + ' • ' + date;
+        var catIcon = (window.Icons && typeof window.Icons.get === 'function') ? window.Icons.get('folder', { size: 12 }) : '';
+        var userIcon = (window.Icons && typeof window.Icons.get === 'function') ? window.Icons.get('user', { size: 12 }) : '';
+        var clockIcon = (window.Icons && typeof window.Icons.get === 'function') ? window.Icons.get('clock', { size: 12 }) : '';
+
+        var catName = CURRENT_DOC.category_name || 'Geral';
+        var authorName = CURRENT_DOC.author_name || 'Autor';
+        var dateStr = fmtFull(CURRENT_DOC.updated_at);
+
+        meta.innerHTML = '<span style="display:inline-flex;align-items:center;gap:3px;">' + userIcon + ' ' + esc(authorName) + '</span> • '
+          + '<span style="display:inline-flex;align-items:center;gap:3px;">' + catIcon + ' ' + esc(catName) + '</span> • '
+          + '<span style="display:inline-flex;align-items:center;gap:3px;">' + clockIcon + ' ' + dateStr + '</span>';
       }
 
       if (notice) {

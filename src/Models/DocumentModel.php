@@ -78,7 +78,12 @@ class DocumentModel extends Repository
 
         // Filtro por papel (role) de acesso
         if ($userRole === 'Visualizador') {
-            $conditions[] = "d.status = 'aprovado'";
+            if ($userId !== null) {
+                $conditions[] = "(d.status = 'aprovado' OR EXISTS (SELECT 1 FROM cp_document_shares ds_v WHERE ds_v.document_id = d.id AND ds_v.user_id = ?))";
+                $params[] = $userId;
+            } else {
+                $conditions[] = "d.status = 'aprovado'";
+            }
         } elseif ($status !== null && $status !== '') {
             $conditions[] = 'd.status = ?';
             $params[] = $status;
@@ -92,11 +97,13 @@ class DocumentModel extends Repository
         // Filtro por restrição de localização (para usuários não-Admin)
         if ($userRole !== 'Admin') {
             if ($userLocationId !== null) {
-                $conditions[] = '(d.is_restricted = 0 OR d.created_by = ? OR EXISTS (SELECT 1 FROM cp_document_locations dl_sec WHERE dl_sec.document_id = d.id AND dl_sec.location_id = ?))';
+                $conditions[] = '(d.is_restricted = 0 OR d.created_by = ? OR EXISTS (SELECT 1 FROM cp_document_locations dl_sec WHERE dl_sec.document_id = d.id AND dl_sec.location_id = ?) OR EXISTS (SELECT 1 FROM cp_document_shares ds_sec WHERE ds_sec.document_id = d.id AND ds_sec.user_id = ?))';
                 $params[] = $userId;
                 $params[] = $userLocationId;
+                $params[] = $userId;
             } else {
-                $conditions[] = '(d.is_restricted = 0 OR d.created_by = ?)';
+                $conditions[] = '(d.is_restricted = 0 OR d.created_by = ? OR EXISTS (SELECT 1 FROM cp_document_shares ds_sec WHERE ds_sec.document_id = d.id AND ds_sec.user_id = ?))';
+                $params[] = $userId;
                 $params[] = $userId;
             }
         }
@@ -244,7 +251,7 @@ class DocumentModel extends Repository
         // Shares
         $stmt4 = $this->db->prepare(
             "SELECT ds.id, ds.document_id, ds.user_id, ds.can_edit, ds.created_at,
-                    u.name, u.login, u.role
+                    u.name, u.username AS login, u.username, u.email, u.role
              FROM cp_document_shares ds
              JOIN cp_users u ON ds.user_id = u.id
              WHERE ds.document_id = ?
@@ -761,7 +768,7 @@ class DocumentModel extends Repository
     {
         $stmt = $this->db->prepare(
             "SELECT ds.id, ds.document_id, ds.user_id, ds.can_edit, ds.created_at,
-                    u.name, u.login, u.role,
+                    u.name, u.username AS login, u.username, u.email, u.role,
                     sb.name AS shared_by_name
              FROM cp_document_shares ds
              JOIN cp_users u ON ds.user_id = u.id
@@ -797,7 +804,7 @@ class DocumentModel extends Repository
     public function getEligibleUsersForShare(int $documentId): array
     {
         $stmt = $this->db->prepare(
-            "SELECT u.id, u.name, u.login, u.role
+            "SELECT u.id, u.name, u.username AS login, u.username, u.email, u.role
              FROM cp_users u
              WHERE u.status = 'ativo'
                AND u.role = 'Editor'
@@ -843,6 +850,13 @@ class DocumentModel extends Repository
         );
         $stmt->execute([$userId]);
         return (int) $stmt->fetchColumn();
+    }
+
+    public function isSharedWithUser(int $documentId, int $userId): bool
+    {
+        $stmt = $this->db->prepare('SELECT 1 FROM cp_document_shares WHERE document_id = ? AND user_id = ? LIMIT 1');
+        $stmt->execute([$documentId, $userId]);
+        return (bool) $stmt->fetchColumn();
     }
 }
 

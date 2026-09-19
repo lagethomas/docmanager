@@ -27,6 +27,9 @@ window.SETTINGS = <?php echo json_encode($settings, JSON_UNESCAPED_SLASHES); ?>;
 <?php if (in_array($page, ['docs', 'docs_view', 'aprovacoes', 'home'], true)): ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
 <?php endif; ?>
-<?php if ($page !== 'home'): ?>
+<?php 
+$pageJsFile = ROOT_DIR . '/public/assets/js/src/' . $page . '.js';
+if ($page !== 'home' && is_file($pageJsFile)): 
+?>
 <script src="<?php echo Controller::asset('/assets/js/src/' . $page . '.js'); ?>"></script>
 <?php endif; ?>

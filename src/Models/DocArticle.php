@@ -358,13 +358,77 @@ Icons.renderInto(document.getElementById("myIconContainer"), "starSolid", { clas
 // 3. Obter mapa de ícones por nome de categoria
 const categoryMap = Icons.getCategoryMap();</code></pre>
 
-                <h4>🎨 3. Estilização & Variações (Solid vs Outline)</h4>
-                <ul style="line-height: 1.8;">
-                    <li><strong>Cor Automática:</strong> Os SVGs usam <code>stroke="currentColor"</code> ou <code>fill="currentColor"</code>. Eles herdam a cor do texto do elemento pai ou da classe CSS (ex.: <code>.text-primary</code>, <code>.text-warning</code>, <code>.text-muted</code>).</li>
-                    <li><strong>Ícones Preenchidos:</strong> Ícones como <code>starSolid</code> usam preenchimento contínuo, perfeitos para ações ativas (como navegação de Favoritos). Ícones de botões usam versão vazada (outline) para um visual limpo e refinado.</li>
-                </ul>
+                <h4>🎨 3. Parâmetros e Opções Suportadas</h4>
+                <p>O método <code>IconHelper::get($name, $options)</code> no PHP e <code>Icons.get($name, $options)</code> no JS aceitam as seguintes propriedades no array ou objeto de opções:</p>
+                <div class="table-responsive" style="margin-top: 1rem;">
+                    <table class="table" style="font-size: 0.88rem;">
+                        <thead>
+                            <tr>
+                                <th>Parâmetro</th>
+                                <th>Tipo</th>
+                                <th>Descrição & Exemplo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>size</code></td>
+                                <td><code>int|string</code></td>
+                                <td>Tamanho em pixels (ex: <code>16</code> ou <code>"24px"</code>). Ajusta <code>width</code> e <code>height</code> automaticamente.</td>
+                            </tr>
+                            <tr>
+                                <td><code>class</code> / <code>className</code></td>
+                                <td><code>string</code></td>
+                                <td>Classes CSS adicionais (ex: <code>"me-2 text-primary align-middle"</code>).</td>
+                            </tr>
+                            <tr>
+                                <td><code>color</code></td>
+                                <td><code>string</code></td>
+                                <td>Cor hexadecimal ou var CSS aplicada diretamente no <code>style</code> (ex: <code>"#f59e0b"</code>).</td>
+                            </tr>
+                            <tr>
+                                <td><code>filled</code> / <code>solid</code></td>
+                                <td><code>bool</code></td>
+                                <td>Força preenchimento contínuo <code>fill="currentColor"</code> em vez de <code>stroke</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>viewBox</code></td>
+                                <td><code>string</code></td>
+                                <td>Sobrescreve a caixa de visualização SVG (ex: <code>"0 0 640 640"</code>).</td>
+                            </tr>
+                            <tr>
+                                <td><code>title</code></td>
+                                <td><code>string</code></td>
+                                <td>Adiciona atributo <code>title="..."</code> para tooltip nativo do navegador.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-                <h4>📦 4. Catálogo de Ícones Disponíveis</h4>
+                <h4>➕ 4. Como Adicionar Novos Ícones à Biblioteca (Passo a Passo)</h4>
+                <p>Para adicionar um novo ícone SVG vetorizado à biblioteca do DocManager, siga os dois passos abaixo para manter paridade entre o servidor e o cliente:</p>
+
+                <h5>Passo 1: Registrar no Backend (PHP) — <code>src/Helpers/IconHelper.php</code></h5>
+                <p>Abra o arquivo <code>src/Helpers/IconHelper.php</code> e adicione a nova chave dentro do array estático <code>$registry</code>:</p>
+                <pre><code>"meuIcone" => [
+    "type" => "svg",
+    "body" => "&lt;path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M...\" /&gt;",
+    "defaultSize" => 14,             // opcional
+    "viewBox" => "0 0 24 24",         // opcional (padrão "0 0 24 24")
+    "filled" => false,               // opcional (true se for sólido)
+],</code></pre>
+
+                <h5>Passo 2: Registrar no Frontend (JS) — <code>public/assets/js/src/icons.js</code></h5>
+                <p>Abra o arquivo <code>public/assets/js/src/icons.js</code> e insira a mesma definição dentro do objeto <code>REGISTRY</code>:</p>
+                <pre><code>meuIcone: {
+  type: "svg",
+  body: "&lt;path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M...\" /&gt;",
+  defaultSize: 14
+},</code></pre>
+
+                <p><em>Alternativamente, no JavaScript você também pode registrar ícones dinamicamente em tempo de execução usando o método:</em></p>
+                <pre><code>Icons.register("novoIcone", { body: "&lt;path d=\"...\" /&gt;", viewBox: "0 0 640 640", filled: true });</code></pre>
+
+                <h4>📦 5. Catálogo de Ícones Disponíveis</h4>
                 <div class="table-responsive" style="margin-top: 1rem;">
                     <table class="table" style="font-size: 0.88rem;">
                         <thead>
@@ -376,19 +440,23 @@ const categoryMap = Icons.getCategoryMap();</code></pre>
                         <tbody>
                             <tr>
                                 <td><strong>Navegação & Geral</strong></td>
-                                <td><code>home</code>, <code>folder</code>, <code>file</code>, <code>document</code>, <code>star</code>, <code>starSolid</code>, <code>history</code>, <code>version</code>, <code>shield</code>, <code>bell</code>, <code>users</code>, <code>settings</code></td>
+                                <td><code>home</code>, <code>folder</code>, <code>folderPlus</code>, <code>file</code>, <code>doc</code>, <code>document</code>, <code>star</code>, <code>starSolid</code>, <code>history</code>, <code>version</code>, <code>shield</code>, <code>bell</code>, <code>sun</code>, <code>moon</code>, <code>users</code>, <code>user</code>, <code>settings</code>, <code>menu</code>, <code>bars</code>, <code>logout</code></td>
                             </tr>
                             <tr>
                                 <td><strong>Ações & Interface</strong></td>
-                                <td><code>check</code>, <code>x</code>, <code>plus</code>, <code>edit</code>, <code>trash</code>, <code>eye</code>, <code>download</code>, <code>share</code>, <code>link</code>, <code>search</code>, <code>filter</code>, <code>lock</code>, <code>unlock</code>, <code>refresh</code></td>
+                                <td><code>check</code>, <code>x</code>, <code>close</code>, <code>plus</code>, <code>add</code>, <code>pencil</code>, <code>edit</code>, <code>trash</code>, <code>delete</code>, <code>forceDelete</code>, <code>restore</code>, <code>duplicate</code>, <code>diff</code>, <code>eye</code>, <code>view</code>, <code>download</code>, <code>upload</code>, <code>share</code>, <code>link</code>, <code>search</code>, <code>filter</code>, <code>lock</code>, <code>unlock</code>, <code>paperclip</code>, <code>printer</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Formatação & Editor</strong></td>
+                                <td><code>list</code>, <code>listOrdered</code>, <code>checkSquare</code>, <code>indent</code>, <code>outdent</code>, <code>quote</code>, <code>code</code>, <code>table</code>, <code>minus</code>, <code>image</code>, <code>columns</code>, <code>key</code>, <code>globe</code>, <code>location</code>, <code>pin</code></td>
                             </tr>
                             <tr>
                                 <td><strong>Tecnologias & Sistemas</strong></td>
-                                <td><code>linux</code> (Tux), <code>docker</code> (Whale), <code>windows</code>, <code>android</code>, <code>apple</code>, <code>terminal</code>, <code>database</code> / <code>db</code>, <code>cloud</code>, <code>server</code>, <code>code</code></td>
+                                <td><code>linux</code> (Tux), <code>docker</code> (Whale), <code>windows</code>, <code>android</code>, <code>apple</code>, <code>terminal</code>, <code>database</code> / <code>db</code>, <code>cloud</code>, <code>server</code>, <code>chart</code>, <code>mail</code></td>
                             </tr>
                             <tr>
                                 <td><strong>Arquitetura & Categorias</strong></td>
-                                <td><code>auth</code>, <code>compute</code>, <code>network</code>, <code>book</code>, <code>archive</code>, <code>devops</code>, <code>api</code>, <code>saas</code>, <code>sec</code></td>
+                                <td><code>auth</code>, <code>compute</code>, <code>network</code>, <code>book</code>, <code>archive</code>, <code>devops</code>, <code>api</code>, <code>saas</code>, <code>sec</code>, <code>tool</code>, <code>idea</code>, <code>goal</code>, <code>rocket</code>, <code>workflow</code>, <code>kanban</code>, <code>robot</code>, <code>truck</code>, <code>calendar</code></td>
                             </tr>
                         </tbody>
                     </table>

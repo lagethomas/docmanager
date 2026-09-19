@@ -1,6 +1,6 @@
 -- =====================================================================
 -- DocManager - Schema completo (MariaDB/MySQL).
--- Uso: mysql -u root -p < database.sql
+-- Uso: mysql -u root -p < core_database.sql
 -- Para aplicar incrementalmente, prefira: php bin/migrate.php
 -- =====================================================================
 
@@ -10,18 +10,37 @@ CREATE DATABASE IF NOT EXISTS docmanager
 USE docmanager;
 
 -- ---------------------------------------------------------------------
+-- cp_locations
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS cp_locations (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    name VARCHAR(150) NOT NULL,
+    description VARCHAR(255) NULL,
+    status ENUM('ativo', 'inativo') NOT NULL DEFAULT 'ativo',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_locations_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
 -- cp_users
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cp_users (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    login VARCHAR(50) NOT NULL,
+    username VARCHAR(50) NOT NULL,
+    email VARCHAR(150) DEFAULT NULL,
     name VARCHAR(120) NOT NULL,
     password VARCHAR(255) NOT NULL,
     role VARCHAR(30) NOT NULL,
     status ENUM('ativo', 'inativo') NOT NULL DEFAULT 'ativo',
+    location_id INT UNSIGNED DEFAULT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_users_login (login)
+    UNIQUE KEY uq_users_username (username),
+    UNIQUE KEY uq_users_email (email),
+    CONSTRAINT fk_users_location FOREIGN KEY (location_id)
+        REFERENCES cp_locations(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
@@ -85,8 +104,8 @@ INSERT IGNORE INTO cp_roles (name, description) VALUES
 ('Visualizador', 'Acesso de somente leitura aos documentos');
 
 -- Usuario padrao: admin / admin@1234
-INSERT IGNORE INTO cp_users (login, name, password, role, status)
-VALUES ('admin', 'Administrador', '$2y$12$8NcsVUHXH7Io5bVvnXdE7eE8Go2eJVFiKbVNAQe0W0SGXKwJcXUNm', 'Admin', 'ativo');
+INSERT IGNORE INTO cp_users (username, email, name, password, role, status)
+VALUES ('admin', 'admin@docmanager.local', 'Administrador', '$2y$12$8NcsVUHXH7Io5bVvnXdE7eE8Go2eJVFiKbVNAQe0W0SGXKwJcXUNm', 'Admin', 'ativo');
 
 -- Configuracoes padrao
 INSERT IGNORE INTO cp_settings (setting_key, setting_value) VALUES 
@@ -140,6 +159,8 @@ CREATE TABLE IF NOT EXISTS cp_documents (
     rejection_reason TEXT DEFAULT NULL,
     views_count INT UNSIGNED NOT NULL DEFAULT 0,
     confidentiality_level ENUM('publico', 'interno', 'confidencial', 'restrito') NOT NULL DEFAULT 'interno',
+    is_public TINYINT(1) NOT NULL DEFAULT 0,
+    is_restricted TINYINT(1) NOT NULL DEFAULT 0,
     deleted_at DATETIME DEFAULT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -149,6 +170,8 @@ CREATE TABLE IF NOT EXISTS cp_documents (
     KEY idx_docs_status (status, deleted_at),
     KEY idx_docs_views (views_count),
     KEY idx_docs_deleted_at (deleted_at),
+    KEY idx_docs_is_public (is_public, status, deleted_at),
+    KEY idx_docs_is_restricted (is_restricted, status, deleted_at),
     FULLTEXT INDEX ft_docs (title, content),
     CONSTRAINT fk_docs_category FOREIGN KEY (category_id)
         REFERENCES cp_doc_categories(id) ON DELETE SET NULL,
@@ -158,6 +181,17 @@ CREATE TABLE IF NOT EXISTS cp_documents (
         REFERENCES cp_users(id) ON DELETE SET NULL,
     CONSTRAINT fk_docs_rejected_by FOREIGN KEY (rejected_by)
         REFERENCES cp_users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- cp_document_locations (restrições por unidade)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS cp_document_locations (
+    document_id INT UNSIGNED NOT NULL,
+    location_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (document_id, location_id),
+    CONSTRAINT fk_docloc_doc FOREIGN KEY (document_id) REFERENCES cp_documents(id) ON DELETE CASCADE,
+    CONSTRAINT fk_docloc_loc FOREIGN KEY (location_id) REFERENCES cp_locations(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
@@ -269,8 +303,11 @@ CREATE TABLE IF NOT EXISTS cp_comments (
     document_id INT UNSIGNED NOT NULL,
     user_id INT UNSIGNED NOT NULL,
     comment TEXT NOT NULL,
+    status ENUM('aberto', 'resolvido_pendente', 'concluido') NOT NULL DEFAULT 'aberto',
     resolved_at DATETIME DEFAULT NULL,
     resolved_by INT UNSIGNED DEFAULT NULL,
+    approved_at DATETIME DEFAULT NULL,
+    approved_by INT UNSIGNED DEFAULT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_comm_doc (document_id),
@@ -279,6 +316,8 @@ CREATE TABLE IF NOT EXISTS cp_comments (
     CONSTRAINT fk_comm_user FOREIGN KEY (user_id)
         REFERENCES cp_users(id) ON DELETE CASCADE,
     CONSTRAINT fk_comm_resolved_by FOREIGN KEY (resolved_by)
+        REFERENCES cp_users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_comm_approved_by FOREIGN KEY (approved_by)
         REFERENCES cp_users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -373,4 +412,10 @@ INSERT IGNORE INTO cp_migrations (name) VALUES
 ('0017_add_new_modules_tables'),
 ('0018_create_logs_table'),
 ('0019_add_resolved_by_to_comments'),
-('0020_create_document_followers');
+('0020_create_document_followers'),
+('0021_add_is_public_to_documents'),
+('0022_create_locations_table'),
+('0023_add_location_id_to_users'),
+('0024_add_restrictions_to_documents'),
+('0025_separate_email_and_username_in_users'),
+('0026_add_issue_approval_flow_to_comments');

@@ -29,8 +29,11 @@ class UsersController extends Controller
     public function users(): void
     {
         $users = array_map(static function (array $user): array {
+            $username = (string) ($user['username'] ?? $user['login']);
             return [
-                'login' => (string) $user['login'],
+                'username' => $username,
+                'login' => $username,
+                'email' => !empty($user['email']) ? (string) $user['email'] : null,
                 'name' => (string) $user['name'],
                 'role' => (string) $user['role'],
                 'status' => (string) $user['status'],
@@ -56,7 +59,8 @@ class UsersController extends Controller
     public function createUser(): void
     {
         $input = self::input();
-        $login = sanitize_input((string) ($input['login'] ?? ''));
+        $username = sanitize_input((string) ($input['username'] ?? $input['login'] ?? ''));
+        $email = sanitize_input((string) ($input['email'] ?? ''));
         $nome = sanitize_input((string) ($input['name'] ?? ''));
         $senha = (string) ($input['password'] ?? '');
         $role = trim((string) ($input['role'] ?? ''));
@@ -64,27 +68,33 @@ class UsersController extends Controller
         $locationId = !empty($input['location_id']) ? (int) $input['location_id'] : null;
 
         $roleModel = new RoleModel();
-        if ($login === '' || $nome === '' || $senha === '' || !$roleModel->nameExists($role)) {
+        if ($username === '' || $nome === '' || $senha === '' || !$roleModel->nameExists($role)) {
             $this->jsonError('Preencha usuário, nome, senha e um perfil válido.', 422);
             return;
         }
 
         $model = new UserModel();
-        if ($model->loginExists($login)) {
-            $this->jsonError('Já existe um usuário com esse login.', 409);
+        if ($model->usernameExists($username) || $model->loginExists($username)) {
+            $this->jsonError('Já existe um usuário com esse username de login.', 409);
             return;
         }
 
-        $model->create($login, $nome, SecurityHelper::hashPassword($senha), $role, $status, $locationId);
-        Logger::log('create_user', "Usuário {$login} criado com perfil {$role}");
+        if ($email !== '' && $model->emailExists($email)) {
+            $this->jsonError('O e-mail informado já está em uso por outro usuário.', 409);
+            return;
+        }
 
-        $this->jsonOk(['login' => mb_strtolower(trim($login))], 201);
+        $model->create($username, $nome, SecurityHelper::hashPassword($senha), $role, $status, $locationId, $email !== '' ? $email : null);
+        Logger::log('create_user', "Usuário {$username} criado com perfil {$role}");
+
+        $this->jsonOk(['login' => mb_strtolower(trim($username)), 'username' => mb_strtolower(trim($username))], 201);
     }
 
     public function updateUser(string $login): void
     {
+        $username = mb_strtolower(trim($login));
         $model = new UserModel();
-        $user = $model->findByLogin($login);
+        $user = $model->findByUsername($username) ?? $model->findByLogin($username);
         if ($user === null) {
             $this->jsonError('Usuário não encontrado.', 404);
             return;
@@ -92,9 +102,10 @@ class UsersController extends Controller
 
         $input = self::input();
         $nome = sanitize_input((string) ($input['name'] ?? $user['name']));
+        $email = sanitize_input((string) ($input['email'] ?? $user['email'] ?? ''));
         $senha = (string) ($input['password'] ?? '');
 
-        $isAdminPrincipal = $login === 'admin';
+        $isAdminPrincipal = $username === 'admin';
         $role = $isAdminPrincipal ? 'Admin' : trim((string) ($input['role'] ?? $user['role']));
         $status = $isAdminPrincipal ? 'ativo' : (($input['status'] ?? $user['status']) === 'inativo' ? 'inativo' : 'ativo');
         $locationId = array_key_exists('location_id', $input)
@@ -107,29 +118,35 @@ class UsersController extends Controller
             return;
         }
 
-        $hash = $senha !== '' ? SecurityHelper::hashPassword($senha) : null;
-        $model->update($login, $nome, $role, $status, $hash, $locationId);
-        Logger::log('edit_user', "Usuário {$login} atualizado");
+        if ($email !== '' && $model->emailExists($email, $username)) {
+            $this->jsonError('O e-mail informado já está em uso por outro usuário.', 409);
+            return;
+        }
 
-        $this->jsonOk(['login' => $login]);
+        $hash = $senha !== '' ? SecurityHelper::hashPassword($senha) : null;
+        $model->update($username, $nome, $role, $status, $hash, $locationId, $email !== '' ? $email : null);
+        Logger::log('edit_user', "Usuário {$username} atualizado");
+
+        $this->jsonOk(['login' => $username, 'username' => $username]);
     }
 
     public function deleteUser(string $login): void
     {
-        if ($login === 'admin') {
+        $username = mb_strtolower(trim($login));
+        if ($username === 'admin') {
             $this->jsonError('Não é possível excluir o administrador principal.', 422);
             return;
         }
 
         $model = new UserModel();
-        if ($model->findByLogin($login) === null) {
+        if ($model->findByUsername($username) === null && $model->findByLogin($username) === null) {
             $this->jsonError('Usuário não encontrado.', 404);
             return;
         }
 
-        $model->delete($login);
-        Logger::log('delete_user', "Usuário {$login} excluído");
+        $model->delete($username);
+        Logger::log('delete_user', "Usuário {$username} excluído");
 
-        $this->jsonOk(['login' => $login]);
+        $this->jsonOk(['login' => $username, 'username' => $username]);
     }
 }

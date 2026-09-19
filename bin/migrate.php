@@ -23,14 +23,16 @@ $migrations = [
     '0001_create_users_table' => "
         CREATE TABLE IF NOT EXISTS cp_users (
             id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-            login VARCHAR(50) NOT NULL,
+            username VARCHAR(50) NOT NULL,
+            email VARCHAR(150) DEFAULT NULL,
             name VARCHAR(120) NOT NULL,
             password VARCHAR(255) NOT NULL,
             role VARCHAR(30) NOT NULL,
             status ENUM('ativo', 'inativo') NOT NULL DEFAULT 'ativo',
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
-            UNIQUE KEY uq_users_login (login)
+            UNIQUE KEY uq_users_username (username),
+            UNIQUE KEY uq_users_email (email)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ",
 
@@ -369,6 +371,17 @@ $migrations = [
             CONSTRAINT fk_docloc_loc FOREIGN KEY (location_id) REFERENCES cp_locations(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ",
+
+    '0025_separate_email_and_username_in_users' => "
+        ALTER TABLE cp_users ADD COLUMN email VARCHAR(150) DEFAULT NULL AFTER username;
+    ",
+
+    '0026_add_issue_approval_flow_to_comments' => "
+        ALTER TABLE cp_comments ADD COLUMN status ENUM('aberto', 'resolvido_pendente', 'concluido') NOT NULL DEFAULT 'aberto' AFTER comment;
+        ALTER TABLE cp_comments ADD COLUMN approved_at DATETIME DEFAULT NULL AFTER resolved_by;
+        ALTER TABLE cp_comments ADD COLUMN approved_by INT UNSIGNED DEFAULT NULL AFTER approved_at;
+        ALTER TABLE cp_comments ADD CONSTRAINT fk_comm_approved_by FOREIGN KEY (approved_by) REFERENCES cp_users(id) ON DELETE SET NULL;
+    ",
 ];
 
 $stmt = $db->query('SELECT name FROM cp_migrations');
@@ -411,13 +424,34 @@ function isIgnorableMigrationError(\PDOException $e): bool
     return false;
 }
 
-// Verificações de integridade estrutural (garante que colunas essenciais existam mesmo se cp_migrations já possuir o registro)
+// Auto-fix integrity check: Rename login to username if needed & ensure email column exists
+try {
+    $checkUserCols = $db->query("SELECT column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'cp_users'")->fetchAll(\PDO::FETCH_COLUMN);
+    if (is_array($checkUserCols)) {
+        if (in_array('login', $checkUserCols, true) && !in_array('username', $checkUserCols, true)) {
+            $db->exec("ALTER TABLE cp_users CHANGE COLUMN login username VARCHAR(50) NOT NULL");
+            echo "  [AUTO-FIX] Coluna 'cp_users.login' renomeada para 'username'." . PHP_EOL;
+        }
+        if (!in_array('email', $checkUserCols, true)) {
+            $db->exec("ALTER TABLE cp_users ADD COLUMN email VARCHAR(150) DEFAULT NULL AFTER username");
+            echo "  [AUTO-FIX] Coluna 'cp_users.email' criada." . PHP_EOL;
+        }
+    }
+} catch (\Throwable $t) {
+    // Tabela cp_users ainda não criada
+}
+
+// Verificações de integridade estrutural
 $integrityChecks = [
     'cp_users' => [
         'location_id' => "ALTER TABLE cp_users ADD COLUMN location_id INT UNSIGNED DEFAULT NULL AFTER role",
+        'email' => "ALTER TABLE cp_users ADD COLUMN email VARCHAR(150) DEFAULT NULL AFTER username",
     ],
     'cp_comments' => [
         'resolved_by' => "ALTER TABLE cp_comments ADD COLUMN resolved_by INT UNSIGNED DEFAULT NULL AFTER resolved_at",
+        'status' => "ALTER TABLE cp_comments ADD COLUMN status ENUM('aberto', 'resolvido_pendente', 'concluido') NOT NULL DEFAULT 'aberto' AFTER comment",
+        'approved_at' => "ALTER TABLE cp_comments ADD COLUMN approved_at DATETIME DEFAULT NULL AFTER resolved_by",
+        'approved_by' => "ALTER TABLE cp_comments ADD COLUMN approved_by INT UNSIGNED DEFAULT NULL AFTER approved_at",
     ],
     'cp_documents' => [
         'deleted_at' => "ALTER TABLE cp_documents ADD COLUMN deleted_at DATETIME DEFAULT NULL",

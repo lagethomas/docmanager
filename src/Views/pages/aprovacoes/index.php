@@ -174,7 +174,3 @@ $user = $user ?? [];
     </div>
   </div>
 </div>
-
-<!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
-<script src="<?php echo Controller::asset('/assets/js/src/aprovacoes.js'); ?>"></script>

@@ -5,6 +5,7 @@ use App\Controllers\ApprovalController;
 use App\Controllers\AuthController;
 use App\Controllers\DocumentController;
 use App\Controllers\HomeController;
+use App\Controllers\ProfileController;
 use App\Controllers\SettingsController;
 use App\Controllers\UsersController;
 use App\Middlewares\AdminMiddleware;
@@ -13,6 +14,9 @@ use App\Middlewares\AuthMiddleware;
 return [
     // Página inicial (Dashboard)
     ['GET', '/', [HomeController::class, 'index'], [AuthMiddleware::class]],
+
+    // Perfil do Usuário
+    ['GET', '/perfil', [ProfileController::class, 'index'], [AuthMiddleware::class]],
 
     // Módulo Documentação do Acervo
     ['GET', '/docs', [DocumentController::class, 'index'], [AuthMiddleware::class]],
@@ -24,6 +28,9 @@ return [
 
     // Módulo Aprovações (Admin e Aprovador)
     ['GET', '/aprovacoes', [ApprovalController::class, 'index'], [AuthMiddleware::class]],
+
+    // Módulo Issues
+    ['GET', '/issues', [App\Controllers\IssueController::class, 'index'], [AuthMiddleware::class]],
 
     // Módulo Usuários (somente Admin)
     ['GET', '/usuarios', [UsersController::class, 'index'], [AuthMiddleware::class, AdminMiddleware::class]],

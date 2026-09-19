@@ -40,8 +40,10 @@ class DocumentController extends Controller
             return;
         }
 
-        // Se visualizador e doc não aprovado
-        if ($userRole === 'Visualizador' && ($doc['status'] ?? '') !== 'aprovado') {
+        $isSharedWithUser = $model->isSharedWithUser($intId, $userId);
+
+        // Se visualizador e doc não aprovado (a menos que seja compartilhado diretamente com ele)
+        if ($userRole === 'Visualizador' && ($doc['status'] ?? '') !== 'aprovado' && !$isSharedWithUser) {
             $this->redirect('/docs');
             return;
         }
@@ -54,8 +56,8 @@ class DocumentController extends Controller
             }
         }
 
-        // Restrição por localização: não-admin e não-autor deve pertencer a uma das localizações do documento
-        if ($userRole !== 'Admin' && (int) ($doc['is_restricted'] ?? 0) === 1 && (int) ($doc['created_by'] ?? 0) !== $userId) {
+        // Restrição por localização: não-admin e não-autor deve pertencer a uma das localizações do documento (ou ter documento compartilhado)
+        if ($userRole !== 'Admin' && (int) ($doc['is_restricted'] ?? 0) === 1 && (int) ($doc['created_by'] ?? 0) !== $userId && !$isSharedWithUser) {
             $userLocId = Auth::locationId();
             $allowedLocIds = (new \App\Models\LocationModel())->getDocumentLocationIds($intId);
             if ($userLocId === null || !in_array($userLocId, $allowedLocIds, true)) {
@@ -69,7 +71,8 @@ class DocumentController extends Controller
 
         $canEdit = $model->canUserEdit($intId, $userId, $userRole);
         $canManageShares = $model->canUserManageShares($intId, $userId, $userRole);
-        $canComment = in_array($userRole, ['Admin', 'Editor', 'Aprovador'], true);
+        $canComment = in_array($userRole, ['Admin', 'Editor', 'Aprovador', 'Visualizador'], true);
+        $canViewVersions = ($userRole !== 'Visualizador');
 
         $followerModel = new \App\Models\DocumentFollowerModel();
         $isFollowing = $followerModel->isFollowing($intId, $userId);
@@ -80,6 +83,7 @@ class DocumentController extends Controller
             'canEdit' => $canEdit,
             'canManageShares' => $canManageShares,
             'canComment' => $canComment,
+            'canViewVersions' => $canViewVersions,
             'isFollowing' => $isFollowing,
             'user' => $user,
             'csrfToken' => CSRF::token(),
@@ -738,50 +742,89 @@ class DocumentController extends Controller
     public function upload(): void
     {
         $user = Auth::user();
-        if (!PermissionManager::can($user['role'] ?? null, 'docs.upload')) {
+        if ($user === null || !PermissionManager::can($user['role'], 'docs.upload')) {
             $this->jsonError('Acesso negado: seu perfil não possui permissão para enviar anexos.', 403);
             return;
         }
+
         if (empty($_FILES['file'])) {
             $this->jsonError('Nenhum arquivo enviado.', 400);
             return;
         }
 
         $file = $_FILES['file'];
-        $ext = pathinfo((string) $file['name'], PATHINFO_EXTENSION);
+        $errorCode = (int) ($file['error'] ?? UPLOAD_ERR_OK);
+
+        if ($errorCode !== UPLOAD_ERR_OK) {
+            $msg = match ($errorCode) {
+                UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'O arquivo enviado excede o tamanho máximo permitido pelo servidor.',
+                UPLOAD_ERR_PARTIAL => 'O upload do arquivo foi feito apenas parcialmente.',
+                UPLOAD_ERR_NO_FILE => 'Nenhum arquivo foi selecionado.',
+                UPLOAD_ERR_NO_TMP_DIR => 'Pasta temporária do servidor ausente.',
+                UPLOAD_ERR_CANT_WRITE => 'Falha de gravação no disco do servidor.',
+                default => 'Erro ao enviar arquivo (código: ' . $errorCode . ').'
+            };
+            $this->jsonError($msg, 400);
+            return;
+        }
+
+        $tmpPath = (string) ($file['tmp_name'] ?? '');
+        if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+            $this->jsonError('Arquivo de upload inválido ou corrompido.', 400);
+            return;
+        }
+
+        $origName = sanitize_input((string) ($file['name'] ?? 'arquivo'));
+        $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
         $stored = uniqid('up_', true) . ($ext !== '' ? '.' . $ext : '');
         $dest = $this->storagePath('uploads/docs/' . $stored);
 
         $dir = dirname($dest);
         if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
+            if (!@mkdir($dir, 0777, true) && !is_dir($dir)) {
+                $this->jsonError('Não foi possível criar o diretório de destino do upload.', 500);
+                return;
+            }
         }
 
-        if (!move_uploaded_file((string) $file['tmp_name'], $dest)) {
-            $this->jsonError('Falha no upload.', 500);
+        if (!is_writable($dir)) {
+            @chmod($dir, 0777);
+        }
+
+        if (!@move_uploaded_file($tmpPath, $dest)) {
+            $this->jsonError('Falha ao mover o arquivo para a pasta de destino no servidor.', 500);
             return;
         }
 
-        $user = Auth::user();
-        $db = Database::getInstance();
-        $stmt = $db->prepare(
-            'INSERT INTO cp_doc_uploads (original_name, stored_name, mime_type, size_bytes, uploaded_by) VALUES (?, ?, ?, ?, ?)'
-        );
-        $stmt->execute([
-            (string) $file['name'],
-            $stored,
-            (string) $file['type'],
-            (int) $file['size'],
-            (int) $user['id'],
-        ]);
-        $uploadId = (int) $db->lastInsertId();
+        $mime = !empty($file['type']) ? sanitize_input((string) $file['type']) : 'application/octet-stream';
+        $size = (int) ($file['size'] ?? 0);
+        $userId = (int) $user['id'];
+
+        try {
+            $db = Database::getInstance();
+            $stmt = $db->prepare(
+                'INSERT INTO cp_doc_uploads (original_name, stored_name, mime_type, size_bytes, uploaded_by) VALUES (?, ?, ?, ?, ?)'
+            );
+            $stmt->execute([
+                $origName,
+                $stored,
+                $mime,
+                $size,
+                $userId,
+            ]);
+            $uploadId = (int) $db->lastInsertId();
+        } catch (\Throwable $ex) {
+            Logger::log('upload_error', 'Erro ao salvar no banco: ' . $ex->getMessage());
+            $this->jsonError('Erro ao registrar o arquivo no banco de dados: ' . $ex->getMessage(), 500);
+            return;
+        }
 
         $this->jsonOk([
             'id' => $uploadId,
             'url' => 'storage/uploads/docs/' . $stored,
-            'name' => (string) $file['name'],
-            'mime' => (string) $file['type'],
-            'size' => (int) $file['size'],
+            'name' => $origName,
+            'mime' => $mime,
+            'size' => $size,
         ]);
     }
 
