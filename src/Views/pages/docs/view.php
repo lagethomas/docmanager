@@ -42,7 +42,7 @@ $status = $doc['status'] ?? 'aprovado';
     <div class="docs-view-actions">
       <!-- Botão Favoritar -->
       <button type="button" class="btn btn-sm btn-outline btn-single-favorite <?php echo !empty($doc['is_favorite']) ? 'active' : ''; ?>" id="btnSingleFavorite" onclick="DocsView.toggleFavorite(<?php echo (int)$doc['id']; ?>)" title="<?php echo !empty($doc['is_favorite']) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'; ?>">
-        <svg viewBox="0 0 24 24" fill="<?php echo !empty($doc['is_favorite']) ? 'currentColor' : 'none'; ?>" stroke="currentColor" stroke-width="2" class="btn-svg"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <?php echo \App\Helpers\IconHelper::get(!empty($doc['is_favorite']) ? 'starSolid' : 'starOutline', ['class' => 'btn-svg']); ?>
         <span id="btnSingleFavoriteText"><?php echo !empty($doc['is_favorite']) ? 'Favorito' : 'Favoritar'; ?></span>
       </button>
 
@@ -60,7 +60,7 @@ $status = $doc['status'] ?? 'aprovado';
 
       <?php if ($canManageShares): ?>
       <button type="button" class="btn btn-sm btn-outline" onclick="DocsView.openShareModal(<?php echo (int)$doc['id']; ?>)" title="Compartilhar documento com outros editores">
-        <i class="fa-solid fa-share-nodes" style="font-size: 13px; margin-right: 4px;"></i>
+        <?php echo icon('share', ['size' => 13, 'style' => 'margin-right:4px']); ?>
         <span>Compartilhar</span>
       </button>
       <?php endif; ?>
@@ -133,7 +133,7 @@ $status = $doc['status'] ?? 'aprovado';
 
         <?php if (!empty($doc['shares']) && (int)($doc['created_by'] ?? 0) === (int)($user['id'] ?? 0)): ?>
         <span class="doc-status-badge badge-sharing" title="Você está compartilhando este documento com outros usuários">
-          <i class="fa-solid fa-share-nodes" style="font-size: 11px; margin-right: 4px;"></i>
+          <?php echo icon('share', ['size' => 11, 'style' => 'margin-right:4px']); ?>
           Compartilhando (<?php echo count($doc['shares']); ?>)
         </span>
         <?php elseif (!empty($doc['is_shared_with_me'])): ?>

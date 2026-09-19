@@ -1,0 +1,381 @@
+/**
+ * ==========================================================================
+ * DOCMANAGER - MÓDULO VISUALIZADOR DE DIFF E COMPARAÇÃO (diff.js)
+ * ==========================================================================
+ * Comparador visual side-by-side estilo Git Diff com contagem de adição/remoção,
+ * histórico de edições e seleção de versões.
+ */
+'use strict';
+
+var DocDiff = (function () {
+  var CURRENT_DOC = null;
+  var CURRENT_TAB = 'diff';
+
+  function computeLineDiff(oldText, newText) {
+    var oldLines = (oldText || '').replace(/\r\n/g, '\n').split('\n');
+    var newLines = (newText || '').replace(/\r\n/g, '\n').split('\n');
+
+    var M = oldLines.length;
+    var N = newLines.length;
+
+    if (oldText === newText) {
+      var same = [];
+      for (var k = 0; k < M; k++) {
+        same.push({ type: 'same', oldLine: oldLines[k], newLine: newLines[k], oldNum: k + 1, newNum: k + 1 });
+      }
+      return same;
+    }
+
+    var dp = [];
+    for (var i = 0; i <= M; i++) {
+      dp.push(new Int32Array(N + 1));
+    }
+
+    for (var i = 1; i <= M; i++) {
+      for (var j = 1; j <= N; j++) {
+        if (oldLines[i - 1] === newLines[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1] + 1;
+        } else {
+          dp[i][j] = dp[i - 1][j] > dp[i][j - 1] ? dp[i - 1][j] : dp[i][j - 1];
+        }
+      }
+    }
+
+    var i = M, j = N;
+    var ops = [];
+    while (i > 0 || j > 0) {
+      if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
+        ops.unshift({ type: 'same', oldLine: oldLines[i - 1], newLine: newLines[j - 1], oldNum: i, newNum: j });
+        i--; j--;
+      } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+        ops.unshift({ type: 'add', newLine: newLines[j - 1], newNum: j });
+        j--;
+      } else {
+        ops.unshift({ type: 'delete', oldLine: oldLines[i - 1], oldNum: i });
+        i--;
+      }
+    }
+
+    return ops;
+  }
+
+  function renderSideBySideDiff(ops, oldVersionLabel, newVersionLabel) {
+    var leftRows = [];
+    var rightRows = [];
+    var addCount = 0;
+    var delCount = 0;
+
+    var k = 0;
+    while (k < ops.length) {
+      var op = ops[k];
+      if (op.type === 'same') {
+        leftRows.push({ num: op.oldNum, text: op.oldLine, type: 'same' });
+        rightRows.push({ num: op.newNum, text: op.newLine, type: 'same' });
+        k++;
+      } else if (op.type === 'delete') {
+        if (k + 1 < ops.length && ops[k + 1].type === 'add') {
+          var nextAdd = ops[k + 1];
+          leftRows.push({ num: op.oldNum, text: op.oldLine, type: 'delete' });
+          rightRows.push({ num: nextAdd.newNum, text: nextAdd.newLine, type: 'add' });
+          delCount++;
+          addCount++;
+          k += 2;
+        } else {
+          leftRows.push({ num: op.oldNum, text: op.oldLine, type: 'delete' });
+          rightRows.push({ num: '', text: '', type: 'empty' });
+          delCount++;
+          k++;
+        }
+      } else if (op.type === 'add') {
+        leftRows.push({ num: '', text: '', type: 'empty' });
+        rightRows.push({ num: op.newNum, text: op.newLine, type: 'add' });
+        addCount++;
+        k++;
+      }
+    }
+
+    var leftHtml = '';
+    var rightHtml = '';
+
+    for (var r = 0; r < leftRows.length; r++) {
+      var l = leftRows[r];
+      var rg = rightRows[r];
+
+      var lClass = l.type === 'delete' ? 'diff-line-delete' : (l.type === 'empty' ? 'diff-line-empty' : 'diff-line-same');
+      var lSymbol = l.type === 'delete' ? '-' : ' ';
+      leftHtml += '<tr class="' + lClass + '">'
+        + '<td class="diff-line-num">' + (l.num || '') + '</td>'
+        + '<td class="diff-line-symbol">' + lSymbol + '</td>'
+        + '<td class="diff-line-content">' + esc(l.text) + '</td>'
+        + '</tr>';
+
+      var rClass = rg.type === 'add' ? 'diff-line-add' : (rg.type === 'empty' ? 'diff-line-empty' : 'diff-line-same');
+      var rSymbol = rg.type === 'add' ? '+' : ' ';
+      rightHtml += '<tr class="' + rClass + '">'
+        + '<td class="diff-line-num">' + (rg.num || '') + '</td>'
+        + '<td class="diff-line-symbol">' + rSymbol + '</td>'
+        + '<td class="diff-line-content">' + esc(rg.text) + '</td>'
+        + '</tr>';
+    }
+
+    var statsHtml = '<div style="display:flex;align-items:center;gap:0.5rem;font-size:0.78rem;font-weight:600;">'
+      + '<span style="color:#166534;background:#dcfce7;padding:3px 9px;border-radius:12px;">+' + addCount + ' adições</span>'
+      + '<span style="color:#991b1b;background:#fee2e2;padding:3px 9px;border-radius:12px;">-' + delCount + ' remoções</span>'
+      + '</div>';
+
+    var containerHtml = '<div class="diff-wrapper">'
+      + '<div class="diff-grid">'
+      + '<div class="diff-pane diff-pane-left">'
+      + '<div class="diff-pane-header"><span>◀ ' + esc(oldVersionLabel) + '</span></div>'
+      + '<table class="diff-table"><tbody>' + leftHtml + '</tbody></table>'
+      + '</div>'
+      + '<div class="diff-pane diff-pane-right">'
+      + '<div class="diff-pane-header"><span>▶ ' + esc(newVersionLabel) + '</span></div>'
+      + '<table class="diff-table"><tbody>' + rightHtml + '</tbody></table>'
+      + '</div>'
+      + '</div>'
+      + '</div>';
+
+    return { html: containerHtml, statsHtml: statsHtml };
+  }
+
+  function switchTab(tab) {
+    CURRENT_TAB = tab;
+
+    var btnDiff = document.getElementById('btnTabDiff');
+    var btnRendered = document.getElementById('btnTabRendered');
+    var btnHistory = document.getElementById('btnTabHistory');
+
+    var containerDiff = document.getElementById('previewDiffContainer');
+    var containerBody = document.getElementById('previewBody');
+    var containerHistory = document.getElementById('previewVersionsContainer');
+    var diffControls = document.getElementById('diffVersionControls');
+
+    if (btnDiff) btnDiff.className = tab === 'diff' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+    if (btnRendered) btnRendered.className = tab === 'rendered' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+    if (btnHistory) btnHistory.className = tab === 'history' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+
+    if (containerDiff) containerDiff.hidden = (tab !== 'diff');
+    if (containerBody) containerBody.hidden = (tab !== 'rendered');
+    if (containerHistory) containerHistory.hidden = (tab !== 'history');
+    if (diffControls) diffControls.hidden = (tab !== 'diff');
+  }
+
+  function populateVersionSelects(versions) {
+    var oldSelect = document.getElementById('diffOldVersionSelect');
+    var newSelect = document.getElementById('diffNewVersionSelect');
+
+    if (!oldSelect || !newSelect) return;
+
+    oldSelect.innerHTML = '';
+    newSelect.innerHTML = '';
+
+    if (!versions || !versions.length) {
+      oldSelect.innerHTML = '<option value="">Sem versão anterior</option>';
+      newSelect.innerHTML = '<option value="0">Conteúdo Atual</option>';
+      return;
+    }
+
+    var total = versions.length;
+
+    for (var i = 0; i < total; i++) {
+      var v = versions[i];
+      var vNum = total - i;
+      var dateStr = fmtFull(v.edited_at);
+      var label = 'v' + vNum + ' (' + dateStr + ' - ' + (v.editor_name || 'Autor') + ')';
+
+      var optOld = document.createElement('option');
+      optOld.value = String(i);
+      optOld.textContent = label;
+
+      var optNew = document.createElement('option');
+      optNew.value = String(i);
+      optNew.textContent = label;
+
+      oldSelect.appendChild(optOld);
+      newSelect.appendChild(optNew);
+    }
+
+    newSelect.value = '0';
+    if (total >= 2) {
+      oldSelect.value = '1';
+    } else {
+      oldSelect.value = '0';
+    }
+  }
+
+  function onVersionSelectChange() {
+    if (!CURRENT_DOC) return;
+    renderSelectedDiff();
+  }
+
+  function renderSelectedDiff() {
+    var oldSelect = document.getElementById('diffOldVersionSelect');
+    var newSelect = document.getElementById('diffNewVersionSelect');
+    var diffContainer = document.getElementById('previewDiffContainer');
+    var statsBadge = document.getElementById('diffStatsBadge');
+
+    if (!CURRENT_DOC || !diffContainer) return;
+
+    var versions = CURRENT_DOC.versions || [];
+
+    var oldIdx = oldSelect ? parseInt(oldSelect.value, 10) : 1;
+    var newIdx = newSelect ? parseInt(newSelect.value, 10) : 0;
+
+    var oldContent = '';
+    var oldLabel = 'Versão Anterior';
+    var newContent = CURRENT_DOC.content || '';
+    var newLabel = 'Nova Alteração (Proposta)';
+
+    if (versions.length > 0) {
+      if (!isNaN(newIdx) && versions[newIdx]) {
+        newContent = versions[newIdx].content || '';
+        var vNumNew = versions.length - newIdx;
+        newLabel = 'Versão v' + vNumNew + ' (' + fmtFull(versions[newIdx].edited_at) + ')';
+      }
+
+      if (!isNaN(oldIdx) && versions[oldIdx] && oldIdx !== newIdx) {
+        oldContent = versions[oldIdx].content || '';
+        var vNumOld = versions.length - oldIdx;
+        oldLabel = 'Versão v' + vNumOld + ' (' + fmtFull(versions[oldIdx].edited_at) + ')';
+      } else if (oldIdx === newIdx) {
+        oldContent = newContent;
+        oldLabel = newLabel + ' (Sem alteração)';
+      }
+    }
+
+    if (!oldContent && (!versions || versions.length <= 1)) {
+      oldLabel = 'Sem versão anterior (Documento Novo)';
+    }
+
+    var ops = computeLineDiff(oldContent, newContent);
+    var res = renderSideBySideDiff(ops, oldLabel, newLabel);
+
+    diffContainer.innerHTML = res.html;
+    if (statsBadge) statsBadge.innerHTML = res.statsHtml;
+  }
+
+  function renderVersionsHistoryList(versions) {
+    var container = document.getElementById('previewVersionsContainer');
+    if (!container) return;
+
+    if (!versions || !versions.length) {
+      container.innerHTML = '<p style="color:var(--docs-text-mut);padding:1rem 0;">Nenhum histórico de edições anteriores registrado.</p>';
+      return;
+    }
+
+    var html = '<div style="display:flex;flex-direction:column;gap:0.75rem;">';
+    var total = versions.length;
+
+    for (var i = 0; i < total; i++) {
+      var v = versions[i];
+      var vNum = total - i;
+      var isLatest = (i === 0);
+
+      html += '<div style="background:var(--docs-bg,#f8fafc);border:1px solid var(--docs-border,#e2e8f0);border-radius:8px;padding:0.85rem 1.1rem;display:flex;align-items:center;justify-content:space-between;">'
+        + '<div>'
+        + '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">'
+        + '<strong style="font-size:0.95rem;">Versão ' + vNum + '</strong>'
+        + (isLatest ? '<span class="badge" style="background:rgba(26,187,156,0.15);color:var(--docs-primary,#1abb9c);font-size:0.75rem;padding:2px 8px;border-radius:10px;">Versão Atual</span>' : '')
+        + '</div>'
+        + '<div style="font-size:0.8rem;color:var(--docs-text-mut);">'
+        + 'Editado por <strong>' + esc(v.editor_name || 'Autor') + '</strong> em ' + fmtFull(v.edited_at)
+        + '</div>'
+        + (v.version_note ? '<div style="font-size:0.8rem;color:var(--docs-text);margin-top:0.35rem;"><em>" ' + esc(v.version_note) + ' "</em></div>' : '')
+        + '</div>'
+        + '<button type="button" class="btn btn-sm btn-secondary" onclick="DocDiff.compareVersionIndex(' + i + ')" style="font-size:0.78rem;border-radius:6px;">Comparar com Anterior</button>'
+        + '</div>';
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+  }
+
+  function compareVersionIndex(idx) {
+    switchTab('diff');
+    var oldSelect = document.getElementById('diffOldVersionSelect');
+    var newSelect = document.getElementById('diffNewVersionSelect');
+    var versions = (CURRENT_DOC && CURRENT_DOC.versions) || [];
+    if (newSelect) newSelect.value = String(idx);
+    if (oldSelect) oldSelect.value = String(Math.min(versions.length - 1, idx + 1));
+    onVersionSelectChange();
+  }
+
+  function open(id, options) {
+    options = options || {};
+    api('GET', '/api/docs/' + id).then(function (res) {
+      CURRENT_DOC = res.doc;
+      var modal   = document.getElementById('previewApprovalModal');
+      var title   = document.getElementById('previewTitle');
+      var meta    = document.getElementById('previewMeta');
+      var body    = document.getElementById('previewBody');
+      var notice  = document.getElementById('previewStatusNotice');
+      var actions = document.getElementById('previewModalActions');
+
+      if (title) title.textContent = CURRENT_DOC.title || '';
+      if (meta) {
+        var cat    = CURRENT_DOC.category_name ? ('📁 ' + CURRENT_DOC.category_name) : '📂 Geral';
+        var author = '👤 ' + (CURRENT_DOC.author_name || 'Autor');
+        var date   = '🕒 ' + fmtFull(CURRENT_DOC.updated_at);
+        meta.textContent = author + ' • ' + cat + ' • ' + date;
+      }
+
+      if (notice) {
+        if (CURRENT_DOC.status === 'rejeitado' && CURRENT_DOC.rejection_reason) {
+          notice.hidden = false;
+          notice.className = 'approval-rejection-callout';
+          notice.innerHTML = '<strong>Motivo da rejeição anterior:</strong> ' + esc(CURRENT_DOC.rejection_reason);
+        } else {
+          notice.hidden = true;
+        }
+      }
+
+      if (body) {
+        var raw = CURRENT_DOC.content || '';
+        body.innerHTML = parseMarkdown(raw);
+      }
+
+      var versions = CURRENT_DOC.versions || [];
+      populateVersionSelects(versions);
+      renderSelectedDiff();
+      renderVersionsHistoryList(versions);
+
+      switchTab('diff');
+
+      if (actions) {
+        var userRole = (window.ME && window.ME.role) || '';
+        var canApprove = (userRole === 'Admin' || userRole === 'Aprovador');
+        var isPendingOrRejected = (CURRENT_DOC.status === 'pendente' || CURRENT_DOC.status === 'rejeitado');
+        actions.hidden = !(options.showApprovalButtons && canApprove && isPendingOrRejected);
+      }
+      if (modal) modal.hidden = false;
+    }).catch(function (err) {
+      if (typeof toast === 'function') {
+        toast(err.message || 'Erro ao carregar documento.', 'error');
+      } else {
+        alert(err.message || 'Erro ao carregar documento.');
+      }
+    });
+  }
+
+  function close() {
+    var modal = document.getElementById('previewApprovalModal');
+    if (modal) modal.hidden = true;
+    CURRENT_DOC = null;
+  }
+
+  function getCurrentDoc() {
+    return CURRENT_DOC;
+  }
+
+  return {
+    open: open,
+    close: close,
+    switchTab: switchTab,
+    onVersionSelectChange: onVersionSelectChange,
+    compareVersionIndex: compareVersionIndex,
+    getCurrentDoc: getCurrentDoc
+  };
+})();
+
+window.DocDiff = DocDiff;

@@ -35,7 +35,7 @@ var Docs = (function () {
   var SVG_DOC = Icons.doc;
   var SVG_FOLDER = Icons.folder;
   var SVG_TRASH = Icons.trash;
-  var SVG_STAR = Icons.star;
+  var SVG_STAR = Icons.starSolid;
   var SVG_SHARE = Icons.share;
 
   var ICONS_MAP = Icons.getCategoryMap();
@@ -893,10 +893,10 @@ var Docs = (function () {
       chipsHtml += '<span class="filter-chip">⭐ Documentos Favoritos</span>';
     } else if (IS_SHARED) {
       hasActiveFilter = true;
-      chipsHtml += '<span class="filter-chip"><i class="fa-solid fa-share-nodes" style="font-size:11px;margin-right:4px;"></i> Compartilhados Comigo</span>';
+      chipsHtml += '<span class="filter-chip">' + Icons.get('share', {size: 11, style: 'margin-right:4px'}) + ' Compartilhados Comigo</span>';
     } else if (IS_SHARED_BY_ME) {
       hasActiveFilter = true;
-      chipsHtml += '<span class="filter-chip"><i class="fa-solid fa-share-nodes" style="font-size:11px;margin-right:4px;"></i> Compartilhados por Mim</span>';
+      chipsHtml += '<span class="filter-chip">' + Icons.get('share', {size: 11, style: 'margin-right:4px'}) + ' Compartilhados por Mim</span>';
     } else {
       if (ACTIVE_FOLDER !== null) {
         hasActiveFilter = true;

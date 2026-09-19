@@ -3261,12 +3261,13 @@ select.form-control {
     transform:translateY(-50%)
 }
 .form-actions {
-    align-items:center;
-    gap:var(--space-2);
-    border-top:1px solid var(--border-color-light);
-    margin-top:20px;
-    padding-top:16px;
-    display:flex
+    align-items: center;
+    gap: var(--space-2);
+    border-top: 1px solid var(--border-color-light);
+    margin-top: 20px;
+    padding-top: 16px;
+    display: flex;
+    justify-content: flex-end;
 }
 .form-actions.right {
     justify-content:flex-end

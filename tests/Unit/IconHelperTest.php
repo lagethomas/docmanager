@@ -11,8 +11,12 @@ final class IconHelperTest extends TestCase
     public function testGetExistingFaIcon(): void
     {
         $rendered = IconHelper::get('share');
-        $this->assertStringContainsString('<i class="fa-solid fa-share-nodes"', $rendered);
-        $this->assertStringContainsString('font-size:13px', $rendered);
+        // Todos os ícones agora são SVGs inline
+        $this->assertStringContainsString('<svg', $rendered);
+        $this->assertStringContainsString('viewBox="0 0 24 24"', $rendered);
+        // Tamanho padrão do share é 13px
+        $this->assertStringContainsString('width="13"', $rendered);
+        $this->assertStringContainsString('height="13"', $rendered);
     }
 
     public function testGetCustomRegisteredSvgIcon(): void
@@ -40,7 +44,9 @@ final class IconHelperTest extends TestCase
             'title' => 'Excluir Item',
         ]);
 
-        $this->assertStringContainsString('font-size:24px', $rendered);
+        // SVG recebe width/height em vez de font-size
+        $this->assertStringContainsString('width="24"', $rendered);
+        $this->assertStringContainsString('height="24"', $rendered);
         $this->assertStringContainsString('custom-trash-icon', $rendered);
         $this->assertStringContainsString('color:#ff0000', $rendered);
         $this->assertStringContainsString('title="Excluir Item"', $rendered);
@@ -49,20 +55,35 @@ final class IconHelperTest extends TestCase
     public function testGlobalIconFunction(): void
     {
         $fromGlobal = icon('folder', ['size' => 20]);
-        $fromClass = IconHelper::get('folder', ['size' => 20]);
+        $fromClass  = IconHelper::get('folder', ['size' => 20]);
 
         $this->assertSame($fromClass, $fromGlobal);
-        $this->assertStringContainsString('font-size:20px', $fromGlobal);
-        $this->assertStringContainsString('fa-folder', $fromGlobal);
+        // Ícone SVG com tamanho correto
+        $this->assertStringContainsString('<svg', $fromGlobal);
+        $this->assertStringContainsString('width="20"', $fromGlobal);
     }
 
     public function testVariantOptions(): void
     {
+        // O campo 'variant' era FA-only; agora SVGs ignoram variant.
+        // O teste garante que o ícone renderiza corretamente de qualquer forma.
         $regularPencil = IconHelper::get('pencil', ['variant' => 'regular']);
-        $solidPencil = IconHelper::get('pencil', ['variant' => 'solid']);
+        $solidPencil   = IconHelper::get('pencil', ['variant' => 'solid']);
 
-        $this->assertStringContainsString('fa-regular', $regularPencil);
-        $this->assertStringContainsString('fa-solid', $solidPencil);
+        $this->assertStringContainsString('<svg', $regularPencil);
+        $this->assertStringContainsString('<svg', $solidPencil);
+        // Ambos retornam o mesmo SVG outline (variant não afeta SVGs, só FA)
+        $this->assertSame($regularPencil, $solidPencil);
+    }
+
+    public function testFilledIconVariant(): void
+    {
+        $starOutline = IconHelper::get('star');
+        $starFilled  = IconHelper::get('starSolid');
+
+        $this->assertStringContainsString('stroke="currentColor"', $starOutline);
+        $this->assertStringContainsString('fill="currentColor"', $starFilled);
+        $this->assertStringContainsString('stroke="none"', $starFilled);
     }
 
     public function testHasMethod(): void
@@ -76,7 +97,9 @@ final class IconHelperTest extends TestCase
     public function testFallbackForNonExistingIcon(): void
     {
         $fallback = IconHelper::get('non_existing_icon_xyz_123');
-        $this->assertStringContainsString('fa-circle-question', $fallback);
+        // Fallback agora é um SVG com círculo de interrogação
+        $this->assertStringContainsString('<svg', $fallback);
+        $this->assertStringContainsString('aria-hidden="true"', $fallback);
     }
 
     public function testAllReturnsRegistry(): void

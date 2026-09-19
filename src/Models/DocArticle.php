@@ -313,6 +313,87 @@ public/index.php ──► src/bootstrap.php (Autoload PSR-4, Error Handlers, DB
                     <li><strong>E-mail não cadastrado no painel:</strong> O e-mail autenticado no Office 365 não foi encontrado na coluna <code>login</code> da tabela <code>cp_users</code>.</li>
                 </ul>
             '
+        ],
+
+        'biblioteca-icones' => [
+            'slug' => 'biblioteca-icones',
+            'title' => '5. Biblioteca Central de Ícones SVG (IconHelper & Icons)',
+            'category' => 'arquitetura',
+            'category_name' => 'Arquitetura & UI',
+            'icon' => 'grid',
+            'summary' => 'Guia completo da biblioteca interna de ícones SVG vetorizados. Como utilizar IconHelper no PHP e Icons no JavaScript sem dependências externas.',
+            'read_time' => '4 min de leitura',
+            'content_html' => '
+                <h3>Biblioteca Centralizada de Ícones SVG</h3>
+                <p>O DocManager conta com uma biblioteca nativa e centralizada de ícones SVG vetorizados, eliminando totalmente a dependência de fontes pesadas e libs externas (como FontAwesome). O sistema disponibiliza paridade total de nomenclatura entre o backend (<strong>PHP</strong>) e o frontend (<strong>JavaScript</strong>).</p>
+
+                <div class="alert alert-info" style="margin: 1.25rem 0;">
+                    <div class="alert-body">
+                        <strong>Vantagens da Lib Própria:</strong> Alta performance (zero requisições HTTP externas), estilização nativa via CSS <code>currentColor</code>, suporte a ícones vazados (outline) e preenchidos (solid/filled), além de ícones técnicos de infraestrutura (Linux Penguin, Docker Whale, Database, Terminal, etc).
+                    </div>
+                </div>
+
+                <h4>🐘 1. Uso no Backend (PHP)</h4>
+                <p>No PHP, utilize a classe <code>App\Helpers\IconHelper</code>. Ela disponibiliza os métodos estáticos abaixo:</p>
+                <pre><code>// 1. Obter SVG simples por nome
+echo IconHelper::get("folder", "me-2 text-primary");
+
+// 2. Definir tamanho customizado em pixels (ex: 20px)
+echo IconHelper::get("linux", "align-middle", 20);
+
+// 3. Ícone preenchido (Solid / Filled) - ex: Estrela de Favoritos
+echo IconHelper::get("starSolid", "text-warning", 18);
+
+// 4. Ícone automático por categoria de documentos/pastas
+echo IconHelper::getCategoryIcon("Servidores Linux", "me-2");</code></pre>
+
+                <h4>⚡ 2. Uso no Frontend (JavaScript)</h4>
+                <p>No JS client-side (carregado via <code>public/assets/js/src/icons.js</code>), utilize o objeto global <code>Icons</code>:</p>
+                <pre><code>// 1. Gerar string HTML do SVG
+const svgHtml = Icons.get("folder", { class: "icon-sm me-2", size: 16 });
+
+// 2. Inserir direto em um elemento do DOM
+Icons.renderInto(document.getElementById("myIconContainer"), "starSolid", { class: "text-warning" });
+
+// 3. Obter mapa de ícones por nome de categoria
+const categoryMap = Icons.getCategoryMap();</code></pre>
+
+                <h4>🎨 3. Estilização & Variações (Solid vs Outline)</h4>
+                <ul style="line-height: 1.8;">
+                    <li><strong>Cor Automática:</strong> Os SVGs usam <code>stroke="currentColor"</code> ou <code>fill="currentColor"</code>. Eles herdam a cor do texto do elemento pai ou da classe CSS (ex.: <code>.text-primary</code>, <code>.text-warning</code>, <code>.text-muted</code>).</li>
+                    <li><strong>Ícones Preenchidos:</strong> Ícones como <code>starSolid</code> usam preenchimento contínuo, perfeitos para ações ativas (como navegação de Favoritos). Ícones de botões usam versão vazada (outline) para um visual limpo e refinado.</li>
+                </ul>
+
+                <h4>📦 4. Catálogo de Ícones Disponíveis</h4>
+                <div class="table-responsive" style="margin-top: 1rem;">
+                    <table class="table" style="font-size: 0.88rem;">
+                        <thead>
+                            <tr>
+                                <th>Categoria</th>
+                                <th>Nomes das Chaves de Ícones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Navegação & Geral</strong></td>
+                                <td><code>home</code>, <code>folder</code>, <code>file</code>, <code>document</code>, <code>star</code>, <code>starSolid</code>, <code>history</code>, <code>version</code>, <code>shield</code>, <code>bell</code>, <code>users</code>, <code>settings</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Ações & Interface</strong></td>
+                                <td><code>check</code>, <code>x</code>, <code>plus</code>, <code>edit</code>, <code>trash</code>, <code>eye</code>, <code>download</code>, <code>share</code>, <code>link</code>, <code>search</code>, <code>filter</code>, <code>lock</code>, <code>unlock</code>, <code>refresh</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Tecnologias & Sistemas</strong></td>
+                                <td><code>linux</code> (Tux), <code>docker</code> (Whale), <code>windows</code>, <code>android</code>, <code>apple</code>, <code>terminal</code>, <code>database</code> / <code>db</code>, <code>cloud</code>, <code>server</code>, <code>code</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Arquitetura & Categorias</strong></td>
+                                <td><code>auth</code>, <code>compute</code>, <code>network</code>, <code>book</code>, <code>archive</code>, <code>devops</code>, <code>api</code>, <code>saas</code>, <code>sec</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            '
         ]
     ];
 

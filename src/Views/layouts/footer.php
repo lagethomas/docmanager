@@ -21,6 +21,8 @@ window.CSRF_TOKEN = <?php echo json_encode($csrfToken ?? '', JSON_UNESCAPED_SLAS
 window.SETTINGS = <?php echo json_encode($settings, JSON_UNESCAPED_SLASHES); ?>;
 </script>
 <script src="<?php echo Controller::asset('/assets/js/src/icons.js'); ?>"></script>
+<script src="<?php echo Controller::asset('/assets/js/src/searchable_select.js'); ?>"></script>
+<script src="<?php echo Controller::asset('/assets/js/src/diff.js'); ?>"></script>
 <script src="<?php echo Controller::asset('/assets/js/src/common.js'); ?>"></script>
 <?php if (in_array($page, ['docs', 'docs_view', 'aprovacoes', 'home'], true)): ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>

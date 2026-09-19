@@ -25,7 +25,7 @@ function navActive(string $current, string $target): string
 <link rel="stylesheet" href="<?php echo Controller::asset('/assets/css/modules/table.min.css'); ?>">
 <link rel="stylesheet" href="<?php echo Controller::asset('/assets/css/modules/docs.min.css'); ?>">
 <link rel="stylesheet" href="<?php echo Controller::asset('/assets/css/modules/reports.min.css'); ?>">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
 <meta name="csrf-token" content="<?php echo e(CSRF::token()); ?>">
 </head>
 <body>

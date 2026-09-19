@@ -250,7 +250,7 @@ $pendingCount = (int) ($stats['total_pending'] ?? $stats['my_pending'] ?? 0);
       <a href="<?php echo e(Controller::url('/docs?filter=shared')); ?>" class="metric-card accent-indigo">
         <div class="metric-top-row">
           <div class="metric-icon bg-indigo">
-            <i class="fa-solid fa-share-nodes" style="font-size: 18px;"></i>
+            <?php echo icon('share', ['size' => 18]); ?>
           </div>
           <span class="metric-badge-tag neutral">Colaboração</span>
         </div>
@@ -311,7 +311,7 @@ $pendingCount = (int) ($stats['total_pending'] ?? $stats['my_pending'] ?? 0);
       <a href="<?php echo e(Controller::url('/docs?filter=favorites')); ?>" class="metric-card accent-amber">
         <div class="metric-top-row">
           <div class="metric-icon bg-amber">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <?php echo \App\Helpers\IconHelper::get('starSolid'); ?>
           </div>
           <span class="metric-badge-tag neutral">Favoritos</span>
         </div>

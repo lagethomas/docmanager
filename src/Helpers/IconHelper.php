@@ -5,109 +5,426 @@ namespace App\Helpers;
 
 /**
  * Helper de ícones centralizado para o backend (PHP Views).
+ * 100% self-hosted — sem dependências externas.
  * Mantém catálogo sincronizado com o frontend (icons.js).
+ *
+ * Fonte: Heroicons v2 MIT — https://heroicons.com
  */
 final class IconHelper
 {
     /**
-     * @var array<string, array{type: string, faClass?: string, defaultSize?: int, viewBox?: string, body?: string}>
+     * @var array<string, array{type: string, body: string, viewBox?: string, defaultSize?: int, filled?: bool}>
      */
     private static array $registry = [
-        'share' => ['type' => 'fa', 'faClass' => 'fa-solid fa-share-nodes', 'defaultSize' => 13],
-        'key' => ['type' => 'fa', 'faClass' => 'fa-solid fa-key', 'defaultSize' => 13],
-        'pencil' => ['type' => 'fa', 'faClass' => 'fa-regular fa-pen-to-square', 'defaultSize' => 14],
-        'edit' => ['type' => 'fa', 'faClass' => 'fa-regular fa-pen-to-square', 'defaultSize' => 14],
-        'trash' => ['type' => 'fa', 'faClass' => 'fa-regular fa-trash-can', 'defaultSize' => 14],
-        'delete' => ['type' => 'fa', 'faClass' => 'fa-regular fa-trash-can', 'defaultSize' => 14],
-        'copy' => ['type' => 'fa', 'faClass' => 'fa-regular fa-copy', 'defaultSize' => 13],
-        'check' => ['type' => 'fa', 'faClass' => 'fa-solid fa-check', 'defaultSize' => 13],
-        'plus' => ['type' => 'fa', 'faClass' => 'fa-solid fa-plus', 'defaultSize' => 13],
-        'add' => ['type' => 'fa', 'faClass' => 'fa-solid fa-plus', 'defaultSize' => 13],
-        'eye' => ['type' => 'fa', 'faClass' => 'fa-regular fa-eye', 'defaultSize' => 13],
-        'view' => ['type' => 'fa', 'faClass' => 'fa-regular fa-eye', 'defaultSize' => 13],
-        'restore' => ['type' => 'fa', 'faClass' => 'fa-solid fa-rotate-left', 'defaultSize' => 13],
-        'forceDelete' => ['type' => 'fa', 'faClass' => 'fa-regular fa-trash-can', 'defaultSize' => 13],
-        'duplicate' => ['type' => 'fa', 'faClass' => 'fa-regular fa-clone', 'defaultSize' => 13],
-        'diff' => ['type' => 'fa', 'faClass' => 'fa-solid fa-code-compare', 'defaultSize' => 13],
-        'star' => ['type' => 'fa', 'faClass' => 'fa-regular fa-star', 'defaultSize' => 13],
-        'starSolid' => ['type' => 'fa', 'faClass' => 'fa-solid fa-star', 'defaultSize' => 13],
-        'starOutline' => ['type' => 'fa', 'faClass' => 'fa-regular fa-star', 'defaultSize' => 13],
-        'clock' => ['type' => 'fa', 'faClass' => 'fa-regular fa-clock', 'defaultSize' => 12],
-        'checkCircle' => ['type' => 'fa', 'faClass' => 'fa-regular fa-circle-check', 'defaultSize' => 13],
-        'xCircle' => ['type' => 'fa', 'faClass' => 'fa-regular fa-circle-xmark', 'defaultSize' => 13],
-        'print' => ['type' => 'fa', 'faClass' => 'fa-solid fa-print', 'defaultSize' => 13],
-        'pdf' => ['type' => 'fa', 'faClass' => 'fa-solid fa-file-pdf', 'defaultSize' => 13],
-        'comment' => ['type' => 'fa', 'faClass' => 'fa-regular fa-comment', 'defaultSize' => 13],
-        'comments' => ['type' => 'fa', 'faClass' => 'fa-regular fa-comments', 'defaultSize' => 13],
-        'preview' => ['type' => 'fa', 'faClass' => 'fa-regular fa-file-lines', 'defaultSize' => 13],
-        'search' => ['type' => 'fa', 'faClass' => 'fa-solid fa-magnifying-glass', 'defaultSize' => 13],
-        'filter' => ['type' => 'fa', 'faClass' => 'fa-solid fa-filter', 'defaultSize' => 13],
-        'download' => ['type' => 'fa', 'faClass' => 'fa-solid fa-download', 'defaultSize' => 13],
-        'upload' => ['type' => 'fa', 'faClass' => 'fa-solid fa-upload', 'defaultSize' => 13],
-        'close' => ['type' => 'fa', 'faClass' => 'fa-solid fa-xmark', 'defaultSize' => 14],
-        'location' => ['type' => 'fa', 'faClass' => 'fa-solid fa-location-dot', 'defaultSize' => 14],
-        'pin' => ['type' => 'fa', 'faClass' => 'fa-solid fa-location-dot', 'defaultSize' => 14],
-        'folder' => ['type' => 'fa', 'faClass' => 'fa-regular fa-folder', 'defaultSize' => 14],
-        'doc' => ['type' => 'fa', 'faClass' => 'fa-regular fa-file-lines', 'defaultSize' => 14],
-        'file' => ['type' => 'fa', 'faClass' => 'fa-regular fa-file-lines', 'defaultSize' => 14],
-        'favorite' => ['type' => 'fa', 'faClass' => 'fa-solid fa-star', 'defaultSize' => 13],
-        'user' => ['type' => 'fa', 'faClass' => 'fa-regular fa-user', 'defaultSize' => 13],
-        'users' => ['type' => 'fa', 'faClass' => 'fa-solid fa-users', 'defaultSize' => 14],
-        'bell' => ['type' => 'fa', 'faClass' => 'fa-regular fa-bell', 'defaultSize' => 14],
-        'settings' => ['type' => 'fa', 'faClass' => 'fa-solid fa-gear', 'defaultSize' => 14],
-        'tag' => ['type' => 'fa', 'faClass' => 'fa-solid fa-tag', 'defaultSize' => 13],
-        'history' => ['type' => 'fa', 'faClass' => 'fa-solid fa-clock-rotate-left', 'defaultSize' => 13],
-        'lock' => ['type' => 'fa', 'faClass' => 'fa-solid fa-lock', 'defaultSize' => 13],
-        'auth' => ['type' => 'fa', 'faClass' => 'fa-solid fa-shield-halved', 'defaultSize' => 14],
-        'compute' => ['type' => 'fa', 'faClass' => 'fa-solid fa-microchip', 'defaultSize' => 14],
-        'database' => ['type' => 'fa', 'faClass' => 'fa-solid fa-database', 'defaultSize' => 14],
-        'network' => ['type' => 'fa', 'faClass' => 'fa-solid fa-network-wired', 'defaultSize' => 14],
-        'cloud' => ['type' => 'fa', 'faClass' => 'fa-solid fa-cloud', 'defaultSize' => 14],
-        'server' => ['type' => 'fa', 'faClass' => 'fa-solid fa-server', 'defaultSize' => 14],
-        'code' => ['type' => 'fa', 'faClass' => 'fa-solid fa-code', 'defaultSize' => 14],
-        'terminal' => ['type' => 'fa', 'faClass' => 'fa-solid fa-terminal', 'defaultSize' => 14],
-        'android' => ['type' => 'fa', 'faClass' => 'fa-brands fa-android', 'defaultSize' => 14],
-        'apple' => ['type' => 'fa', 'faClass' => 'fa-brands fa-apple', 'defaultSize' => 14],
-        'book' => ['type' => 'fa', 'faClass' => 'fa-solid fa-book', 'defaultSize' => 14],
-        'archive' => ['type' => 'fa', 'faClass' => 'fa-solid fa-box-archive', 'defaultSize' => 14],
-        'devops' => ['type' => 'fa', 'faClass' => 'fa-solid fa-gears', 'defaultSize' => 14],
-        'db' => ['type' => 'fa', 'faClass' => 'fa-solid fa-database', 'defaultSize' => 14],
-        'tool' => ['type' => 'fa', 'faClass' => 'fa-solid fa-wrench', 'defaultSize' => 14],
-        'idea' => ['type' => 'fa', 'faClass' => 'fa-solid fa-lightbulb', 'defaultSize' => 14],
-        'goal' => ['type' => 'fa', 'faClass' => 'fa-solid fa-bullseye', 'defaultSize' => 14],
-        'rocket' => ['type' => 'fa', 'faClass' => 'fa-solid fa-rocket', 'defaultSize' => 14],
-        'docker' => ['type' => 'fa', 'faClass' => 'fa-brands fa-docker', 'defaultSize' => 14],
-        'workflow' => ['type' => 'fa', 'faClass' => 'fa-solid fa-diagram-project', 'defaultSize' => 14],
-        'kanban' => ['type' => 'fa', 'faClass' => 'fa-solid fa-table-columns', 'defaultSize' => 14],
-        'robot' => ['type' => 'fa', 'faClass' => 'fa-solid fa-robot', 'defaultSize' => 14],
-        'truck' => ['type' => 'fa', 'faClass' => 'fa-solid fa-truck', 'defaultSize' => 14],
-        'calendar' => ['type' => 'fa', 'faClass' => 'fa-solid fa-calendar', 'defaultSize' => 14],
-        'chart' => ['type' => 'fa', 'faClass' => 'fa-solid fa-chart-line', 'defaultSize' => 14],
-        'mail' => ['type' => 'fa', 'faClass' => 'fa-solid fa-envelope', 'defaultSize' => 14],
-        'home' => ['type' => 'fa', 'faClass' => 'fa-solid fa-house', 'defaultSize' => 14],
-        'shield' => ['type' => 'fa', 'faClass' => 'fa-solid fa-shield-halved', 'defaultSize' => 14],
-        'link' => ['type' => 'fa', 'faClass' => 'fa-solid fa-link', 'defaultSize' => 14],
-        'linux' => ['type' => 'fa', 'faClass' => 'fa-brands fa-linux', 'defaultSize' => 14],
-        'windows' => ['type' => 'fa', 'faClass' => 'fa-brands fa-windows', 'defaultSize' => 14],
+
+        // ─── Ações Comuns ──────────────────────────────────────────────────────
+
+        'share' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />',
+            'defaultSize' => 13,
+        ],
+        'key' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />',
+            'defaultSize' => 13,
+        ],
+        'pencil' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />',
+            'defaultSize' => 14,
+        ],
+        'edit' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />',
+            'defaultSize' => 14,
+        ],
+        'trash' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />',
+            'defaultSize' => 14,
+        ],
+        'delete' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />',
+            'defaultSize' => 14,
+        ],
+        'copy' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5" />',
+            'defaultSize' => 13,
+        ],
+        'check' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />',
+            'defaultSize' => 13,
+        ],
+        'plus' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />',
+            'defaultSize' => 13,
+        ],
+        'add' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />',
+            'defaultSize' => 13,
+        ],
+        'eye' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />',
+            'defaultSize' => 13,
+        ],
+        'view' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />',
+            'defaultSize' => 13,
+        ],
+        'restore' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />',
+            'defaultSize' => 13,
+        ],
+        'forceDelete' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />',
+            'defaultSize' => 13,
+        ],
+        'duplicate' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5" />',
+            'defaultSize' => 13,
+        ],
+        'diff' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />',
+            'defaultSize' => 13,
+        ],
+        'star' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />',
+            'defaultSize' => 13,
+        ],
+        'starSolid' => [
+            'type' => 'svg',
+            'filled' => true,
+            'body' => '<path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.536.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.769-.415-2.212.749-2.305l5.404-.434 2.082-5.005z" clip-rule="evenodd" />',
+            'defaultSize' => 13,
+        ],
+        'starOutline' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />',
+            'defaultSize' => 13,
+        ],
+        'clock' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />',
+            'defaultSize' => 12,
+        ],
+        'checkCircle' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />',
+            'defaultSize' => 13,
+        ],
+        'xCircle' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />',
+            'defaultSize' => 13,
+        ],
+        'print' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />',
+            'defaultSize' => 13,
+        ],
+        'pdf' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />',
+            'defaultSize' => 13,
+        ],
+        'comment' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />',
+            'defaultSize' => 13,
+        ],
+        'comments' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />',
+            'defaultSize' => 13,
+        ],
+        'preview' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75h6M9 15.75h3" />',
+            'defaultSize' => 13,
+        ],
+        'search' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z" />',
+            'defaultSize' => 13,
+        ],
+        'filter' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />',
+            'defaultSize' => 13,
+        ],
+        'download' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />',
+            'defaultSize' => 13,
+        ],
+        'upload' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />',
+            'defaultSize' => 13,
+        ],
+        'close' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />',
+            'defaultSize' => 14,
+        ],
+
+        // ─── Entidades & Navegação ──────────────────────────────────────────────
+
+        'location' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />',
+            'defaultSize' => 14,
+        ],
+        'pin' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />',
+            'defaultSize' => 14,
+        ],
+        'folder' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />',
+            'defaultSize' => 14,
+        ],
+        'doc' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />',
+            'defaultSize' => 14,
+        ],
+        'file' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />',
+            'defaultSize' => 14,
+        ],
+        'favorite' => [
+            'type' => 'svg',
+            'filled' => true,
+            'body' => '<path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.536.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.769-.415-2.212.749-2.305l5.404-.434 2.082-5.005z" clip-rule="evenodd" />',
+            'defaultSize' => 13,
+        ],
+        'user' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />',
+            'defaultSize' => 13,
+        ],
+        'users' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />',
+            'defaultSize' => 14,
+        ],
+        'bell' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />',
+            'defaultSize' => 14,
+        ],
+        'settings' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />',
+            'defaultSize' => 14,
+        ],
+        'tag' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" />',
+            'defaultSize' => 13,
+        ],
+        'history' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />',
+            'defaultSize' => 13,
+        ],
+        'lock' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />',
+            'defaultSize' => 13,
+        ],
+
+        // ─── Categorias Técnicas ────────────────────────────────────────────────
+
+        'auth' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />',
+            'defaultSize' => 14,
+        ],
+        'compute' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25zm.75-12h9v9h-9v-9z" />',
+            'defaultSize' => 14,
+        ],
+        'database' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />',
+            'defaultSize' => 14,
+        ],
+        'network' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />',
+            'defaultSize' => 14,
+        ],
+        'cloud' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5h10.5a3.75 3.75 0 003.75-3.75c0-.895-.315-1.717-.843-2.361A3.75 3.75 0 0016.5 9.75a5.25 5.25 0 00-10.233-2.33A4.502 4.502 0 002.25 15z" />',
+            'defaultSize' => 14,
+        ],
+        'terminal' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />',
+            'defaultSize' => 14,
+        ],
+        'book' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />',
+            'defaultSize' => 14,
+        ],
+        'archive' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />',
+            'defaultSize' => 14,
+        ],
+        'devops' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z" />',
+            'defaultSize' => 14,
+        ],
+        'db' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />',
+            'defaultSize' => 14,
+        ],
+        'tool' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75a4.5 4.5 0 01-4.884 4.484c-1.076-.091-2.264.071-2.95.904l-7.152 8.684a2.548 2.548 0 11-3.586-3.586l8.684-7.152c.833-.686.995-1.874.904-2.95a4.5 4.5 0 016.336-4.486l-3.276 3.276a3.004 3.004 0 002.25 2.25l3.276-3.276c.256.565.398 1.192.398 1.852z" /><path stroke-linecap="round" stroke-linejoin="round" d="M4.867 19.125h.008v.008h-.008v-.008z" />',
+            'defaultSize' => 14,
+        ],
+        'idea' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />',
+            'defaultSize' => 14,
+        ],
+        'goal' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />',
+            'defaultSize' => 14,
+        ],
+        'rocket' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />',
+            'defaultSize' => 14,
+        ],
+        'docker' => [
+            'type' => 'svg',
+            'viewBox' => '0 0 640 640',
+            'filled' => true,
+            'body' => '<path d="M349.9 300.3L283.8 300.3L283.8 240.9L349.9 240.9L349.9 300.3zM349.9 96L283.8 96L283.8 156.7L349.9 156.7L349.9 96zM428.1 240.8L362 240.8L362 300.2L428.1 300.2L428.1 240.8zM271.8 168.7L205.7 168.7L205.7 228.8L271.8 228.8L271.8 168.7zM349.9 168.7L283.8 168.7L283.8 228.8L349.9 228.8L349.9 168.7zM626.7 268.7C612.3 259 579.1 255.5 553.6 260.3C550.3 236.3 536.9 215.4 512.5 196.6L498.5 187.3L489.2 201.3C470.8 229.1 465.8 274.9 485.5 305.1C476.8 309.8 459.7 316.2 437.1 315.8L2.4 315.8C-6.3 366.6 8.2 432.6 46.4 477.9C83.5 521.8 139.1 544.1 211.8 544.1C369.2 544.1 485.7 471.6 540.2 339.9C561.6 340.3 607.8 340 631.5 294.7C633 292.2 638.1 281.5 640 277.6L626.7 268.7zM115.6 240.8L49.6 240.8L49.6 300.2L115.7 300.2L115.7 240.8L115.6 240.8zM193.7 240.8L127.6 240.8L127.6 300.2L193.7 300.2L193.7 240.8zM271.8 240.8L205.7 240.8L205.7 300.2L271.8 300.2L271.8 240.8zM193.7 168.7L127.6 168.7L127.6 228.8L193.7 228.8L193.7 168.7z"/>',
+            'defaultSize' => 14,
+        ],
+        'workflow' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3l-3 3" />',
+            'defaultSize' => 14,
+        ],
+        'kanban' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />',
+            'defaultSize' => 14,
+        ],
+        'robot' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25zm.75-12h9v9h-9v-9z" />',
+            'defaultSize' => 14,
+        ],
+        'truck' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />',
+            'defaultSize' => 14,
+        ],
+        'calendar' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H18v-.008zm0 2.25h.008v.008H18V15z" />',
+            'defaultSize' => 14,
+        ],
+        'chart' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />',
+            'defaultSize' => 14,
+        ],
+        'mail' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />',
+            'defaultSize' => 14,
+        ],
+        'home' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />',
+            'defaultSize' => 14,
+        ],
+        'shield' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />',
+            'defaultSize' => 14,
+        ],
+        'link' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />',
+            'defaultSize' => 14,
+        ],
+        'linux' => [
+            'type' => 'svg',
+            'viewBox' => '0 0 640 640',
+            'filled' => true,
+            'body' => '<path d="M316.9 187.3C317.9 187.8 318.7 189 319.9 189C321 189 322.7 188.6 322.8 187.5C323 186.1 320.9 185.2 319.6 184.6C317.9 183.9 315.7 183.6 314.1 184.5C313.7 184.7 313.3 185.2 313.5 185.6C313.8 186.9 315.8 186.7 316.9 187.3zM295 189C296.2 189 297 187.8 298 187.3C299.1 186.7 301.1 186.9 301.5 185.7C301.7 185.3 301.3 184.8 300.9 184.6C299.3 183.7 297.1 184 295.4 184.7C294.1 185.3 292 186.2 292.2 187.6C292.3 188.6 294 189.1 295 189zM516 467.8C512.4 463.8 510.7 456.2 508.8 448.1C507 440 504.9 431.3 498.3 425.7C497 424.6 495.7 423.6 494.3 422.8C493 422 491.6 421.3 490.2 420.8C499.4 393.5 495.8 366.3 486.5 341.7C475.1 311.6 455.2 285.3 440 267.3C422.9 245.8 406.3 225.4 406.6 195.3C407.1 149.4 411.7 64.1 330.8 64C228.4 63.8 254 167.4 252.9 199.2C251.2 222.6 246.5 241 230.4 263.9C211.5 286.4 184.9 322.7 172.3 360.6C166.3 378.5 163.5 396.7 166.1 413.9C159.6 419.7 154.7 428.6 149.5 434.1C145.3 438.4 139.2 440 132.5 442.4C125.8 444.8 118.5 448.4 114 456.9C111.9 460.8 111.2 465 111.2 469.3C111.2 473.2 111.8 477.2 112.4 481.1C113.6 489.2 114.9 496.8 113.2 501.9C108 516.3 107.3 526.3 111 533.6C114.8 540.9 122.4 544.1 131.1 545.9C148.4 549.5 171.9 548.6 190.4 558.4C210.2 568.8 230.3 572.5 246.3 568.8C257.9 566.2 267.4 559.2 272.2 548.6C284.7 548.5 298.5 543.2 320.5 542C335.4 540.8 354.1 547.3 375.6 546.1C376.2 548.4 377 550.7 378.1 552.8L378.1 552.9C386.4 569.6 401.9 577.2 418.4 575.9C435 574.6 452.5 564.9 466.7 548C480.3 531.6 502.7 524.8 517.6 515.8C525 511.3 531 505.7 531.5 497.5C531.9 489.3 527.1 480.2 516 467.8zM319.8 151.3C329.6 129.1 354 129.5 363.8 150.9C370.3 165.1 367.4 181.8 359.5 191.3C357.9 190.5 353.6 188.7 346.9 186.4C348 185.2 350 183.7 350.8 181.8C355.6 170 350.6 154.8 341.7 154.5C334.4 154 327.8 165.3 329.9 177.5C325.8 175.5 320.5 174 316.9 173.1C315.9 166.2 316.6 158.5 319.8 151.3zM279.1 139.8C289.2 139.8 299.9 154 298.2 173.3C294.7 174.3 291.1 175.8 288 177.9C289.2 169 284.7 157.8 278.4 158.3C270 159 268.6 179.5 276.6 186.4C277.6 187.2 278.5 186.2 270.7 191.9C255.1 177.3 260.2 139.8 279.1 139.8zM265.5 200.5C271.7 195.9 279.1 190.5 279.6 190C284.3 185.6 293.1 175.8 307.5 175.8C314.6 175.8 323.1 178.1 333.4 184.7C339.7 188.8 344.7 189.1 356 194C364.4 197.5 369.7 203.7 366.5 212.2C363.9 219.3 355.5 226.6 343.8 230.3C332.7 233.9 324 246.3 305.6 245.2C301.7 245 298.6 244.2 296 243.1C288 239.6 283.8 232.7 276 228.1C267.4 223.3 262.8 217.7 261.3 212.8C259.9 207.9 261.3 203.8 265.5 200.5zM268.8 534.5C266.1 569.6 224.9 568.9 193.5 552.5C163.6 536.7 124.9 546 117 530.6C114.6 525.9 114.6 517.9 119.6 504.2L119.6 504C122 496.4 120.2 488 119 480.1C117.8 472.3 117.2 465.1 119.9 460.1C123.4 453.4 128.4 451 134.7 448.8C145 445.1 146.5 445.4 154.3 438.9C159.8 433.2 163.8 426 168.6 420.9C173.7 415.4 178.6 412.8 186.3 414C194.4 415.2 201.4 420.8 208.2 430L227.8 465.6C237.3 485.5 270.9 514 268.8 534.5zM267.4 508.6C263.3 502 257.8 495 253 489C260.1 489 267.2 486.8 269.7 480.1C272 473.9 269.7 465.2 262.3 455.2C248.8 437 224 422.7 224 422.7C210.5 414.3 202.9 404 199.4 392.8C195.9 381.6 196.4 369.5 199.1 357.6C204.3 334.7 217.7 312.4 226.3 298.4C228.6 296.7 227.1 301.6 217.6 319.2C209.1 335.3 193.2 372.5 215 401.6C215.6 380.9 220.5 359.8 228.8 340.1C240.8 312.7 266.1 265.2 268.1 227.4C269.2 228.2 272.7 230.6 274.3 231.5C278.9 234.2 282.4 238.2 286.9 241.8C299.3 251.8 315.4 251 329.3 243C335.5 239.5 340.5 235.5 345.2 234C355.1 230.9 363 225.4 367.5 219C375.2 249.4 393.2 293.3 404.7 314.7C410.8 326.1 423 350.2 428.3 379.3C431.6 379.2 435.3 379.7 439.2 380.7C453 345 427.5 306.5 415.9 295.8C411.2 291.2 411 289.2 413.3 289.3C425.9 300.5 442.5 323 448.5 348.3C451.3 359.9 451.8 372 448.9 384C465.3 390.8 484.8 401.9 479.6 418.8C477.4 418.7 476.4 418.8 475.4 418.8C478.6 408.7 471.5 401.2 452.6 392.7C433 384.1 416.6 384.1 414.3 405.2C402.2 409.4 396 419.9 392.9 432.5C390.1 443.7 389.3 457.2 388.5 472.4C388 480.1 384.9 490.4 381.7 501.4C349.6 524.3 305 534.3 267.4 508.6zM524.8 497.1C523.9 513.9 483.6 517 461.6 543.6C448.4 559.3 432.2 568 418 569.1C403.8 570.2 391.5 564.3 384.3 549.8C379.6 538.7 381.9 526.7 385.4 513.5C389.1 499.3 394.6 484.7 395.3 472.9C396.1 457.7 397 444.4 399.5 434.2C402.1 423.9 406.1 417 413.2 413.1C413.5 412.9 413.9 412.8 414.2 412.6C415 425.8 421.5 439.2 433 442.1C445.6 445.4 463.7 434.6 471.4 425.8C480.4 425.5 487.1 424.9 494 430.9C503.9 439.4 501.1 461.2 511.1 472.5C521.7 484.1 525.1 492 524.8 497.1zM269.4 212.7C271.4 214.6 274.1 217.2 277.4 219.8C284 225 293.2 230.4 304.7 230.4C316.3 230.4 327.2 224.5 336.5 219.6C341.4 217 347.4 212.6 351.3 209.2C355.2 205.8 357.2 202.9 354.4 202.6C351.6 202.3 351.8 205.2 348.4 207.7C344 210.9 338.7 215.1 334.5 217.5C327.1 221.7 315 227.7 304.6 227.7C294.2 227.7 285.9 222.9 279.7 218C276.6 215.5 274 213 272 211.1C270.5 209.7 270.1 206.5 267.7 206.2C266.3 206.1 265.9 209.9 269.4 212.7z" />',
+            'defaultSize' => 14,
+        ],
+        'windows' => [
+            'type' => 'svg',
+            'filled' => true,
+            'body' => '<path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801" />',
+            'defaultSize' => 14,
+        ],
+        'android' => [
+            'type' => 'svg',
+            'filled' => true,
+            'body' => '<path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zM3.5 8C2.67 8 2 8.67 2 9.5v7c0 .83.67 1.5 1.5 1.5S5 17.33 5 16.5v-7C5 8.67 4.33 8 3.5 8zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zm-4.97-5.84l1.3-1.3c.2-.2.2-.51 0-.71-.2-.2-.51-.2-.71 0l-1.48 1.48A5.84 5.84 0 0012 1c-.96 0-1.86.23-2.66.63L7.85.15c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l1.31 1.31A5.983 5.983 0 006 7h12c0-2.21-1.2-4.15-2.97-5.16zM10 5H9V4h1v1zm5 0h-1V4h1v1z" />',
+            'defaultSize' => 14,
+        ],
+        'apple' => [
+            'type' => 'svg',
+            'filled' => true,
+            'body' => '<path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />',
+            'defaultSize' => 14,
+        ],
     ];
 
     /**
-     * Retorna o HTML de um ícone a partir do nome cadastrado.
+     * Retorna o HTML SVG inline do ícone solicitado.
      *
-     * @param string $name Nome do ícone
-     * @param array{size?: int|string, color?: string, class?: string, style?: string, title?: string, variant?: string} $options
+     * @param string $name   Nome do ícone no registry
+     * @param array{size?: int|string, color?: string, class?: string, style?: string, title?: string, filled?: bool} $options
      */
     public static function get(string $name, array $options = []): string
     {
-        $def = self::$registry[$name] ?? ['type' => 'fa', 'faClass' => 'fa-solid fa-circle-question', 'defaultSize' => 14];
+        $def = self::$registry[$name] ?? [
+            'type' => 'svg',
+            'body' => '<circle cx="12" cy="12" r="9" stroke-linecap="round" stroke-linejoin="round" /><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />',
+            'defaultSize' => 14,
+        ];
 
         $size = $options['size'] ?? ($def['defaultSize'] ?? 14);
-        $sizePx = is_numeric($size) ? ($size . 'px') : (string) $size;
+        $w    = is_numeric($size) ? (string) (int) $size : '18';
+        $h    = $w;
 
         $styleParts = [];
-        if ($sizePx !== '') {
-            $styleParts[] = 'font-size:' . $sizePx;
-        }
         if (!empty($options['color'])) {
             $styleParts[] = 'color:' . $options['color'];
         }
@@ -117,34 +434,29 @@ final class IconHelper
 
         $styleAttr = !empty($styleParts) ? (' style="' . implode(';', $styleParts) . '"') : '';
         $titleAttr = !empty($options['title']) ? (' title="' . e($options['title']) . '"') : '';
+        $clsAttr   = !empty($options['class']) ? (' class="' . e($options['class']) . '"') : '';
 
-        if ($def['type'] === 'fa') {
-            $cls = $def['faClass'] ?? 'fa-solid fa-circle-question';
-            if (($options['variant'] ?? '') === 'regular') {
-                $cls = str_replace('fa-solid', 'fa-regular', $cls);
-            } elseif (($options['variant'] ?? '') === 'solid') {
-                $cls = str_replace('fa-regular', 'fa-solid', $cls);
-            }
-            if (!empty($options['class'])) {
-                $cls .= ' ' . $options['class'];
-            }
-            return '<i class="' . e($cls) . '"' . $styleAttr . $titleAttr . '></i>';
-        }
+        $isFilled = ($options['filled'] ?? false) || ($def['filled'] ?? false);
+        $fillAttr = $isFilled
+            ? 'fill="currentColor" stroke="none"'
+            : 'fill="none" stroke="currentColor" stroke-width="1.5"';
 
-        if ($def['type'] === 'svg') {
-            $viewBox = $def['viewBox'] ?? '0 0 24 24';
-            $w = is_numeric($size) ? (string) $size : '18';
-            $h = is_numeric($size) ? (string) $size : '18';
-            $cls = !empty($options['class']) ? (' class="' . e($options['class']) . '"') : '';
-            $body = $def['body'] ?? '';
-            return '<svg viewBox="' . e($viewBox) . '" width="' . e($w) . '" height="' . e($h) . '" fill="none" stroke="currentColor" stroke-width="2"' . $cls . $styleAttr . $titleAttr . '>' . $body . '</svg>';
-        }
+        $viewBox = $def['viewBox'] ?? '0 0 24 24';
+        $body    = $def['body'];
 
-        return '';
+        return '<svg viewBox="' . e($viewBox) . '"'
+            . ' width="' . $w . '" height="' . $h . '"'
+            . $clsAttr . $styleAttr . $titleAttr
+            . ' ' . $fillAttr
+            . ' aria-hidden="true">'
+            . $body
+            . '</svg>';
     }
 
     /**
-     * @param array{type: string, faClass?: string, defaultSize?: int, viewBox?: string, body?: string} $definition
+     * Registra ou sobrescreve um ícone no catálogo.
+     *
+     * @param array{type: string, body: string, viewBox?: string, defaultSize?: int, filled?: bool} $definition
      */
     public static function register(string $name, array $definition): void
     {
@@ -157,7 +469,7 @@ final class IconHelper
     }
 
     /**
-     * @return array<string, array{type: string, faClass?: string, defaultSize?: int, viewBox?: string, body?: string}>
+     * @return array<string, array{type: string, body: string, viewBox?: string, defaultSize?: int, filled?: bool}>
      */
     public static function all(): array
     {
