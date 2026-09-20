@@ -155,11 +155,14 @@
   align-items: center;
   justify-content: flex-end;
   gap: 0.35rem;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .table-action-btn {
   width: 28px;
   height: 28px;
+  flex-shrink: 0;
   border-radius: 6px;
   border: 1px solid var(--docs-border, #e2e8f0);
   background-color: var(--docs-surface, #fff);

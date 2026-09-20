@@ -92,11 +92,11 @@ $user = $user ?? [];
 
     <!-- Toggle Card / Lista -->
     <div class="approvals-view-toggle" role="group" aria-label="Modo de visualização">
-      <button type="button" id="approvalsBtnCard" class="view-toggle-btn active" onclick="Approvals.setViewMode('card')" title="Visualização em Cards">
+      <button type="button" id="approvalsBtnCard" class="view-toggle-btn" onclick="Approvals.setViewMode('card')" title="Visualização em Cards">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         <span>Cards</span>
       </button>
-      <button type="button" id="approvalsBtnList" class="view-toggle-btn" onclick="Approvals.setViewMode('list')" title="Visualização em Lista">
+      <button type="button" id="approvalsBtnList" class="view-toggle-btn active" onclick="Approvals.setViewMode('list')" title="Visualização em Lista">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
         <span>Lista</span>
       </button>
@@ -105,12 +105,12 @@ $user = $user ?? [];
 
 
   <!-- ─── CARDS GRID ───────────────────────────────────── -->
-  <div class="approvals-grid" id="approvalsGrid">
+  <div class="approvals-grid" id="approvalsGrid" hidden>
     <!-- Renderizado via JS -->
   </div>
 
   <!-- ─── TABLE VIEW (PADRONIZADA COM DOCS) ──────────────── -->
-  <div class="card" id="approvalsTableWrapper" hidden>
+  <div class="card" id="approvalsTableWrapper">
     <div class="table-responsive">
       <table class="table" id="approvalsTable">
         <thead>

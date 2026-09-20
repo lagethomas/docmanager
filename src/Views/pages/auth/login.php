@@ -58,16 +58,28 @@ $errorMessageMap = [
     'oauth_init_error' => 'Falha ao iniciar a conexão com o Office 365.',
     'oauth_process_error' => 'Ocorreu um erro no processamento do login Office 365.',
 ];
-$serverError = !empty($error ?? '') ? ($errorMessageMap[$error] ?? 'Ocorreu um erro na autenticação com o Office 365.') : '';
+$errKey = (string) ($error ?? '');
+$serverError = $errKey !== '' ? ($errorMessageMap[$errKey] ?? 'Ocorreu um erro na autenticação com o Office 365.') : '';
 ?>
           <div class="alert alert-error auth-error" id="loginError" <?php echo empty($serverError) ? 'hidden' : ''; ?>>
             <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
             <div class="alert-body" id="loginErrorText"><?php echo e($serverError); ?></div>
           </div>
 
+          <div class="alert alert-success auth-success" id="loginSuccess" hidden style="margin-bottom: 16px;">
+            <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <div class="alert-body" id="loginSuccessText">Autenticado com sucesso! Redirecionando...</div>
+          </div>
+
           <button id="btnLogin" class="btn btn-primary btn-lg btn-block">
-            <span class="btn-label">Entrar</span>
-            <span class="btn-label" hidden>Entrando...</span>
+            <span class="btn-label-text">Autenticar-se</span>
+            <span class="btn-label-loading" hidden style="display: none; align-items: center; justify-content: center; gap: 0.5rem;">
+              <svg class="auth-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px; animation: authSpin 0.8s linear infinite;">
+                <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+                <path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="1"></path>
+              </svg>
+              <span>Autenticando...</span>
+            </span>
             <svg class="auth-btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
           </button>
 
@@ -91,7 +103,7 @@ $serverError = !empty($error ?? '') ? ($errorMessageMap[$error] ?? 'Ocorreu um e
 
           <div style="margin-top: 1.25rem; text-align: center;">
             <a href="/public-docs" class="btn btn-block" style="display: flex; align-items: center; justify-content: center; gap: 0.65rem; background: rgba(26, 187, 156, 0.1); color: #1abb9c; border: 1px solid rgba(26, 187, 156, 0.35); text-decoration: none; border-radius: 8px; padding: 0.75rem 1rem; font-weight: 600; font-size: 0.9rem; transition: all 0.2s; box-shadow: 0 2px 6px rgba(26, 187, 156, 0.08);" onmouseover="this.style.background='rgba(26, 187, 156, 0.2)'; this.style.borderColor='#1abb9c';" onmouseout="this.style.background='rgba(26, 187, 156, 0.1)'; this.style.borderColor='rgba(26, 187, 156, 0.35)';">
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 4 4v14a3 3 0 0 1 3-3h7z"/></svg>
               <span>Biblioteca</span>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: auto; opacity: 0.85;"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </a>
@@ -103,6 +115,12 @@ $serverError = !empty($error ?? '') ? ($errorMessageMap[$error] ?? 'Ocorreu um e
     </div>
   </div>
 </div>
+<style>
+@keyframes authSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+</style>
 <script>
 (function () {
   'use strict';
@@ -115,8 +133,13 @@ $serverError = !empty($error ?? '') ? ($errorMessageMap[$error] ?? 'Ocorreu um e
   var p = document.getElementById('lPass');
   var err = document.getElementById('loginError');
   var errText = document.getElementById('loginErrorText');
+  var succ = document.getElementById('loginSuccess');
+  var succText = document.getElementById('loginSuccessText');
   var eye = document.getElementById('lEye');
-  var btnLabel = btn.querySelector('.btn-label');
+
+  var btnText = btn ? btn.querySelector('.btn-label-text') : null;
+  var btnLoading = btn ? btn.querySelector('.btn-label-loading') : null;
+  var btnArrow = btn ? btn.querySelector('.auth-btn-arrow') : null;
 
   var eyeOpen = eye.querySelector('.auth-eye-open');
   var eyeClosed = eye.querySelector('.auth-eye-closed');
@@ -130,14 +153,35 @@ $serverError = !empty($error ?? '') ? ($errorMessageMap[$error] ?? 'Ocorreu um e
   });
 
   function setLoading(loading) {
+    if (!btn) return;
     btn.disabled = loading;
-    btnLabel.nextElementSibling.hidden = !loading;
-    btnLabel.hidden = loading;
+    if (loading) {
+      if (btnText) btnText.hidden = true;
+      if (btnLoading) {
+        btnLoading.hidden = false;
+        btnLoading.style.display = 'inline-flex';
+      }
+      if (btnArrow) btnArrow.hidden = true;
+    } else {
+      if (btnText) btnText.hidden = false;
+      if (btnLoading) {
+        btnLoading.hidden = true;
+        btnLoading.style.display = 'none';
+      }
+      if (btnArrow) btnArrow.hidden = false;
+    }
   }
 
   function showError(msg) {
-    errText.textContent = msg;
-    err.hidden = false;
+    if (succ) succ.hidden = true;
+    if (errText) errText.textContent = msg;
+    if (err) err.hidden = false;
+  }
+
+  function showSuccess(msg) {
+    if (err) err.hidden = true;
+    if (succText) succText.textContent = msg;
+    if (succ) succ.hidden = false;
   }
 
   function login() {
@@ -147,7 +191,9 @@ $serverError = !empty($error ?? '') ? ($errorMessageMap[$error] ?? 'Ocorreu um e
       return;
     }
     setLoading(true);
-    err.hidden = true;
+    if (err) err.hidden = true;
+    if (succ) succ.hidden = true;
+
     fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.CSRF_TOKEN || '' },
@@ -155,11 +201,21 @@ $serverError = !empty($error ?? '') ? ($errorMessageMap[$error] ?? 'Ocorreu um e
     })
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, json: j }; }); })
       .then(function (res) {
+        if (res.ok) {
+          showSuccess('Autenticado com sucesso! Redirecionando...');
+          setTimeout(function () {
+            window.location.href = '/';
+          }, 600);
+          return;
+        }
         setLoading(false);
-        if (res.ok) { window.location.href = '/'; return; }
-        showError(MSG_INVALID);
+        var errorMsg = (res.json && res.json.error) ? res.json.error : MSG_INVALID;
+        showError(errorMsg);
       })
-      .catch(function () { setLoading(false); showError(MSG_NETWORK); });
+      .catch(function () {
+        setLoading(false);
+        showError(MSG_NETWORK);
+      });
   }
 
   btn.addEventListener('click', login);

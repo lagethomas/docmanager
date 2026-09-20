@@ -365,7 +365,7 @@ if ($categoryId === -1) {
 <script>
 (function() {
   function getPublicViewMode() {
-    return localStorage.getItem('public_docmanager_view') || 'grid';
+    return localStorage.getItem('public_docmanager_view') || 'list';
   }
 
   window.setPublicViewMode = function(mode) {

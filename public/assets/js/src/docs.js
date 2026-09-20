@@ -22,7 +22,7 @@ var Docs = (function () {
   var IS_SHARED = false;
   var IS_SHARED_BY_ME = false;
   var CURRENT_SORT = 'updated_desc';
-  var CURRENT_VIEW = localStorage.getItem('docmanager_view') || 'grid';
+  var CURRENT_VIEW = localStorage.getItem('docmanager_view') || 'list';
   var CURRENT_PAGE = 1;
   var PER_PAGE = 10;
   var EDITOR_MODE = 'split';
@@ -1060,7 +1060,7 @@ var Docs = (function () {
       html += '<div class="doc-card-pro">'
         + '<div>'
         + '<div class="doc-card-header">'
-        + '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">' + catBadge + statusBadge + restrictedBadge + sharedBadge + '</div>'
+        + '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;flex:1 1 auto;min-width:0;">' + catBadge + statusBadge + restrictedBadge + sharedBadge + '</div>'
         + '<div class="table-actions">'
         + actionsHtml
         + '</div>'

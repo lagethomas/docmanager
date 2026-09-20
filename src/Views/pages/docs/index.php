@@ -38,10 +38,10 @@ $user = $user ?? [];
     <div class="docs-header-right">
       <!-- Alternador de visualização (Cards / Tabela) -->
       <div class="docs-view-switcher" role="group" aria-label="Modo de visualização">
-        <button type="button" class="view-btn active" id="btnViewGrid" onclick="Docs.setViewMode('grid')" title="Visualização em Grade">
+        <button type="button" class="view-btn" id="btnViewGrid" onclick="Docs.setViewMode('grid')" title="Visualização em Grade">
           <?php echo icon('grid', ['size' => 16]); ?>
         </button>
-        <button type="button" class="view-btn" id="btnViewList" onclick="Docs.setViewMode('list')" title="Visualização em Lista / Tabela">
+        <button type="button" class="view-btn active" id="btnViewList" onclick="Docs.setViewMode('list')" title="Visualização em Lista / Tabela">
           <?php echo icon('list', ['size' => 16]); ?>
         </button>
       </div>
@@ -139,12 +139,12 @@ $user = $user ?? [];
       </div>
 
       <!-- Container de Grade (Cards) -->
-      <div class="docs-grid-container" id="docsGrid">
+      <div class="docs-grid-container" id="docsGrid" hidden>
         <!-- Renderizado dinamicamente -->
       </div>
 
       <!-- Container de Lista / Tabela -->
-      <div class="card" id="docsTableWrapper" hidden>
+      <div class="card" id="docsTableWrapper">
         <div class="table-responsive">
           <table class="table">
             <thead>
