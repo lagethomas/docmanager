@@ -65,11 +65,17 @@ class DocumentController extends Controller
             }
         }
 
-        // Restrição por localização: não-admin e não-autor deve pertencer a uma das localizações do documento (ou ter documento compartilhado)
+        // Restrição por localização e área: não-admin e não-autor deve pertencer a uma das localizações ou áreas do documento (ou ter documento compartilhado)
         if ($userRole !== 'Admin' && (int) ($doc['is_restricted'] ?? 0) === 1 && (int) ($doc['created_by'] ?? 0) !== $userId && !$isSharedWithUser) {
             $userLocId = Auth::locationId();
+            $userAreaId = Auth::areaId();
             $allowedLocIds = (new \App\Models\LocationModel())->getDocumentLocationIds($intId);
-            if ($userLocId === null || !in_array($userLocId, $allowedLocIds, true)) {
+            $allowedAreaIds = (new \App\Models\AreaModel())->getDocumentAreaIds($intId);
+
+            $hasLocAccess = !empty($allowedLocIds) && $userLocId !== null && in_array($userLocId, $allowedLocIds, true);
+            $hasAreaAccess = !empty($allowedAreaIds) && $userAreaId !== null && in_array($userAreaId, $allowedAreaIds, true);
+
+            if (!$hasLocAccess && !$hasAreaAccess) {
                 $this->redirect('/docs');
                 return;
             }
@@ -191,7 +197,8 @@ class DocumentController extends Controller
             favorites: $favorites,
             sharedWithMe: $sharedWithMe,
             sharedByMe: $sharedByMe,
-            userLocationId: Auth::locationId()
+            userLocationId: Auth::locationId(),
+            userAreaId: Auth::areaId()
         );
         $this->jsonOk(['docs' => $docs]);
     }
@@ -268,12 +275,18 @@ class DocumentController extends Controller
             }
         }
 
-        // Restrição por localização
+        // Restrição por localização e área
         if ($userRole !== 'Admin' && (int) ($doc['is_restricted'] ?? 0) === 1 && (int) ($doc['created_by'] ?? 0) !== $userId && !$isSharedWithUser) {
             $userLocId = Auth::locationId();
+            $userAreaId = Auth::areaId();
             $allowedLocIds = (new \App\Models\LocationModel())->getDocumentLocationIds($intId);
-            if ($userLocId === null || !in_array($userLocId, $allowedLocIds, true)) {
-                $this->jsonError('Acesso negado: este documento não está disponível na sua localização.', 403);
+            $allowedAreaIds = (new \App\Models\AreaModel())->getDocumentAreaIds($intId);
+
+            $hasLocAccess = !empty($allowedLocIds) && $userLocId !== null && in_array($userLocId, $allowedLocIds, true);
+            $hasAreaAccess = !empty($allowedAreaIds) && $userAreaId !== null && in_array($userAreaId, $allowedAreaIds, true);
+
+            if (!$hasLocAccess && !$hasAreaAccess) {
+                $this->jsonError('Acesso negado: este documento não está disponível na sua localização ou área.', 403);
                 return;
             }
         }
@@ -303,6 +316,7 @@ class DocumentController extends Controller
         $isPublic = !empty($input['is_public']) ? 1 : 0;
         $isRestricted = !empty($input['is_restricted']) ? 1 : 0;
         $locationIds = isset($input['location_ids']) && is_array($input['location_ids']) ? array_map('intval', $input['location_ids']) : [];
+        $areaIds = isset($input['area_ids']) && is_array($input['area_ids']) ? array_map('intval', $input['area_ids']) : [];
         $tags = $input['tags'] ?? [];
 
         if ($title === '') {
@@ -317,7 +331,7 @@ class DocumentController extends Controller
         $approvedBy = $isApprover ? (int) $user['id'] : null;
 
         $model = new DocumentModel();
-        $docId = $model->create($title, $content, $categoryId, (int) $user['id'], $status, $approvedBy, $isPublic, $isRestricted, $locationIds);
+        $docId = $model->create($title, $content, $categoryId, (int) $user['id'], $status, $approvedBy, $isPublic, $isRestricted, $locationIds, $areaIds);
 
         // Tags
         if (is_array($tags) && $tags !== []) {
@@ -389,6 +403,9 @@ class DocumentController extends Controller
         $locationIds = array_key_exists('location_ids', $input) && is_array($input['location_ids'])
             ? array_map('intval', $input['location_ids'])
             : null;
+        $areaIds = array_key_exists('area_ids', $input) && is_array($input['area_ids'])
+            ? array_map('intval', $input['area_ids'])
+            : null;
         $versionNote = sanitize_input((string) ($input['version_note'] ?? ''));
         $tags = $input['tags'] ?? null;
 
@@ -397,7 +414,7 @@ class DocumentController extends Controller
         $status = $isApprover ? 'aprovado' : 'pendente';
         $approvedBy = $isApprover ? (int) $user['id'] : null;
 
-        $model->update($intId, $title, $content, $categoryId, $userId, $versionNote, $status, $approvedBy, $isPublic, $isRestricted, $locationIds);
+        $model->update($intId, $title, $content, $categoryId, $userId, $versionNote, $status, $approvedBy, $isPublic, $isRestricted, $locationIds, $areaIds);
 
         if (is_array($tags)) {
             $tagModel = new TagModel();
@@ -930,13 +947,19 @@ class DocumentController extends Controller
             $docId = (int) $doc['id'];
             $docModel = new DocumentModel();
 
-            // Restrição por localização
+            // Restrição por localização e área
             if ($userRole !== 'Admin' && (int) $doc['is_restricted'] === 1 && (int) $doc['created_by'] !== $userId) {
                 $isShared = $docModel->isSharedWithUser($docId, $userId);
                 if (!$isShared) {
                     $userLocId = Auth::locationId();
+                    $userAreaId = Auth::areaId();
                     $allowedLocIds = (new \App\Models\LocationModel())->getDocumentLocationIds($docId);
-                    if ($userLocId === null || !in_array($userLocId, $allowedLocIds, true)) {
+                    $allowedAreaIds = (new \App\Models\AreaModel())->getDocumentAreaIds($docId);
+
+                    $hasLocAccess = !empty($allowedLocIds) && $userLocId !== null && in_array($userLocId, $allowedLocIds, true);
+                    $hasAreaAccess = !empty($allowedAreaIds) && $userAreaId !== null && in_array($userAreaId, $allowedAreaIds, true);
+
+                    if (!$hasLocAccess && !$hasAreaAccess) {
                         http_response_code(403);
                         echo 'Acesso negado.';
                         return;
@@ -1009,8 +1032,14 @@ class DocumentController extends Controller
 
         if ($userRole !== 'Admin' && (int) ($doc['is_restricted'] ?? 0) === 1 && (int) ($doc['created_by'] ?? 0) !== $userId && !$isSharedWithUser) {
             $userLocId = Auth::locationId();
+            $userAreaId = Auth::areaId();
             $allowedLocIds = (new \App\Models\LocationModel())->getDocumentLocationIds($intId);
-            if ($userLocId === null || !in_array($userLocId, $allowedLocIds, true)) {
+            $allowedAreaIds = (new \App\Models\AreaModel())->getDocumentAreaIds($intId);
+
+            $hasLocAccess = !empty($allowedLocIds) && $userLocId !== null && in_array($userLocId, $allowedLocIds, true);
+            $hasAreaAccess = !empty($allowedAreaIds) && $userAreaId !== null && in_array($userAreaId, $allowedAreaIds, true);
+
+            if (!$hasLocAccess && !$hasAreaAccess) {
                 $this->jsonError('Acesso negado.', 403);
                 return;
             }

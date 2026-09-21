@@ -234,6 +234,24 @@ $user = $user ?? [];
           </div>
         </div>
 
+        <div id="docAreaPicker" class="doceditor-dropdown-wrap" hidden style="position: relative;">
+          <button type="button" class="btn btn-sm btn-outline" id="btnDocAreas" onclick="Docs.toggleAreaDropdown()" title="Selecionar áreas/setores permitidos" style="display: flex; align-items: center; gap: 4px; border-color: rgba(99, 102, 241, 0.4); color: #6366f1;">
+            <?php echo icon('area', ['size' => 13]); ?>
+            <span id="docAreasLabel">Áreas (0)</span>
+          </button>
+          <div id="docAreasDropdown" class="doceditor-dropdown-menu" hidden style="min-width: 250px; max-width: 320px; padding: 10px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.25); z-index: 1050;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: var(--docs-text-mut); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--docs-border); display: flex; align-items: center; justify-content: space-between;">
+              <span>ÁREAS AUTORIZADAS</span>
+              <span id="docAreasCountBadge" style="font-size: 0.7rem; color: #6366f1; font-weight: 600;"></span>
+            </div>
+            <div style="position: relative; margin-bottom: 8px;">
+              <?php echo icon('search', ['size' => 13, 'style' => 'position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--docs-text-mut); pointer-events: none;']); ?>
+              <input type="text" id="docAreaSearchInput" placeholder="Buscar área/setor..." autocomplete="off" style="width: 100%; height: 30px; font-size: 0.8rem; padding: 2px 8px 2px 28px; border: 1px solid var(--docs-border); border-radius: 6px; background: var(--docs-bg); color: var(--docs-text); outline: none; box-sizing: border-box;" oninput="Docs.filterAreas(this.value)" />
+            </div>
+            <div id="docAreasList" style="display: flex; flex-direction: column; gap: 2px; max-height: 238px; overflow-y: auto; scrollbar-width: thin; padding-right: 2px;"></div>
+          </div>
+        </div>
+
         <button type="button" class="btn btn-sm btn-outline" id="btnDocUpload" onclick="Docs.openUploadModal()" title="Anexar arquivo ou imagem">
           <?php echo icon('paperclip', ['class' => 'btn-svg', 'size' => 14]); ?>
           <span>Anexo</span>

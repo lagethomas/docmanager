@@ -13,6 +13,8 @@ var Docs = (function () {
   var STATS = {};
   var ALL_LOCATIONS = [];
   var SELECTED_DOC_LOCATIONS = [];
+  var ALL_AREAS = [];
+  var SELECTED_DOC_AREAS = [];
   var CURRENT_DOC = null;
   var CURRENT_TAGS = [];
   var ACTIVE_FOLDER = null;
@@ -382,8 +384,16 @@ var Docs = (function () {
       loadTags(),
       loadStats(),
       loadLocations(),
+      loadAreas(),
       loadDocs()
     ]);
+  }
+
+  function loadAreas() {
+    return api('GET', '/api/areas').then(function (data) {
+      ALL_AREAS = data || [];
+      renderDocAreasList();
+    }).catch(function () {});
   }
 
   function loadLocations() {
@@ -394,11 +404,15 @@ var Docs = (function () {
   }
 
   function toggleRestricted(checked) {
-    var picker = document.getElementById('docLocationPicker');
-    if (picker) picker.hidden = !checked;
+    var locPicker = document.getElementById('docLocationPicker');
+    var areaPicker = document.getElementById('docAreaPicker');
+    if (locPicker) locPicker.hidden = !checked;
+    if (areaPicker) areaPicker.hidden = !checked;
     if (!checked) {
-      var dropdown = document.getElementById('docLocationsDropdown');
-      if (dropdown) dropdown.hidden = true;
+      var locDropdown = document.getElementById('docLocationsDropdown');
+      if (locDropdown) locDropdown.hidden = true;
+      var areaDropdown = document.getElementById('docAreasDropdown');
+      if (areaDropdown) areaDropdown.hidden = true;
     }
   }
 
@@ -475,6 +489,82 @@ var Docs = (function () {
     var badge = document.getElementById('docLocationsCountBadge');
     if (badge) {
       badge.textContent = SELECTED_DOC_LOCATIONS.length + ' sel.';
+    }
+  }
+
+  var CURRENT_AREA_QUERY = '';
+
+  function toggleAreaDropdown() {
+    var dropdown = document.getElementById('docAreasDropdown');
+    if (!dropdown) return;
+    dropdown.hidden = !dropdown.hidden;
+    if (!dropdown.hidden) {
+      CURRENT_AREA_QUERY = '';
+      var searchInput = document.getElementById('docAreaSearchInput');
+      if (searchInput) {
+        searchInput.value = '';
+        setTimeout(function () { searchInput.focus(); }, 40);
+      }
+      renderDocAreasList();
+    }
+  }
+
+  function filterAreas(query) {
+    CURRENT_AREA_QUERY = (query || '').trim().toLowerCase();
+    renderDocAreasList();
+  }
+
+  function renderDocAreasList() {
+    var list = document.getElementById('docAreasList');
+    if (!list) return;
+    if (!ALL_AREAS.length) {
+      list.innerHTML = '<div style="font-size:0.75rem;color:var(--docs-text-mut);padding:8px;text-align:center;">Nenhuma área ou setor cadastrado.</div>';
+      updateDocAreasLabel();
+      return;
+    }
+
+    var filtered = ALL_AREAS;
+    if (CURRENT_AREA_QUERY) {
+      filtered = ALL_AREAS.filter(function (area) {
+        return (area.name && area.name.toLowerCase().indexOf(CURRENT_AREA_QUERY) !== -1);
+      });
+    }
+
+    if (!filtered.length) {
+      list.innerHTML = '<div style="font-size:0.75rem;color:var(--docs-text-mut);padding:14px 8px;text-align:center;">Nenhuma área encontrada.</div>';
+      updateDocAreasLabel();
+      return;
+    }
+
+    list.innerHTML = filtered.map(function (area) {
+      var isChecked = SELECTED_DOC_AREAS.indexOf(Number(area.id)) !== -1;
+      return '<label class="doc-location-item" style="display:flex;align-items:center;gap:8px;min-height:34px;height:34px;padding:0 8px;border-radius:4px;font-size:0.82rem;cursor:pointer;user-select:none;box-sizing:border-box;transition:background 0.1s;" onmouseover="this.style.background=\'rgba(0,0,0,0.05)\'" onmouseout="this.style.background=\'transparent\'">'
+        + '<input type="checkbox" value="' + area.id + '"' + (isChecked ? ' checked' : '') + ' onchange="Docs.onAreaChange(this)" style="margin:0;cursor:pointer;flex-shrink:0;" /> '
+        + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(area.name) + '</span>'
+        + '</label>';
+    }).join('');
+    updateDocAreasLabel();
+  }
+
+  function onAreaChange(input) {
+    var id = Number(input.value);
+    if (input.checked) {
+      if (SELECTED_DOC_AREAS.indexOf(id) === -1) SELECTED_DOC_AREAS.push(id);
+    } else {
+      var idx = SELECTED_DOC_AREAS.indexOf(id);
+      if (idx !== -1) SELECTED_DOC_AREAS.splice(idx, 1);
+    }
+    updateDocAreasLabel();
+  }
+
+  function updateDocAreasLabel() {
+    var lbl = document.getElementById('docAreasLabel');
+    if (lbl) {
+      lbl.textContent = 'Áreas (' + SELECTED_DOC_AREAS.length + ')';
+    }
+    var badge = document.getElementById('docAreasCountBadge');
+    if (badge) {
+      badge.textContent = SELECTED_DOC_AREAS.length + ' sel.';
     }
   }
 
@@ -1253,9 +1343,11 @@ var Docs = (function () {
     if (verNoteInput) verNoteInput.value = '';
     if (chkPublic) chkPublic.checked = false;
     if (chkRestricted) chkRestricted.checked = false;
-    SELECTED_DOC_LOCATIONS = [];
-    toggleRestricted(false);
-    renderDocLocationsList();
+      SELECTED_DOC_LOCATIONS = [];
+      SELECTED_DOC_AREAS = [];
+      toggleRestricted(false);
+      renderDocLocationsList();
+      renderDocAreasList();
     if (catSelect) {
       if (initialCatId) catSelect.value = initialCatId;
       else if (ACTIVE_FOLDER && ACTIVE_FOLDER > 0) catSelect.value = ACTIVE_FOLDER;
@@ -1308,8 +1400,10 @@ var Docs = (function () {
       var isRestricted = !!(parseInt(CURRENT_DOC.is_restricted, 10));
       if (chkRestricted) chkRestricted.checked = isRestricted;
       SELECTED_DOC_LOCATIONS = (CURRENT_DOC.location_ids || []).map(Number);
+      SELECTED_DOC_AREAS = (CURRENT_DOC.area_ids || []).map(Number);
       toggleRestricted(isRestricted);
       renderDocLocationsList();
+      renderDocAreasList();
 
       setViewOnlyMode(isView);
       renderTags();
@@ -1369,8 +1463,8 @@ var Docs = (function () {
     var chkRestricted = document.getElementById('chkDocIsRestricted');
     var isRestricted = chkRestricted && chkRestricted.checked ? 1 : 0;
 
-    if (isRestricted && !SELECTED_DOC_LOCATIONS.length) {
-      toast('Selecione pelo menos uma localização para restringir o documento.', 'warning');
+    if (isRestricted && !SELECTED_DOC_LOCATIONS.length && !SELECTED_DOC_AREAS.length) {
+      toast('Selecione pelo menos uma localização ou área para restringir o documento.', 'warning');
       var dropdown = document.getElementById('docLocationsDropdown');
       if (dropdown) dropdown.hidden = false;
       return;
@@ -1383,6 +1477,7 @@ var Docs = (function () {
       is_public: isPublic,
       is_restricted: isRestricted,
       location_ids: SELECTED_DOC_LOCATIONS,
+      area_ids: SELECTED_DOC_AREAS,
       version_note: verNote,
       tags: CURRENT_TAGS,
     };
@@ -2494,6 +2589,9 @@ var Docs = (function () {
     toggleLocationDropdown: toggleLocationDropdown,
     filterLocations: filterLocations,
     onLocationChange: onLocationChange,
+    toggleAreaDropdown: toggleAreaDropdown,
+    filterAreas: filterAreas,
+    onAreaChange: onAreaChange,
   };
 })();
 

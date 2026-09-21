@@ -46,13 +46,21 @@
           </select>
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label" for="fUserLocation">Localização / Unidade</label>
-        <select id="fUserLocation" class="form-control">
-          <option value="">Nenhuma / Sem restrição</option>
-        </select>
-        <div class="form-help">Usuários associados a uma localização terão acesso aos documentos restritos da mesma unidade.</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="fUserLocation">Localização / Unidade</label>
+          <select id="fUserLocation" class="form-control">
+            <option value="">Nenhuma / Sem restrição</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="fUserArea">Área / Setor</label>
+          <select id="fUserArea" class="form-control">
+            <option value="">Nenhuma / Sem restrição</option>
+          </select>
+        </div>
       </div>
+      <div class="form-help mb-12">Usuários associados a uma localização ou área terão acesso aos documentos restritos da mesma unidade ou setor.</div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="fecharModalUsuario()">Cancelar</button>

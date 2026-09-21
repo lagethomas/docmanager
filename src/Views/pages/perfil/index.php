@@ -51,6 +51,13 @@ $initials = mb_substr((string)($u['name'] ?? 'U'), 0, 2);
           </div>
         </div>
         <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <?php echo icon('area', ['size' => 16, 'style' => 'color: var(--primary); flex-shrink: 0;']); ?>
+          <div>
+            <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">Área / Setor</div>
+            <div style="font-weight: 600; color: var(--text-color);"><?php echo e((string)($u['area_name'] ?? 'Todas (Global)')); ?></div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
           <?php echo icon('user', ['size' => 16, 'style' => 'color: var(--primary); flex-shrink: 0;']); ?>
           <div>
             <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">ID do Usuário</div>
@@ -132,6 +139,12 @@ $initials = mb_substr((string)($u['name'] ?? 'U'), 0, 2);
           <div class="form-group" style="margin: 0;">
             <label class="form-label" for="profileLocation">Localização</label>
             <input type="text" id="profileLocation" class="form-control" value="<?php echo e((string)($u['location_name'] ?? 'Todas (Global)')); ?>" disabled readonly style="background-color: var(--bg-body, #f4f6f9); opacity: 0.85; cursor: not-allowed;">
+            <div class="form-hint" style="font-size: 0.72rem; margin-top: 4px; color: var(--text-muted);">Definido pela administração.</div>
+          </div>
+
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" for="profileArea">Área / Setor</label>
+            <input type="text" id="profileArea" class="form-control" value="<?php echo e((string)($u['area_name'] ?? 'Todas (Global)')); ?>" disabled readonly style="background-color: var(--bg-body, #f4f6f9); opacity: 0.85; cursor: not-allowed;">
             <div class="form-hint" style="font-size: 0.72rem; margin-top: 4px; color: var(--text-muted);">Definido pela administração.</div>
           </div>
         </div>

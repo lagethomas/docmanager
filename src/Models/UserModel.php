@@ -16,9 +16,10 @@ class UserModel extends Repository
     {
         $id = mb_strtolower(trim($identifier));
         $stmt = $this->db->prepare(
-            'SELECT u.*, u.username AS login, l.name AS location_name 
+            'SELECT u.*, u.username AS login, l.name AS location_name, a.name AS area_name 
              FROM `cp_users` u 
              LEFT JOIN `cp_locations` l ON u.location_id = l.id 
+             LEFT JOIN `cp_areas` a ON u.area_id = a.id 
              WHERE u.username = ? OR u.email = ? LIMIT 1'
         );
         $stmt->execute([$id, $id]);
@@ -33,9 +34,10 @@ class UserModel extends Repository
     {
         $u = mb_strtolower(trim($username));
         $stmt = $this->db->prepare(
-            'SELECT u.*, u.username AS login, l.name AS location_name 
+            'SELECT u.*, u.username AS login, l.name AS location_name, a.name AS area_name 
              FROM `cp_users` u 
              LEFT JOIN `cp_locations` l ON u.location_id = l.id 
+             LEFT JOIN `cp_areas` a ON u.area_id = a.id 
              WHERE u.username = ? LIMIT 1'
         );
         $stmt->execute([$u]);
@@ -74,38 +76,39 @@ class UserModel extends Repository
      */
     public function all(string $orderBy = 'name', string $direction = 'ASC'): array
     {
-        $sql = "SELECT u.*, u.username AS login, l.name AS location_name 
+        $sql = "SELECT u.*, u.username AS login, l.name AS location_name, a.name AS area_name 
                 FROM `cp_users` u 
                 LEFT JOIN `cp_locations` l ON u.location_id = l.id 
+                LEFT JOIN `cp_areas` a ON u.area_id = a.id 
                 ORDER BY u.name ASC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         return $stmt->fetchAll();
     }
 
-    public function create(string $username, string $name, string $passwordHash, string $role, string $status, ?int $locationId = null, ?string $email = null): int
+    public function create(string $username, string $name, string $passwordHash, string $role, string $status, ?int $locationId = null, ?string $email = null, ?int $areaId = null): int
     {
         $emailVal = ($email !== null && trim($email) !== '') ? mb_strtolower(trim($email)) : null;
         $stmt = $this->db->prepare(
-            'INSERT INTO `cp_users` (username, email, name, password, role, status, location_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO `cp_users` (username, email, name, password, role, status, location_id, area_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->execute([mb_strtolower(trim($username)), $emailVal, trim($name), $passwordHash, $role, $status, $locationId]);
+        $stmt->execute([mb_strtolower(trim($username)), $emailVal, trim($name), $passwordHash, $role, $status, $locationId, $areaId]);
         return (int) $this->db->lastInsertId();
     }
 
-    public function update(string $username, string $name, string $role, string $status, ?string $passwordHash = null, ?int $locationId = null, ?string $email = null): bool
+    public function update(string $username, string $name, string $role, string $status, ?string $passwordHash = null, ?int $locationId = null, ?string $email = null, ?int $areaId = null): bool
     {
         $u = mb_strtolower(trim($username));
         $emailVal = ($email !== null && trim($email) !== '') ? mb_strtolower(trim($email)) : null;
 
         if ($passwordHash !== null && $passwordHash !== '') {
             $stmt = $this->db->prepare(
-                'UPDATE `cp_users` SET name = ?, email = ?, role = ?, status = ?, password = ?, location_id = ? WHERE username = ?'
+                'UPDATE `cp_users` SET name = ?, email = ?, role = ?, status = ?, password = ?, location_id = ?, area_id = ? WHERE username = ?'
             );
-            return $stmt->execute([trim($name), $emailVal, $role, $status, $passwordHash, $locationId, $u]);
+            return $stmt->execute([trim($name), $emailVal, $role, $status, $passwordHash, $locationId, $areaId, $u]);
         }
-        $stmt = $this->db->prepare('UPDATE `cp_users` SET name = ?, email = ?, role = ?, status = ?, location_id = ? WHERE username = ?');
-        return $stmt->execute([trim($name), $emailVal, $role, $status, $locationId, $u]);
+        $stmt = $this->db->prepare('UPDATE `cp_users` SET name = ?, email = ?, role = ?, status = ?, location_id = ?, area_id = ? WHERE username = ?');
+        return $stmt->execute([trim($name), $emailVal, $role, $status, $locationId, $areaId, $u]);
     }
 
     public function updateProfile(string $username, string $name, ?string $email = null, ?string $passwordHash = null): bool

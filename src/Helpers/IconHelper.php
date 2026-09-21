@@ -188,6 +188,11 @@ final class IconHelper
             'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />',
             'defaultSize' => 14,
         ],
+        'area' => [
+            'type' => 'svg',
+            'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5s.75 0 .75.75v1.5s0 .75-.75.75H9s-.75 0-.75-.75v-1.5s0-.75.75-.75zm6 0h1.5s.75 0 .75.75v1.5s0 .75-.75.75H15s-.75 0-.75-.75v-1.5s0-.75.75-.75zM9 12.75h1.5s.75 0 .75.75v1.5s0 .75-.75.75H9s-.75 0-.75-.75v-1.5s0-.75.75-.75zm6 0h1.5s.75 0 .75.75v1.5s0 .75-.75.75H15s-.75 0-.75-.75v-1.5s0-.75.75-.75z" />',
+            'defaultSize' => 14,
+        ],
         'pin' => [
             'type' => 'svg',
             'body' => '<path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />',

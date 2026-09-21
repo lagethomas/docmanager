@@ -4,6 +4,7 @@ declare(strict_types=1);
 use App\Controllers\ApprovalController;
 use App\Controllers\AuthController;
 use App\Controllers\DocumentController;
+use App\Controllers\AreaController;
 use App\Controllers\LocationController;
 use App\Controllers\ProfileController;
 use App\Controllers\SettingsController;
@@ -34,6 +35,14 @@ return [
     ['GET', '/api/locations/{id}', [LocationController::class, 'show'], [AuthMiddleware::class, AdminMiddleware::class]],
     ['PUT', '/api/locations/{id}', [LocationController::class, 'update'], [AuthMiddleware::class, AdminMiddleware::class]],
     ['DELETE', '/api/locations/{id}', [LocationController::class, 'delete'], [AuthMiddleware::class, AdminMiddleware::class]],
+
+    // Áreas / Setores
+    ['GET', '/api/areas', [AreaController::class, 'areas'], [AuthMiddleware::class]],
+    ['GET', '/api/areas/admin', [AreaController::class, 'adminAreas'], [AuthMiddleware::class, AdminMiddleware::class]],
+    ['POST', '/api/areas', [AreaController::class, 'store'], [AuthMiddleware::class, AdminMiddleware::class]],
+    ['GET', '/api/areas/{id}', [AreaController::class, 'show'], [AuthMiddleware::class, AdminMiddleware::class]],
+    ['PUT', '/api/areas/{id}', [AreaController::class, 'update'], [AuthMiddleware::class, AdminMiddleware::class]],
+    ['DELETE', '/api/areas/{id}', [AreaController::class, 'delete'], [AuthMiddleware::class, AdminMiddleware::class]],
 
     // Configurações (somente Admin)
     ['GET', '/api/settings', [SettingsController::class, 'get'], [AuthMiddleware::class, AdminMiddleware::class]],

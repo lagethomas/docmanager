@@ -52,8 +52,14 @@ class CommentController extends Controller
 
         if ($userRole !== 'Admin' && (int) ($doc['is_restricted'] ?? 0) === 1 && (int) ($doc['created_by'] ?? 0) !== $userId && !$isSharedWithUser) {
             $userLocId = Auth::locationId();
+            $userAreaId = Auth::areaId();
             $allowedLocIds = (new \App\Models\LocationModel())->getDocumentLocationIds($id);
-            if ($userLocId === null || !in_array($userLocId, $allowedLocIds, true)) {
+            $allowedAreaIds = (new \App\Models\AreaModel())->getDocumentAreaIds($id);
+
+            $hasLocAccess = !empty($allowedLocIds) && $userLocId !== null && in_array($userLocId, $allowedLocIds, true);
+            $hasAreaAccess = !empty($allowedAreaIds) && $userAreaId !== null && in_array($userAreaId, $allowedAreaIds, true);
+
+            if (!$hasLocAccess && !$hasAreaAccess) {
                 $this->jsonError('Acesso negado.', 403);
                 return;
             }
@@ -125,8 +131,14 @@ class CommentController extends Controller
 
         if ($userRole !== 'Admin' && (int) ($doc['is_restricted'] ?? 0) === 1 && (int) ($doc['created_by'] ?? 0) !== $userId && !$isSharedWithUser) {
             $userLocId = Auth::locationId();
+            $userAreaId = Auth::areaId();
             $allowedLocIds = (new \App\Models\LocationModel())->getDocumentLocationIds($id);
-            if ($userLocId === null || !in_array($userLocId, $allowedLocIds, true)) {
+            $allowedAreaIds = (new \App\Models\AreaModel())->getDocumentAreaIds($id);
+
+            $hasLocAccess = !empty($allowedLocIds) && $userLocId !== null && in_array($userLocId, $allowedLocIds, true);
+            $hasAreaAccess = !empty($allowedAreaIds) && $userAreaId !== null && in_array($userAreaId, $allowedAreaIds, true);
+
+            if (!$hasLocAccess && !$hasAreaAccess) {
                 $this->jsonError('Acesso negado.', 403);
                 return;
             }

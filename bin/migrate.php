@@ -388,6 +388,39 @@ $migrations = [
         ALTER TABLE cp_document_versions ADD COLUMN category_id INT UNSIGNED DEFAULT NULL AFTER title;
         UPDATE cp_document_versions v JOIN cp_documents d ON v.document_id = d.id SET v.title = d.title, v.category_id = d.category_id WHERE v.title IS NULL;
     ",
+
+    '0028_create_areas_and_add_user_doc_area_restrictions' => "
+        CREATE TABLE IF NOT EXISTS cp_areas (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            name VARCHAR(150) NOT NULL,
+            description VARCHAR(255) NULL,
+            status ENUM('ativo', 'inativo') NOT NULL DEFAULT 'ativo',
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uq_areas_name (name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+        INSERT IGNORE INTO cp_areas (name, description, status) VALUES 
+        ('Tecnologia da Informação', 'Setor de TI e Infraestrutura', 'ativo'),
+        ('Recursos Humanos', 'Setor de RH e Gestão de Pessoas', 'ativo'),
+        ('Financeiro', 'Setor Financeiro e Contabilidade', 'ativo'),
+        ('Comercial', 'Setor Comercial e Vendas', 'ativo'),
+        ('Operações', 'Setor Operacional', 'ativo'),
+        ('Jurídico', 'Setor Jurídico e Compliance', 'ativo'),
+        ('Diretoria', 'Diretoria e Execução', 'ativo');
+
+        ALTER TABLE cp_users ADD COLUMN area_id INT UNSIGNED DEFAULT NULL AFTER location_id;
+        ALTER TABLE cp_users ADD CONSTRAINT fk_users_area FOREIGN KEY (area_id) REFERENCES cp_areas(id) ON DELETE SET NULL;
+
+        CREATE TABLE IF NOT EXISTS cp_document_areas (
+            document_id INT UNSIGNED NOT NULL,
+            area_id INT UNSIGNED NOT NULL,
+            PRIMARY KEY (document_id, area_id),
+            CONSTRAINT fk_docarea_doc FOREIGN KEY (document_id) REFERENCES cp_documents(id) ON DELETE CASCADE,
+            CONSTRAINT fk_docarea_area FOREIGN KEY (area_id) REFERENCES cp_areas(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ",
 ];
 
 $stmt = $db->query('SELECT name FROM cp_migrations');
@@ -451,6 +484,7 @@ try {
 $integrityChecks = [
     'cp_users' => [
         'location_id' => "ALTER TABLE cp_users ADD COLUMN location_id INT UNSIGNED DEFAULT NULL AFTER role",
+        'area_id' => "ALTER TABLE cp_users ADD COLUMN area_id INT UNSIGNED DEFAULT NULL AFTER location_id",
         'email' => "ALTER TABLE cp_users ADD COLUMN email VARCHAR(150) DEFAULT NULL AFTER username",
     ],
     'cp_comments' => [

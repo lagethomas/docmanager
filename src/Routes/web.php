@@ -38,6 +38,9 @@ return [
     // Módulo Localizações (somente Admin)
     ['GET', '/localizacoes', [App\Controllers\LocationController::class, 'index'], [AuthMiddleware::class, AdminMiddleware::class]],
 
+    // Módulo Áreas / Setores (somente Admin)
+    ['GET', '/areas', [App\Controllers\AreaController::class, 'index'], [AuthMiddleware::class, AdminMiddleware::class]],
+
     // Módulo Configurações (somente Admin)
     ['GET', '/configuracoes', [SettingsController::class, 'index'], [AuthMiddleware::class, AdminMiddleware::class]],
 

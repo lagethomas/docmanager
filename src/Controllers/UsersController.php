@@ -39,6 +39,8 @@ class UsersController extends Controller
                 'status' => (string) $user['status'],
                 'location_id' => !empty($user['location_id']) ? (int) $user['location_id'] : null,
                 'location_name' => !empty($user['location_name']) ? (string) $user['location_name'] : null,
+                'area_id' => !empty($user['area_id']) ? (int) $user['area_id'] : null,
+                'area_name' => !empty($user['area_name']) ? (string) $user['area_name'] : null,
             ];
         }, (new UserModel())->all());
         $this->jsonOk($users);
@@ -66,6 +68,7 @@ class UsersController extends Controller
         $role = trim((string) ($input['role'] ?? ''));
         $status = ($input['status'] ?? 'ativo') === 'inativo' ? 'inativo' : 'ativo';
         $locationId = !empty($input['location_id']) ? (int) $input['location_id'] : null;
+        $areaId = !empty($input['area_id']) ? (int) $input['area_id'] : null;
 
         $roleModel = new RoleModel();
         if ($username === '' || $nome === '' || $senha === '' || !$roleModel->nameExists($role)) {
@@ -84,7 +87,7 @@ class UsersController extends Controller
             return;
         }
 
-        $model->create($username, $nome, SecurityHelper::hashPassword($senha), $role, $status, $locationId, $email !== '' ? $email : null);
+        $model->create($username, $nome, SecurityHelper::hashPassword($senha), $role, $status, $locationId, $email !== '' ? $email : null, $areaId);
         Logger::log('create_user', "Usuário {$username} criado com perfil {$role}");
 
         $this->jsonOk(['login' => mb_strtolower(trim($username)), 'username' => mb_strtolower(trim($username))], 201);
@@ -111,6 +114,9 @@ class UsersController extends Controller
         $locationId = array_key_exists('location_id', $input)
             ? (!empty($input['location_id']) ? (int) $input['location_id'] : null)
             : (!empty($user['location_id']) ? (int) $user['location_id'] : null);
+        $areaId = array_key_exists('area_id', $input)
+            ? (!empty($input['area_id']) ? (int) $input['area_id'] : null)
+            : (!empty($user['area_id']) ? (int) $user['area_id'] : null);
 
         $roleModel = new RoleModel();
         if ($nome === '' || !$roleModel->nameExists($role)) {
@@ -124,7 +130,7 @@ class UsersController extends Controller
         }
 
         $hash = $senha !== '' ? SecurityHelper::hashPassword($senha) : null;
-        $model->update($username, $nome, $role, $status, $hash, $locationId, $email !== '' ? $email : null);
+        $model->update($username, $nome, $role, $status, $hash, $locationId, $email !== '' ? $email : null, $areaId);
         Logger::log('edit_user', "Usuário {$username} atualizado");
 
         $this->jsonOk(['login' => $username, 'username' => $username]);

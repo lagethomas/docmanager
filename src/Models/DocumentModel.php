@@ -25,7 +25,8 @@ class DocumentModel extends Repository
         bool $favorites = false,
         bool $sharedWithMe = false,
         bool $sharedByMe = false,
-        ?int $userLocationId = null
+        ?int $userLocationId = null,
+        ?int $userAreaId = null
     ): array {
         $uid = $userId !== null ? (int) $userId : 0;
         $sql = "SELECT d.*, u.name AS author_name,
@@ -94,17 +95,24 @@ class DocumentModel extends Repository
             $params[] = $userId;
         }
 
-        // Filtro por restrição de localização (para usuários não-Admin)
+        // Filtro por restrição de localização e área (para usuários não-Admin)
         if ($userRole !== 'Admin') {
+            $restConds = ['d.is_restricted = 0', 'd.created_by = ?', 'EXISTS (SELECT 1 FROM cp_document_shares ds_sec WHERE ds_sec.document_id = d.id AND ds_sec.user_id = ?)'];
+            $restParams = [$userId, $userId];
+
             if ($userLocationId !== null) {
-                $conditions[] = '(d.is_restricted = 0 OR d.created_by = ? OR EXISTS (SELECT 1 FROM cp_document_locations dl_sec WHERE dl_sec.document_id = d.id AND dl_sec.location_id = ?) OR EXISTS (SELECT 1 FROM cp_document_shares ds_sec WHERE ds_sec.document_id = d.id AND ds_sec.user_id = ?))';
-                $params[] = $userId;
-                $params[] = $userLocationId;
-                $params[] = $userId;
-            } else {
-                $conditions[] = '(d.is_restricted = 0 OR d.created_by = ? OR EXISTS (SELECT 1 FROM cp_document_shares ds_sec WHERE ds_sec.document_id = d.id AND ds_sec.user_id = ?))';
-                $params[] = $userId;
-                $params[] = $userId;
+                $restConds[] = 'EXISTS (SELECT 1 FROM cp_document_locations dl_sec WHERE dl_sec.document_id = d.id AND dl_sec.location_id = ?)';
+                $restParams[] = $userLocationId;
+            }
+
+            if ($userAreaId !== null) {
+                $restConds[] = 'EXISTS (SELECT 1 FROM cp_document_areas da_sec WHERE da_sec.document_id = d.id AND da_sec.area_id = ?)';
+                $restParams[] = $userAreaId;
+            }
+
+            $conditions[] = '(' . implode(' OR ', $restConds) . ')';
+            foreach ($restParams as $rp) {
+                $params[] = $rp;
             }
         }
 
@@ -272,6 +280,17 @@ class DocumentModel extends Repository
         $row['locations'] = $locs;
         $row['location_ids'] = array_map(static fn($l) => (int) $l['id'], $locs);
 
+        // Areas (Restrições por área/setor)
+        $stmtArea = $this->db->prepare(
+            'SELECT a.id, a.name FROM cp_areas a
+             JOIN cp_document_areas da ON a.id = da.area_id
+             WHERE da.document_id = ? ORDER BY a.name ASC'
+        );
+        $stmtArea->execute([$id]);
+        $areas = $stmtArea->fetchAll() ?: [];
+        $row['areas'] = $areas;
+        $row['area_ids'] = array_map(static fn($a) => (int) $a['id'], $areas);
+
         return $row;
     }
 
@@ -284,7 +303,8 @@ class DocumentModel extends Repository
         ?int $approvedBy = null,
         int $isPublic = 0,
         int $isRestricted = 0,
-        array $locationIds = []
+        array $locationIds = [],
+        array $areaIds = []
     ): int {
         $categoryId = ($categoryId !== null && $categoryId > 0) ? $categoryId : null;
         $approvedAt = ($status === 'aprovado') ? date('Y-m-d H:i:s') : null;
@@ -298,6 +318,10 @@ class DocumentModel extends Repository
 
         if ($isRestricted && !empty($locationIds)) {
             (new \App\Models\LocationModel())->setDocumentLocations($id, $locationIds);
+        }
+
+        if ($isRestricted && !empty($areaIds)) {
+            (new \App\Models\AreaModel())->setDocumentAreas($id, $areaIds);
         }
 
         // Versão inicial
@@ -322,7 +346,8 @@ class DocumentModel extends Repository
         ?int $approvedBy = null,
         ?int $isPublic = null,
         ?int $isRestricted = null,
-        ?array $locationIds = null
+        ?array $locationIds = null,
+        ?array $areaIds = null
     ): bool {
         $categoryId = ($categoryId !== null && $categoryId > 0) ? $categoryId : null;
         $encryptedContent = SecurityHelper::encryptPskTags($content);
@@ -363,6 +388,10 @@ class DocumentModel extends Repository
 
         if ($ok && $locationIds !== null) {
             (new \App\Models\LocationModel())->setDocumentLocations($id, $isRestricted ? $locationIds : []);
+        }
+
+        if ($ok && $areaIds !== null) {
+            (new \App\Models\AreaModel())->setDocumentAreas($id, $isRestricted ? $areaIds : []);
         }
 
         if ($ok) {

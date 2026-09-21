@@ -17,6 +17,7 @@
           <th data-sort="name" class="sortable-th">Nome <span class="sort-icon"></span></th>
           <th data-sort="role" class="sortable-th">Perfil <span class="sort-icon"></span></th>
           <th data-sort="location" class="sortable-th">Localização <span class="sort-icon"></span></th>
+          <th data-sort="area" class="sortable-th">Área / Setor <span class="sort-icon"></span></th>
           <th data-sort="status" class="sortable-th">Status <span class="sort-icon"></span></th>
           <th class="th-actions">Ações</th>
         </tr>

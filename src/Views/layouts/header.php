@@ -74,6 +74,10 @@ function navActive(string $current, string $target): string
         <?php echo icon('location', ['class' => 'icon', 'size' => 16]); ?>
         <span class="nav-text">Localizações</span>
       </a>
+      <a class="nav-link<?php echo navActive($page, 'areas'); ?>" href="<?php echo e(Controller::url('/areas')); ?>" data-rail-label="Áreas / Setores">
+        <?php echo icon('area', ['class' => 'icon', 'size' => 16]); ?>
+        <span class="nav-text">Áreas / Setores</span>
+      </a>
       <a class="nav-link<?php echo navActive($page, 'configuracoes'); ?>" href="<?php echo e(Controller::url('/configuracoes')); ?>" data-rail-label="Configurações">
         <?php echo icon('settings', ['class' => 'icon', 'size' => 16]); ?>
         <span class="nav-text">Configurações</span>
