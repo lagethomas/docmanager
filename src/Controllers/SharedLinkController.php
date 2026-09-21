@@ -22,7 +22,7 @@ class SharedLinkController extends Controller
 
         $id = (int) $docId;
         $userId = (int) $user['id'];
-        $role = (string) ($user['role'] ?? '');
+        $role = (string) $user['role'];
 
         $docModel = new DocumentModel();
         if (!$docModel->canUserManageShares($id, $userId, $role)) {
@@ -45,7 +45,7 @@ class SharedLinkController extends Controller
 
         $id = (int) $docId;
         $userId = (int) $user['id'];
-        $role = (string) ($user['role'] ?? '');
+        $role = (string) $user['role'];
 
         $docModel = new DocumentModel();
         if (!$docModel->canUserManageShares($id, $userId, $role)) {
@@ -79,7 +79,7 @@ class SharedLinkController extends Controller
         }
 
         $userId = (int) $user['id'];
-        $role = (string) ($user['role'] ?? '');
+        $role = (string) $user['role'];
 
         $docModel = new DocumentModel();
         if (!$docModel->canUserManageShares((int) $link['document_id'], $userId, $role)) {

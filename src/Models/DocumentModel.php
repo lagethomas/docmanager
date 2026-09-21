@@ -35,6 +35,7 @@ class DocumentModel extends Repository
                        c.name AS category_name, c.icon AS category_icon, c.color AS category_color,
                        GROUP_CONCAT(DISTINCT t.name ORDER BY t.name ASC SEPARATOR ',') AS tag_names,
                        GROUP_CONCAT(DISTINCT loc_t.name ORDER BY loc_t.name ASC SEPARATOR ', ') AS location_names,
+                       GROUP_CONCAT(DISTINCT area_t.name ORDER BY area_t.name ASC SEPARATOR ', ') AS area_names,
                        (SELECT COUNT(*) FROM cp_document_versions WHERE document_id = d.id) AS version_count,
                        (SELECT COUNT(*) FROM cp_document_favorites df WHERE df.document_id = d.id AND df.user_id = {$uid}) AS is_favorite,
                        (SELECT COUNT(*) FROM cp_document_shares ds_cnt WHERE ds_cnt.document_id = d.id) AS shares_count,
@@ -48,7 +49,9 @@ class DocumentModel extends Repository
                 LEFT JOIN cp_document_tags dt ON d.id = dt.document_id
                 LEFT JOIN cp_doc_tags t ON dt.tag_id = t.id
                 LEFT JOIN cp_document_locations dl_join ON d.id = dl_join.document_id
-                LEFT JOIN cp_locations loc_t ON dl_join.location_id = loc_t.id";
+                LEFT JOIN cp_locations loc_t ON dl_join.location_id = loc_t.id
+                LEFT JOIN cp_document_areas da_join ON d.id = da_join.document_id
+                LEFT JOIN cp_areas area_t ON da_join.area_id = area_t.id";
 
         $conditions = [];
         $params = [];
@@ -97,22 +100,35 @@ class DocumentModel extends Repository
 
         // Filtro por restrição de localização e área (para usuários não-Admin)
         if ($userRole !== 'Admin') {
-            $restConds = ['d.is_restricted = 0', 'd.created_by = ?', 'EXISTS (SELECT 1 FROM cp_document_shares ds_sec WHERE ds_sec.document_id = d.id AND ds_sec.user_id = ?)'];
-            $restParams = [$userId, $userId];
+            $scopeConds = [
+                'd.created_by = ?',
+                'EXISTS (SELECT 1 FROM cp_document_shares ds_sec WHERE ds_sec.document_id = d.id AND ds_sec.user_id = ?)'
+            ];
+            $scopeParams = [$uid, $uid];
 
+            $locPart = '';
             if ($userLocationId !== null) {
-                $restConds[] = 'EXISTS (SELECT 1 FROM cp_document_locations dl_sec WHERE dl_sec.document_id = d.id AND dl_sec.location_id = ?)';
-                $restParams[] = $userLocationId;
+                $locPart = '(CASE WHEN EXISTS (SELECT 1 FROM cp_document_locations dl_chk WHERE dl_chk.document_id = d.id) THEN EXISTS (SELECT 1 FROM cp_document_locations dl_sec WHERE dl_sec.document_id = d.id AND dl_sec.location_id = ?) ELSE (u.location_id IS NULL OR u.location_id = ?) END)';
+                $scopeParams[] = $userLocationId;
+                $scopeParams[] = $userLocationId;
+            } else {
+                $locPart = '(NOT EXISTS (SELECT 1 FROM cp_document_locations dl_chk WHERE dl_chk.document_id = d.id))';
             }
 
+            $areaPart = '';
             if ($userAreaId !== null) {
-                $restConds[] = 'EXISTS (SELECT 1 FROM cp_document_areas da_sec WHERE da_sec.document_id = d.id AND da_sec.area_id = ?)';
-                $restParams[] = $userAreaId;
+                $areaPart = '(CASE WHEN EXISTS (SELECT 1 FROM cp_document_areas da_chk WHERE da_chk.document_id = d.id) THEN EXISTS (SELECT 1 FROM cp_document_areas da_sec WHERE da_sec.document_id = d.id AND da_sec.area_id = ?) ELSE (u.area_id IS NULL OR u.area_id = ?) END)';
+                $scopeParams[] = $userAreaId;
+                $scopeParams[] = $userAreaId;
+            } else {
+                $areaPart = '(NOT EXISTS (SELECT 1 FROM cp_document_areas da_chk WHERE da_chk.document_id = d.id))';
             }
 
-            $conditions[] = '(' . implode(' OR ', $restConds) . ')';
-            foreach ($restParams as $rp) {
-                $params[] = $rp;
+            $scopeConds[] = '(' . $locPart . ' AND ' . $areaPart . ')';
+
+            $conditions[] = '(' . implode(' OR ', $scopeConds) . ')';
+            foreach ($scopeParams as $sp) {
+                $params[] = $sp;
             }
         }
 
@@ -158,6 +174,7 @@ class DocumentModel extends Repository
             'created_desc' => 'd.created_at DESC',
             'created_asc' => 'd.created_at ASC',
             'updated_asc' => 'd.updated_at ASC',
+            'approved_desc' => 'COALESCE(d.approved_at, d.updated_at) DESC',
             'views_desc' => 'd.views_count DESC, d.updated_at DESC',
             'versions_desc' => 'version_count DESC, d.updated_at DESC',
             'deleted_desc' => 'd.deleted_at DESC',
@@ -559,43 +576,43 @@ class DocumentModel extends Repository
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function getRecentPublished(int $limit = 10): array
-    {
-        $limit = max(1, min(50, $limit));
-        $stmt = $this->db->prepare(
-            "SELECT d.id, d.title, d.category_id, d.created_by, d.status, d.approved_at, d.updated_at, d.views_count,
-                    u.name AS author_name,
-                    c.name AS category_name, c.icon AS category_icon, c.color AS category_color
-             FROM cp_documents d
-             LEFT JOIN cp_users u ON d.created_by = u.id
-             LEFT JOIN cp_doc_categories c ON d.category_id = c.id
-             WHERE d.deleted_at IS NULL AND d.status = 'aprovado'
-             ORDER BY COALESCE(d.approved_at, d.updated_at) DESC
-             LIMIT {$limit}"
+    public function getRecentPublished(
+        int $limit = 10,
+        ?int $userId = null,
+        ?string $userRole = null,
+        ?int $userLocationId = null,
+        ?int $userAreaId = null
+    ): array {
+        $docs = $this->search(
+            sort: 'approved_desc',
+            status: 'aprovado',
+            userId: $userId,
+            userRole: $userRole,
+            userLocationId: $userLocationId,
+            userAreaId: $userAreaId
         );
-        $stmt->execute();
-        return $stmt->fetchAll() ?: [];
+        return array_slice($docs, 0, max(1, min(50, $limit)));
     }
 
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function getMostViewed(int $limit = 10): array
-    {
-        $limit = max(1, min(50, $limit));
-        $stmt = $this->db->prepare(
-            "SELECT d.id, d.title, d.category_id, d.created_by, d.status, d.views_count, d.updated_at,
-                    u.name AS author_name,
-                    c.name AS category_name, c.icon AS category_icon, c.color AS category_color
-             FROM cp_documents d
-             LEFT JOIN cp_users u ON d.created_by = u.id
-             LEFT JOIN cp_doc_categories c ON d.category_id = c.id
-             WHERE d.deleted_at IS NULL AND d.status = 'aprovado'
-             ORDER BY d.views_count DESC, d.updated_at DESC
-             LIMIT {$limit}"
+    public function getMostViewed(
+        int $limit = 10,
+        ?int $userId = null,
+        ?string $userRole = null,
+        ?int $userLocationId = null,
+        ?int $userAreaId = null
+    ): array {
+        $docs = $this->search(
+            sort: 'views_desc',
+            status: 'aprovado',
+            userId: $userId,
+            userRole: $userRole,
+            userLocationId: $userLocationId,
+            userAreaId: $userAreaId
         );
-        $stmt->execute();
-        return $stmt->fetchAll() ?: [];
+        return array_slice($docs, 0, max(1, min(50, $limit)));
     }
 
     public function trash(int $id): bool
@@ -676,22 +693,73 @@ class DocumentModel extends Repository
     /**
      * @return array<string, int>
      */
-    public function getStats(?int $userId = null, ?string $userRole = null): array
-    {
-        if ($userRole === 'Visualizador') {
-            $totalDocs = (int) $this->db->query("SELECT COUNT(*) FROM cp_documents WHERE deleted_at IS NULL AND status = 'aprovado'")->fetchColumn();
-        } elseif ($userRole === 'Editor' && $userId !== null) {
-            $stmtEd = $this->db->prepare("SELECT COUNT(*) FROM cp_documents WHERE deleted_at IS NULL AND (status = 'aprovado' OR created_by = ? OR EXISTS (SELECT 1 FROM cp_document_shares ds WHERE ds.document_id = cp_documents.id AND ds.user_id = ?))");
-            $stmtEd->execute([$userId, $userId]);
-            $totalDocs = (int) $stmtEd->fetchColumn();
-        } else {
-            $totalDocs = (int) $this->db->query('SELECT COUNT(*) FROM cp_documents WHERE deleted_at IS NULL')->fetchColumn();
+    /**
+     * @return array<string, int>
+     */
+    public function getStats(
+        ?int $userId = null,
+        ?string $userRole = null,
+        ?int $userLocationId = null,
+        ?int $userAreaId = null
+    ): array {
+        $uid = $userId !== null ? (int) $userId : 0;
+        $joinUser = '';
+        $scopeConditions = ['d.deleted_at IS NULL'];
+        $params = [];
+
+        if ($userRole !== 'Admin') {
+            $joinUser = 'LEFT JOIN cp_users u ON d.created_by = u.id';
+            $scopeConds = [
+                'd.created_by = ?',
+                'EXISTS (SELECT 1 FROM cp_document_shares ds_sec WHERE ds_sec.document_id = d.id AND ds_sec.user_id = ?)'
+            ];
+            $params[] = $uid;
+            $params[] = $uid;
+
+            $locPart = '';
+            if ($userLocationId !== null) {
+                $locPart = '(CASE WHEN EXISTS (SELECT 1 FROM cp_document_locations dl_chk WHERE dl_chk.document_id = d.id) THEN EXISTS (SELECT 1 FROM cp_document_locations dl_sec WHERE dl_sec.document_id = d.id AND dl_sec.location_id = ?) ELSE (u.location_id IS NULL OR u.location_id = ?) END)';
+                $params[] = $userLocationId;
+                $params[] = $userLocationId;
+            } else {
+                $locPart = '(NOT EXISTS (SELECT 1 FROM cp_document_locations dl_chk WHERE dl_chk.document_id = d.id))';
+            }
+
+            $areaPart = '';
+            if ($userAreaId !== null) {
+                $areaPart = '(CASE WHEN EXISTS (SELECT 1 FROM cp_document_areas da_chk WHERE da_chk.document_id = d.id) THEN EXISTS (SELECT 1 FROM cp_document_areas da_sec WHERE da_sec.document_id = d.id AND da_sec.area_id = ?) ELSE (u.area_id IS NULL OR u.area_id = ?) END)';
+                $params[] = $userAreaId;
+                $params[] = $userAreaId;
+            } else {
+                $areaPart = '(NOT EXISTS (SELECT 1 FROM cp_document_areas da_chk WHERE da_chk.document_id = d.id))';
+            }
+
+            $scopeConds[] = '(' . $locPart . ' AND ' . $areaPart . ')';
+            $scopeConditions[] = '(' . implode(' OR ', $scopeConds) . ')';
         }
 
-        $totalPending = (int) $this->db->query("SELECT COUNT(*) FROM cp_documents WHERE deleted_at IS NULL AND status = 'pendente'")->fetchColumn();
-        $totalApproved = (int) $this->db->query("SELECT COUNT(*) FROM cp_documents WHERE deleted_at IS NULL AND status = 'aprovado'")->fetchColumn();
-        $totalRejected = (int) $this->db->query("SELECT COUNT(*) FROM cp_documents WHERE deleted_at IS NULL AND status = 'rejeitado'")->fetchColumn();
-        $totalViews = (int) $this->db->query('SELECT COALESCE(SUM(views_count), 0) FROM cp_documents WHERE deleted_at IS NULL')->fetchColumn();
+        $baseWhere = ' WHERE ' . implode(' AND ', $scopeConditions);
+
+        $stmtTotal = $this->db->prepare("SELECT COUNT(*) FROM cp_documents d {$joinUser} {$baseWhere}");
+        $stmtTotal->execute($params);
+        $totalDocs = (int) $stmtTotal->fetchColumn();
+
+        $stmtPend = $this->db->prepare("SELECT COUNT(*) FROM cp_documents d {$joinUser} {$baseWhere} AND d.status = 'pendente'");
+        $stmtPend->execute($params);
+        $totalPending = (int) $stmtPend->fetchColumn();
+
+        $stmtApp = $this->db->prepare("SELECT COUNT(*) FROM cp_documents d {$joinUser} {$baseWhere} AND d.status = 'aprovado'");
+        $stmtApp->execute($params);
+        $totalApproved = (int) $stmtApp->fetchColumn();
+
+        $stmtRej = $this->db->prepare("SELECT COUNT(*) FROM cp_documents d {$joinUser} {$baseWhere} AND d.status = 'rejeitado'");
+        $stmtRej->execute($params);
+        $totalRejected = (int) $stmtRej->fetchColumn();
+
+        $stmtViews = $this->db->prepare("SELECT COALESCE(SUM(d.views_count), 0) FROM cp_documents d {$joinUser} {$baseWhere}");
+        $stmtViews->execute($params);
+        $totalViews = (int) $stmtViews->fetchColumn();
+
         $totalTrash = (int) $this->db->query('SELECT COUNT(*) FROM cp_documents WHERE deleted_at IS NOT NULL')->fetchColumn();
         $totalCategories = (int) $this->db->query('SELECT COUNT(*) FROM cp_doc_categories')->fetchColumn();
         $totalTags = (int) $this->db->query('SELECT COUNT(*) FROM cp_doc_tags')->fetchColumn();
@@ -887,6 +955,70 @@ class DocumentModel extends Repository
         $stmt = $this->db->prepare('SELECT 1 FROM cp_document_shares WHERE document_id = ? AND user_id = ? LIMIT 1');
         $stmt->execute([$documentId, $userId]);
         return (bool) $stmt->fetchColumn();
+    }
+
+    public function canUserAccessDocument(
+        array|int $docOrId,
+        int $userId,
+        string $userRole,
+        ?int $userLocationId = null,
+        ?int $userAreaId = null
+    ): bool {
+        if ($userRole === 'Admin') {
+            return true;
+        }
+
+        $docId = is_array($docOrId) ? (int) ($docOrId['id'] ?? 0) : (int) $docOrId;
+        $doc = is_array($docOrId) ? $docOrId : $this->find($docId);
+
+        if ($doc === null) {
+            return false;
+        }
+
+        // Criador e compartilhado sempre têm acesso
+        if ((int) ($doc['created_by'] ?? 0) === $userId) {
+            return true;
+        }
+
+        if ($this->isSharedWithUser($docId, $userId)) {
+            return true;
+        }
+
+        $authorLocId = null;
+        $authorAreaId = null;
+        if (!empty($doc['created_by'])) {
+            $author = (new UserModel())->findById((int) $doc['created_by']);
+            if ($author) {
+                $authorLocId = !empty($author['location_id']) ? (int) $author['location_id'] : null;
+                $authorAreaId = !empty($author['area_id']) ? (int) $author['area_id'] : null;
+            }
+        }
+
+        // 1. Verificar restrição de Localização
+        $allowedLocIds = (new LocationModel())->getDocumentLocationIds($docId);
+        if (!empty($allowedLocIds)) {
+            if ($userLocationId === null || !in_array($userLocationId, $allowedLocIds, true)) {
+                return false;
+            }
+        } else {
+            if ($userLocationId !== null && $authorLocId !== null && $authorLocId !== $userLocationId) {
+                return false;
+            }
+        }
+
+        // 2. Verificar restrição de Área
+        $allowedAreaIds = (new AreaModel())->getDocumentAreaIds($docId);
+        if (!empty($allowedAreaIds)) {
+            if ($userAreaId === null || !in_array($userAreaId, $allowedAreaIds, true)) {
+                return false;
+            }
+        } else {
+            if ($userAreaId !== null && $authorAreaId !== null && $authorAreaId !== $userAreaId) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
 

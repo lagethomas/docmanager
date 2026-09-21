@@ -298,23 +298,66 @@ function initGlobalSearch() {
     if (clearBtn) clearBtn.hidden = !q;
     if (q.length < 2) { closePanel(); return; }
 
-    api('GET', '/api/docs?q=' + encodeURIComponent(q)).then(function (data) {
-      var docs = (data && data.docs) ? data.docs : [];
-      if (!docs.length) {
-        panel.innerHTML = '<div style="padding:1rem; text-align:center; color:var(--text-muted); font-size:0.82rem;">Nenhum documento encontrado para "' + esc(q) + '"</div>';
-      } else {
-        var html = '<div style="padding:0.4rem 0.75rem; font-size:0.72rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); border-bottom:1px solid var(--border-color); background:var(--bg-muted, rgba(0,0,0,0.02));">Documentos (' + docs.length + ')</div>';
-        docs.forEach(function (doc) {
-          var viewUrl = '/docs/view/' + doc.id;
-          var catLabel = doc.category_name ? esc(doc.category_name) : 'Geral';
-          var author = doc.author_name ? esc(doc.author_name) : '';
-          html += '<a href="' + viewUrl + '" class="tb-dropdown-item" style="display:flex; flex-direction:column; align-items:flex-start; padding:0.6rem 0.85rem; border-bottom:1px solid var(--border-color); text-decoration:none;">'
-            + '<div style="font-weight:600; font-size:0.85rem; color:var(--text-color); margin-bottom:2px;">' + esc(doc.title) + '</div>'
-            + '<div style="font-size:0.75rem; color:var(--text-muted); display:flex; gap:0.5rem; align-items:center;">'
-            + '<span style="background:rgba(26,187,156,0.1); color:var(--primary); padding:1px 6px; border-radius:4px; font-weight:500;">' + catLabel + '</span>'
-            + (author ? '<span>Por ' + author + '</span>' : '')
-            + '</div></a>';
+    var promises = [api('GET', '/api/docs?q=' + encodeURIComponent(q))];
+    var canViewUsers = ME && (ME.role === 'Admin');
+    if (canViewUsers) {
+      promises.push(api('GET', '/api/users').catch(function () { return []; }));
+    }
+
+    Promise.all(promises).then(function (results) {
+      var docData = results[0];
+      var docs = (docData && docData.docs) ? docData.docs : [];
+      var allUsers = results[1] || [];
+      var matchingUsers = [];
+
+      if (canViewUsers && Array.isArray(allUsers) && allUsers.length > 0) {
+        var lowerQ = q.toLowerCase();
+        matchingUsers = allUsers.filter(function (u) {
+          var login = (u.login || u.username || '').toLowerCase();
+          var name = (u.name || '').toLowerCase();
+          var email = (u.email || '').toLowerCase();
+          var loc = (u.location_name || '').toLowerCase();
+          var area = (u.area_name || '').toLowerCase();
+          return login.indexOf(lowerQ) !== -1 ||
+                 name.indexOf(lowerQ) !== -1 ||
+                 email.indexOf(lowerQ) !== -1 ||
+                 loc.indexOf(lowerQ) !== -1 ||
+                 area.indexOf(lowerQ) !== -1;
         });
+      }
+
+      if (!docs.length && !matchingUsers.length) {
+        panel.innerHTML = '<div style="padding:1rem; text-align:center; color:var(--text-muted); font-size:0.82rem;">Nenhum resultado encontrado para "' + esc(q) + '"</div>';
+      } else {
+        var html = '';
+        if (docs.length) {
+          html += '<div style="padding:0.4rem 0.75rem; font-size:0.72rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); border-bottom:1px solid var(--border-color); background:var(--bg-muted, rgba(0,0,0,0.02));">Documentos (' + docs.length + ')</div>';
+          docs.forEach(function (doc) {
+            var viewUrl = '/docs/view/' + doc.id;
+            var catLabel = doc.category_name ? esc(doc.category_name) : 'Geral';
+            var author = doc.author_name ? esc(doc.author_name) : '';
+            html += '<a href="' + viewUrl + '" class="tb-dropdown-item" style="display:flex; flex-direction:column; align-items:flex-start; padding:0.6rem 0.85rem; border-bottom:1px solid var(--border-color); text-decoration:none;">'
+              + '<div style="font-weight:600; font-size:0.85rem; color:var(--text-color); margin-bottom:2px;">' + esc(doc.title) + '</div>'
+              + '<div style="font-size:0.75rem; color:var(--text-muted); display:flex; gap:0.5rem; align-items:center;">'
+              + '<span style="background:rgba(26,187,156,0.1); color:var(--primary); padding:1px 6px; border-radius:4px; font-weight:500;">' + catLabel + '</span>'
+              + (author ? '<span>Por ' + author + '</span>' : '')
+              + '</div></a>';
+          });
+        }
+        if (matchingUsers.length) {
+          html += '<div style="padding:0.4rem 0.75rem; font-size:0.72rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); border-bottom:1px solid var(--border-color); background:var(--bg-muted, rgba(0,0,0,0.02));">Usuários (' + matchingUsers.length + ')</div>';
+          matchingUsers.forEach(function (u) {
+            var userLogin = u.login || u.username || '';
+            var userUrl = '/usuarios?edit=' + encodeURIComponent(userLogin);
+            var locArea = [u.location_name, u.area_name].filter(Boolean).join(' • ');
+            html += '<a href="' + userUrl + '" class="tb-dropdown-item" style="display:flex; flex-direction:column; align-items:flex-start; padding:0.6rem 0.85rem; border-bottom:1px solid var(--border-color); text-decoration:none;">'
+              + '<div style="font-weight:600; font-size:0.85rem; color:var(--text-color); margin-bottom:2px;">' + esc(u.name) + ' <span style="font-weight:400; color:var(--text-muted); font-size:0.75rem;">(' + esc(userLogin) + ')</span></div>'
+              + '<div style="font-size:0.75rem; color:var(--text-muted); display:flex; gap:0.5rem; align-items:center;">'
+              + '<span style="background:rgba(99,102,241,0.1); color:#6366f1; padding:1px 6px; border-radius:4px; font-weight:500;">' + esc(u.role) + '</span>'
+              + (locArea ? '<span>' + esc(locArea) + '</span>' : '')
+              + '</div></a>';
+          });
+        }
         panel.innerHTML = html;
       }
       panel.hidden = false;

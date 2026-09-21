@@ -8,6 +8,14 @@
   </div>
 </div>
 
+<div class="card mb-16" style="padding: 0.85rem 1rem;">
+  <div style="position: relative; display: flex; align-items: center;">
+    <?php echo icon('search', ['style' => 'position: absolute; left: 12px; width: 16px; height: 16px; color: var(--text-muted); pointer-events: none;']); ?>
+    <input type="text" id="userSearchInput" class="form-control" placeholder="Buscar por usuário, nome, e-mail, perfil, localização, área..." style="padding-left: 36px; padding-right: 28px; height: 38px; border-radius: 8px;" />
+    <button type="button" id="userSearchClear" onclick="clearUserSearch()" hidden style="position: absolute; right: 10px; background: none; border: none; color: var(--text-muted); font-size: 1rem; cursor: pointer;">✕</button>
+  </div>
+</div>
+
 <div class="card">
   <div class="table-responsive">
     <table class="table" id="userTable">

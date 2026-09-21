@@ -448,12 +448,55 @@ $pendingCount = (int) ($stats['total_pending'] ?? $stats['my_pending'] ?? 0);
               ?>
               <tr>
                 <td>
-                  <a href="<?php echo e(Controller::url('/docs/view/' . (int) $d['id'])); ?>" class="table-doc-cell" title="<?php echo e($d['title'] ?? ''); ?>">
-                    <span class="table-doc-icon">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    </span>
-                    <span class="table-doc-name"><?php echo e($d['title'] ?? ''); ?></span>
-                  </a>
+                  <div style="display:flex; flex-direction:column; gap:3px;">
+                    <a href="<?php echo e(Controller::url('/docs/view/' . (int) $d['id'])); ?>" class="table-doc-cell" title="<?php echo e($d['title'] ?? ''); ?>">
+                      <span class="table-doc-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      </span>
+                      <span class="table-doc-name"><?php echo e($d['title'] ?? ''); ?></span>
+                    </a>
+                    <?php
+                    $locs = !empty($d['location_names']) ? array_filter(array_map('trim', explode(',', (string) $d['location_names']))) : [];
+                    $areas = !empty($d['area_names']) ? array_filter(array_map('trim', explode(',', (string) $d['area_names']))) : [];
+                    if (!empty($locs) || !empty($areas)):
+                    ?>
+                    <div style="display:flex; flex-wrap:wrap; gap:3px; margin-left: 28px;">
+                      <?php if (!empty($locs)): ?>
+                        <?php if (count($locs) <= 1): ?>
+                          <span class="doc-status-badge badge-restricted" style="font-size:0.63rem;padding:1px 5px;border-radius:4px;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25);display:inline-flex;align-items:center;gap:3px;" title="Restrito para: <?php echo e(implode(', ', $locs)); ?>">
+                            <?php echo \App\Helpers\IconHelper::get('location', ['size' => 9]); ?> <?php echo e($locs[0]); ?>
+
+                          </span>
+                        <?php else: ?>
+                          <span class="doc-status-badge badge-restricted" style="font-size:0.63rem;padding:1px 5px;border-radius:4px;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25);display:inline-flex;align-items:center;gap:3px;" title="Restrito para: <?php echo e(implode(', ', $locs)); ?>">
+                            <?php echo \App\Helpers\IconHelper::get('location', ['size' => 9]); ?> <?php echo e($locs[0]); ?>
+
+                          </span>
+                          <span class="doc-status-badge badge-restricted" style="font-size:0.63rem;padding:1px 4px;border-radius:4px;background:rgba(239,68,68,0.18);color:#ef4444;border:1px solid rgba(239,68,68,0.3);display:inline-flex;align-items:center;gap:2px;cursor:pointer;font-weight:700;" title="Outras localizações: <?php echo e(implode(', ', array_slice($locs, 1))); ?>">
+                            +<?php echo (count($locs) - 1); ?>
+                          </span>
+                        <?php endif; ?>
+                      <?php endif; ?>
+
+                      <?php if (!empty($areas)): ?>
+                        <?php if (count($areas) <= 1): ?>
+                          <span class="doc-status-badge badge-area-restricted" style="font-size:0.63rem;padding:1px 5px;border-radius:4px;background:rgba(99,102,241,0.12);color:#6366f1;border:1px solid rgba(99,102,241,0.25);display:inline-flex;align-items:center;gap:3px;" title="Restrito para área: <?php echo e(implode(', ', $areas)); ?>">
+                            <?php echo \App\Helpers\IconHelper::get('area', ['size' => 9]); ?> <?php echo e($areas[0]); ?>
+
+                          </span>
+                        <?php else: ?>
+                          <span class="doc-status-badge badge-area-restricted" style="font-size:0.63rem;padding:1px 5px;border-radius:4px;background:rgba(99,102,241,0.12);color:#6366f1;border:1px solid rgba(99,102,241,0.25);display:inline-flex;align-items:center;gap:3px;" title="Restrito para áreas: <?php echo e(implode(', ', $areas)); ?>">
+                            <?php echo \App\Helpers\IconHelper::get('area', ['size' => 9]); ?> <?php echo e($areas[0]); ?>
+
+                          </span>
+                          <span class="doc-status-badge badge-area-restricted" style="font-size:0.63rem;padding:1px 4px;border-radius:4px;background:rgba(99,102,241,0.18);color:#6366f1;border:1px solid rgba(99,102,241,0.3);display:inline-flex;align-items:center;gap:2px;cursor:pointer;font-weight:700;" title="Outras áreas: <?php echo e(implode(', ', array_slice($areas, 1))); ?>">
+                            +<?php echo (count($areas) - 1); ?>
+                          </span>
+                        <?php endif; ?>
+                      <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
+                  </div>
                 </td>
                 <td>
                   <span class="table-cat-badge">
@@ -536,12 +579,55 @@ $pendingCount = (int) ($stats['total_pending'] ?? $stats['my_pending'] ?? 0);
               ?>
               <tr>
                 <td>
-                  <a href="<?php echo e(Controller::url('/docs/view/' . (int) $d['id'])); ?>" class="table-doc-cell" title="<?php echo e($d['title'] ?? ''); ?>">
-                    <span class="table-doc-icon" style="background: rgba(139, 92, 246, 0.12); color: #8b5cf6;">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    </span>
-                    <span class="table-doc-name"><?php echo e($d['title'] ?? ''); ?></span>
-                  </a>
+                  <div style="display:flex; flex-direction:column; gap:3px;">
+                    <a href="<?php echo e(Controller::url('/docs/view/' . (int) $d['id'])); ?>" class="table-doc-cell" title="<?php echo e($d['title'] ?? ''); ?>">
+                      <span class="table-doc-icon" style="background: rgba(139, 92, 246, 0.12); color: #8b5cf6;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      </span>
+                      <span class="table-doc-name"><?php echo e($d['title'] ?? ''); ?></span>
+                    </a>
+                    <?php
+                    $locs = !empty($d['location_names']) ? array_filter(array_map('trim', explode(',', (string) $d['location_names']))) : [];
+                    $areas = !empty($d['area_names']) ? array_filter(array_map('trim', explode(',', (string) $d['area_names']))) : [];
+                    if (!empty($locs) || !empty($areas)):
+                    ?>
+                    <div style="display:flex; flex-wrap:wrap; gap:3px; margin-left: 28px;">
+                      <?php if (!empty($locs)): ?>
+                        <?php if (count($locs) <= 1): ?>
+                          <span class="doc-status-badge badge-restricted" style="font-size:0.63rem;padding:1px 5px;border-radius:4px;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25);display:inline-flex;align-items:center;gap:3px;" title="Restrito para: <?php echo e(implode(', ', $locs)); ?>">
+                            <?php echo \App\Helpers\IconHelper::get('location', ['size' => 9]); ?> <?php echo e($locs[0]); ?>
+
+                          </span>
+                        <?php else: ?>
+                          <span class="doc-status-badge badge-restricted" style="font-size:0.63rem;padding:1px 5px;border-radius:4px;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25);display:inline-flex;align-items:center;gap:3px;" title="Restrito para: <?php echo e(implode(', ', $locs)); ?>">
+                            <?php echo \App\Helpers\IconHelper::get('location', ['size' => 9]); ?> <?php echo e($locs[0]); ?>
+
+                          </span>
+                          <span class="doc-status-badge badge-restricted" style="font-size:0.63rem;padding:1px 4px;border-radius:4px;background:rgba(239,68,68,0.18);color:#ef4444;border:1px solid rgba(239,68,68,0.3);display:inline-flex;align-items:center;gap:2px;cursor:pointer;font-weight:700;" title="Outras localizações: <?php echo e(implode(', ', array_slice($locs, 1))); ?>">
+                            +<?php echo (count($locs) - 1); ?>
+                          </span>
+                        <?php endif; ?>
+                      <?php endif; ?>
+
+                      <?php if (!empty($areas)): ?>
+                        <?php if (count($areas) <= 1): ?>
+                          <span class="doc-status-badge badge-area-restricted" style="font-size:0.63rem;padding:1px 5px;border-radius:4px;background:rgba(99,102,241,0.12);color:#6366f1;border:1px solid rgba(99,102,241,0.25);display:inline-flex;align-items:center;gap:3px;" title="Restrito para área: <?php echo e(implode(', ', $areas)); ?>">
+                            <?php echo \App\Helpers\IconHelper::get('area', ['size' => 9]); ?> <?php echo e($areas[0]); ?>
+
+                          </span>
+                        <?php else: ?>
+                          <span class="doc-status-badge badge-area-restricted" style="font-size:0.63rem;padding:1px 5px;border-radius:4px;background:rgba(99,102,241,0.12);color:#6366f1;border:1px solid rgba(99,102,241,0.25);display:inline-flex;align-items:center;gap:3px;" title="Restrito para áreas: <?php echo e(implode(', ', $areas)); ?>">
+                            <?php echo \App\Helpers\IconHelper::get('area', ['size' => 9]); ?> <?php echo e($areas[0]); ?>
+
+                          </span>
+                          <span class="doc-status-badge badge-area-restricted" style="font-size:0.63rem;padding:1px 4px;border-radius:4px;background:rgba(99,102,241,0.18);color:#6366f1;border:1px solid rgba(99,102,241,0.3);display:inline-flex;align-items:center;gap:2px;cursor:pointer;font-weight:700;" title="Outras áreas: <?php echo e(implode(', ', array_slice($areas, 1))); ?>">
+                            +<?php echo (count($areas) - 1); ?>
+                          </span>
+                        <?php endif; ?>
+                      <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
+                  </div>
                 </td>
                 <td>
                   <span class="table-cat-badge">

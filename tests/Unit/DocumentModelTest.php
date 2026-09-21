@@ -213,5 +213,185 @@ final class DocumentModelTest extends TestCase
         $this->catModel->delete($catId1);
         $this->catModel->delete($catId2);
     }
+
+    public function testLocationAndAreaScopingIsolation(): void
+    {
+        $userModel = new UserModel();
+        $locModel = new \App\Models\LocationModel();
+        $areaModel = new \App\Models\AreaModel();
+
+        // Criar Localizações (SP, RJ)
+        $spLocId = $locModel->create('São Paulo SP ' . uniqid(), 'Descrição SP', 'ativo');
+        $rjLocId = $locModel->create('Rio de Janeiro RJ ' . uniqid(), 'Descrição RJ', 'ativo');
+
+        // Criar Áreas (TI, RH)
+        $tiAreaId = $areaModel->create('Tecnologia TI ' . uniqid(), 'TI', 'ativo');
+        $rhAreaId = $areaModel->create('Recursos Humanos RH ' . uniqid(), 'RH', 'ativo');
+
+        // Criar Usuários
+        $editorSpId = $userModel->create('ed_sp_' . uniqid(), 'Editor SP', 'hash', 'Editor', 'ativo', $spLocId, null, $tiAreaId);
+        $editorRjId = $userModel->create('ed_rj_' . uniqid(), 'Editor RJ', 'hash', 'Editor', 'ativo', $rjLocId, null, $rhAreaId);
+        $approverSpId = $userModel->create('app_sp_' . uniqid(), 'Aprovador SP', 'hash', 'Aprovador', 'ativo', $spLocId, null, $tiAreaId);
+        $approverRjId = $userModel->create('app_rj_' . uniqid(), 'Aprovador RJ', 'hash', 'Aprovador', 'ativo', $rjLocId, null, $rhAreaId);
+
+        // Documento criado pelo Editor de SP+TI
+        $docSpId = $this->docModel->create('Doc SP TI ' . uniqid(), 'Conteúdo de SP TI', null, $editorSpId, 'pendente');
+
+        // Documento criado pelo Editor de RJ+RH
+        $docRjId = $this->docModel->create('Doc RJ RH ' . uniqid(), 'Conteúdo de RJ RH', null, $editorRjId, 'pendente');
+
+        // 1. Editor de SP + TI realiza busca: deve enxergar docSpId, mas NÃO docRjId
+        $searchSp = $this->docModel->search(userId: $editorSpId, userRole: 'Editor', userLocationId: $spLocId, userAreaId: $tiAreaId);
+        $spDocIds = array_column($searchSp, 'id');
+        $this->assertTrue(in_array($docSpId, $spDocIds, true));
+        $this->assertFalse(in_array($docRjId, $spDocIds, true));
+
+        // 2. Editor de RJ + RH realiza busca: deve enxergar docRjId, mas NÃO docSpId
+        $searchRj = $this->docModel->search(userId: $editorRjId, userRole: 'Editor', userLocationId: $rjLocId, userAreaId: $rhAreaId);
+        $rjDocIds = array_column($searchRj, 'id');
+        $this->assertTrue(in_array($docRjId, $rjDocIds, true));
+        $this->assertFalse(in_array($docSpId, $rjDocIds, true));
+
+        // 3. Aprovador de SP + TI testa canUserAccessDocument
+        $this->assertTrue($this->docModel->canUserAccessDocument($docSpId, $approverSpId, 'Aprovador', $spLocId, $tiAreaId));
+        $this->assertFalse($this->docModel->canUserAccessDocument($docRjId, $approverSpId, 'Aprovador', $spLocId, $tiAreaId));
+
+        // 4. Aprovador de RJ + RH testa canUserAccessDocument
+        $this->assertFalse($this->docModel->canUserAccessDocument($docSpId, $approverRjId, 'Aprovador', $rjLocId, $rhAreaId));
+        $this->assertTrue($this->docModel->canUserAccessDocument($docRjId, $approverRjId, 'Aprovador', $rjLocId, $rhAreaId));
+
+        // 5. Usuário sem localização e sem área associadas (null, null) deve enxergar AMBOS os documentos
+        $searchGlobal = $this->docModel->search(userId: $this->userId, userRole: 'Aprovador', userLocationId: null, userAreaId: null);
+        $globalDocIds = array_column($searchGlobal, 'id');
+        $this->assertTrue(in_array($docSpId, $globalDocIds, true));
+        $this->assertTrue(in_array($docRjId, $globalDocIds, true));
+
+        // Cleanup
+        $this->docModel->forceDelete($docSpId);
+        $this->docModel->forceDelete($docRjId);
+        $db = \App\Core\Database::getInstance();
+        $stmtDel = $db->prepare('DELETE FROM cp_users WHERE id = ?');
+        $stmtDel->execute([$editorSpId]);
+        $stmtDel->execute([$editorRjId]);
+        $stmtDel->execute([$approverSpId]);
+        $stmtDel->execute([$approverRjId]);
+        $locModel->delete($spLocId);
+        $locModel->delete($rjLocId);
+        $areaModel->delete($tiAreaId);
+        $areaModel->delete($rhAreaId);
+    }
+
+    public function testExplicitDocumentRestrictionsEnforced(): void
+    {
+        $locModel = new \App\Models\LocationModel();
+        $areaModel = new \App\Models\AreaModel();
+        $userModel = new UserModel();
+
+        $spLocId = $locModel->create('SP Loc ' . uniqid());
+        $diretoriaAreaId = $areaModel->create('Diretoria ' . uniqid());
+        $juridicoAreaId = $areaModel->create('Jurídico ' . uniqid());
+
+        // Documento restrito para SP / Diretoria
+        $docId = $this->docModel->create(
+            'Doc Restrito SP Diretoria ' . uniqid(),
+            'Conteúdo Sigiloso',
+            null,
+            $this->userId,
+            'aprovado',
+            null,
+            0,
+            1,
+            [$spLocId],
+            [$diretoriaAreaId]
+        );
+
+        // Usuário do Jurídico em SP
+        $userJuridicoId = $userModel->create('user_juridico_' . uniqid(), 'Juridico User', 'pass123', 'Editor', 'ativo', $spLocId, 'juridico_' . uniqid() . '@test.com', $juridicoAreaId);
+
+        // Busca pelo Usuário do Jurídico: NÃO deve encontrar o documento restrito à Diretoria
+        $searchResults = $this->docModel->search(userId: $userJuridicoId, userRole: 'Editor', userLocationId: $spLocId, userAreaId: $juridicoAreaId);
+        $foundIds = array_column($searchResults, 'id');
+        $this->assertFalse(in_array($docId, $foundIds, true));
+
+        // canUserAccessDocument deve retornar FALSE para o usuário do Jurídico
+        $this->assertFalse($this->docModel->canUserAccessDocument($docId, $userJuridicoId, 'Editor', $spLocId, $juridicoAreaId));
+
+        // Cleanup
+        $this->docModel->forceDelete($docId);
+        $db = \App\Core\Database::getInstance();
+        $stmtDel = $db->prepare('DELETE FROM cp_users WHERE id = ?');
+        $stmtDel->execute([$userJuridicoId]);
+        $locModel->delete($spLocId);
+        $areaModel->delete($diretoriaAreaId);
+        $areaModel->delete($juridicoAreaId);
+    }
+
+    public function testDashboardRecentAndMostViewedScoping(): void
+    {
+        $locModel = new \App\Models\LocationModel();
+        $areaModel = new \App\Models\AreaModel();
+        $userModel = new UserModel();
+
+        $spLocId = $locModel->create('SP Loc Dash ' . uniqid());
+        $rjLocId = $locModel->create('RJ Loc Dash ' . uniqid());
+
+        $tiAreaId = $areaModel->create('TI Area Dash ' . uniqid());
+        $rhAreaId = $areaModel->create('RH Area Dash ' . uniqid());
+
+        $userSpId = $userModel->create('usersp_' . uniqid(), 'SP User', 'pass', 'Visualizador', 'ativo', $spLocId, 'sp_' . uniqid() . '@test.com', $tiAreaId);
+        $userRjId = $userModel->create('userrj_' . uniqid(), 'RJ User', 'pass', 'Visualizador', 'ativo', $rjLocId, 'rj_' . uniqid() . '@test.com', $rhAreaId);
+
+        // Documento Aprovado de SP + TI
+        $docSpId = $this->docModel->create(
+            'Doc SP TI ' . uniqid(),
+            'Conteudo SP TI',
+            null,
+            $this->userId,
+            'aprovado',
+            null,
+            0,
+            1,
+            [$spLocId],
+            [$tiAreaId]
+        );
+
+        // Documento Aprovado de RJ + RH
+        $docRjId = $this->docModel->create(
+            'Doc RJ RH ' . uniqid(),
+            'Conteudo RJ RH',
+            null,
+            $this->userId,
+            'aprovado',
+            null,
+            0,
+            1,
+            [$rjLocId],
+            [$rhAreaId]
+        );
+
+        // getRecentPublished para usuário de SP + TI (Visualizador)
+        $recentSp = $this->docModel->getRecentPublished(10, $userSpId, 'Visualizador', $spLocId, $tiAreaId);
+        $spDocIds = array_column($recentSp, 'id');
+        $this->assertTrue(in_array($docSpId, $spDocIds, true));
+        $this->assertFalse(in_array($docRjId, $spDocIds, true));
+
+        // getMostViewed para usuário de RJ + RH (Visualizador)
+        $mostRj = $this->docModel->getMostViewed(10, $userRjId, 'Visualizador', $rjLocId, $rhAreaId);
+        $rjDocIds = array_column($mostRj, 'id');
+        $this->assertTrue(in_array($docRjId, $rjDocIds, true));
+        $this->assertFalse(in_array($docSpId, $rjDocIds, true));
+
+        // Cleanup
+        $this->docModel->forceDelete($docSpId);
+        $this->docModel->forceDelete($docRjId);
+        $db = \App\Core\Database::getInstance();
+        $stmtDel = $db->prepare('DELETE FROM cp_users WHERE id = ?');
+        $stmtDel->execute([$userSpId]);
+        $stmtDel->execute([$userRjId]);
+        $locModel->delete($spLocId);
+        $locModel->delete($rjLocId);
+        $areaModel->delete($tiAreaId);
+        $areaModel->delete($rhAreaId);
+    }
 }
 

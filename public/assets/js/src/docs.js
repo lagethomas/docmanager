@@ -1067,6 +1067,62 @@ var Docs = (function () {
     }
   }
 
+  function buildDocMetaBadges(d) {
+    var html = '';
+
+    // Status Badge
+    if (d.status === 'pendente') {
+      html += '<span class="doc-status-badge pending" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;gap:3px;">' + Icons.get('clock', { size: 10 }) + 'Pendente</span>';
+    } else if (d.status === 'rejeitado') {
+      html += '<span class="doc-status-badge rejected" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;gap:3px;">' + Icons.get('close', { size: 10 }) + 'Rejeitado</span>';
+    } else if (d.status === 'rascunho') {
+      html += '<span class="doc-status-badge draft" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;background:rgba(107,114,128,0.12);color:#6b7280;border:1px solid rgba(107,114,128,0.25);display:inline-flex;align-items:center;gap:3px;">' + Icons.get('pencil', { size: 10 }) + 'Rascunho</span>';
+    }
+
+    // Localizações (Location Restrictions)
+    var locs = d.location_names ? d.location_names.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
+    if (parseInt(d.is_restricted, 10) || locs.length > 0) {
+      if (locs.length <= 1) {
+        var locLabel = locs.length === 1 ? locs[0] : 'Restrito';
+        var locTitle = locs.length === 1 ? ('Restrito para: ' + locs[0]) : 'Documento com restrição de localização';
+        html += '<span class="doc-status-badge badge-restricted" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25);display:inline-flex;align-items:center;gap:3px;" title="' + esc(locTitle) + '">' + Icons.get('location', { size: 9 }) + esc(locLabel) + '</span>';
+      } else {
+        var firstLoc = locs[0];
+        var remainingLocs = locs.slice(1).join(', ');
+        var allLocsTitle = 'Restrito para: ' + locs.join(', ');
+        var restLocsTitle = 'Outras localizações: ' + remainingLocs;
+
+        html += '<span class="doc-status-badge badge-restricted" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25);display:inline-flex;align-items:center;gap:3px;" title="' + esc(allLocsTitle) + '">' + Icons.get('location', { size: 9 }) + esc(firstLoc) + '</span>';
+        html += '<span class="doc-status-badge badge-restricted" style="font-size:0.65rem;padding:2px 5px;border-radius:4px;background:rgba(239,68,68,0.18);color:#ef4444;border:1px solid rgba(239,68,68,0.3);display:inline-flex;align-items:center;gap:2px;cursor:pointer;font-weight:700;" title="' + esc(restLocsTitle) + '">+' + (locs.length - 1) + '</span>';
+      }
+    }
+
+    // Áreas (Area Restrictions)
+    var areas = d.area_names ? d.area_names.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
+    if (areas.length > 0) {
+      if (areas.length === 1) {
+        html += '<span class="doc-status-badge badge-area-restricted" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;background:rgba(99,102,241,0.12);color:#6366f1;border:1px solid rgba(99,102,241,0.25);display:inline-flex;align-items:center;gap:3px;" title="Restrito para área: ' + esc(areas[0]) + '">' + Icons.get('area', { size: 9 }) + esc(areas[0]) + '</span>';
+      } else {
+        var firstArea = areas[0];
+        var remainingAreas = areas.slice(1).join(', ');
+        var allAreasTitle = 'Restrito para áreas: ' + areas.join(', ');
+        var restAreasTitle = 'Outras áreas: ' + remainingAreas;
+
+        html += '<span class="doc-status-badge badge-area-restricted" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;background:rgba(99,102,241,0.12);color:#6366f1;border:1px solid rgba(99,102,241,0.25);display:inline-flex;align-items:center;gap:3px;" title="' + esc(allAreasTitle) + '">' + Icons.get('area', { size: 9 }) + esc(firstArea) + '</span>';
+        html += '<span class="doc-status-badge badge-area-restricted" style="font-size:0.65rem;padding:2px 5px;border-radius:4px;background:rgba(99,102,241,0.18);color:#6366f1;border:1px solid rgba(99,102,241,0.3);display:inline-flex;align-items:center;gap:2px;cursor:pointer;font-weight:700;" title="' + esc(restAreasTitle) + '">+' + (areas.length - 1) + '</span>';
+      }
+    }
+
+    // Compartilhamento
+    if (d.is_shared_by_me) {
+      html += '<span class="doc-status-badge badge-sharing" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;gap:3px;" title="Você está compartilhando este documento com ' + (d.shares_count || 1) + ' usuário(s)">' + Icons.get('share', { size: 9 }) + 'Compartilhando (' + (d.shares_count || 1) + ')</span>';
+    } else if (d.is_shared_with_me) {
+      html += '<span class="doc-status-badge badge-shared-with-me" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;gap:3px;" title="Compartilhado com você">' + Icons.get('users', { size: 9 }) + 'Compartilhado</span>';
+    }
+
+    return html;
+  }
+
   function renderGridView(grid) {
     if (!grid) return;
     var html = '';
@@ -1124,25 +1180,7 @@ var Docs = (function () {
         }
       }
 
-      var statusBadge = '';
-      if (d.status === 'pendente') {
-        statusBadge = '<span class="doc-status-badge pending" style="display:inline-flex;align-items:center;gap:3px;">' + Icons.get('clock', { size: 11 }) + 'Pendente</span>';
-      } else if (d.status === 'rejeitado') {
-        statusBadge = '<span class="doc-status-badge rejected" style="display:inline-flex;align-items:center;gap:3px;">' + Icons.get('close', { size: 11 }) + 'Rejeitado</span>';
-      }
-
-      var restrictedBadge = '';
-      if (parseInt(d.is_restricted, 10)) {
-        var locTitle = d.location_names ? ('Restrito para: ' + d.location_names) : 'Documento restrito';
-        restrictedBadge = '<span class="doc-status-badge badge-restricted" title="' + esc(locTitle) + '" style="background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25);font-size:0.68rem;padding:2px 7px;border-radius:6px;display:inline-flex;align-items:center;gap:3px;">' + Icons.get('location', { size: 10 }) + esc(d.location_names || 'Restrito') + '</span>';
-      }
-
-      var sharedBadge = '';
-      if (d.is_shared_by_me) {
-        sharedBadge = '<span class="doc-status-badge badge-sharing" title="Você está compartilhando este documento com ' + (d.shares_count || 1) + ' usuário(s)" style="display:inline-flex;align-items:center;gap:3px;">' + Icons.get('share', { size: 11 }) + 'Compartilhando (' + (d.shares_count || 1) + ')</span>';
-      } else if (d.is_shared_with_me || (myRole === 'Editor' && !isOwner && canEdit)) {
-        sharedBadge = '<span class="doc-status-badge badge-shared-with-me" title="Compartilhado com você" style="display:inline-flex;align-items:center;gap:3px;">' + Icons.get('users', { size: 11 }) + 'Compartilhado</span>';
-      }
+      var metaBadgesGrid = buildDocMetaBadges(d);
 
       var cardClickMode = canEdit ? 'split' : 'preview';
       var cardClickAction = isReadOnlyRole() ? ('Docs.viewDoc(' + d.id + ')') : ('Docs.openDoc(' + d.id + ', \'' + cardClickMode + '\')');
@@ -1150,7 +1188,7 @@ var Docs = (function () {
       html += '<div class="doc-card-pro">'
         + '<div>'
         + '<div class="doc-card-header">'
-        + '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;flex:1 1 auto;min-width:0;">' + catBadge + statusBadge + restrictedBadge + sharedBadge + '</div>'
+        + '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;flex:1 1 auto;min-width:0;">' + catBadge + metaBadgesGrid + '</div>'
         + '<div class="table-actions">'
         + actionsHtml
         + '</div>'
@@ -1206,21 +1244,7 @@ var Docs = (function () {
         tagsHtml = '<span style="color:var(--docs-text-mut);font-size:0.75rem">—</span>';
       }
 
-      var statusBadgeTable = '';
-      if (d.status === 'pendente') {
-        statusBadgeTable += ' <span class="doc-status-badge pending" style="font-size:0.65rem;padding:0.1rem 0.35rem;display:inline-flex;align-items:center;gap:2px;">' + Icons.get('clock', { size: 10 }) + 'Pendente</span>';
-      } else if (d.status === 'rejeitado') {
-        statusBadgeTable += ' <span class="doc-status-badge rejected" style="font-size:0.65rem;padding:0.1rem 0.35rem;display:inline-flex;align-items:center;gap:2px;">' + Icons.get('close', { size: 10 }) + 'Rejeitado</span>';
-      }
-      if (parseInt(d.is_restricted, 10)) {
-        var locTitle = d.location_names ? ('Restrito para: ' + d.location_names) : 'Documento restrito';
-        statusBadgeTable += ' <span class="doc-status-badge badge-restricted" style="font-size:0.65rem;padding:0.1rem 0.35rem;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25);display:inline-flex;align-items:center;gap:2px;" title="' + esc(locTitle) + '">' + Icons.get('location', { size: 9 }) + esc(d.location_names || 'Restrito') + '</span>';
-      }
-      if (d.is_shared_by_me) {
-        statusBadgeTable += ' <span class="doc-status-badge badge-sharing" style="font-size:0.65rem;padding:0.1rem 0.35rem;display:inline-flex;align-items:center;gap:2px;" title="Você está compartilhando este documento com ' + (d.shares_count || 1) + ' usuário(s)">' + Icons.get('share', { size: 10 }) + 'Compartilhando (' + (d.shares_count || 1) + ')</span>';
-      } else if (d.is_shared_with_me) {
-        statusBadgeTable += ' <span class="doc-status-badge badge-shared-with-me" style="font-size:0.65rem;padding:0.1rem 0.35rem;display:inline-flex;align-items:center;gap:2px;" title="Compartilhado com você">' + Icons.get('users', { size: 10 }) + 'Compartilhado</span>';
-      }
+      var metaBadgesTable = buildDocMetaBadges(d);
 
       var isOwner = (d.is_owner || (myId > 0 && parseInt(d.created_by, 10) === myId));
       var canEdit = !isReadOnlyRole() && (myRole === 'Admin' || isOwner || !!d.can_edit);
@@ -1257,7 +1281,10 @@ var Docs = (function () {
 
       html += '<tr>'
         + '<td><span style="font-size:1.1rem;display:inline-flex;align-items:center;">' + docIcon + '</span></td>'
-        + '<td><div class="table-doc-title" style="font-weight:600;color:var(--docs-text)">' + esc(d.title) + statusBadgeTable + '</div></td>'
+        + '<td>'
+        +   '<div class="table-doc-title" style="font-weight:600;color:var(--docs-text);line-height:1.35;">' + esc(d.title) + '</div>'
+        +   (metaBadgesTable ? '<div class="table-doc-sub-badges" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-top:4px;">' + metaBadgesTable + '</div>' : '')
+        + '</td>'
         + '<td><span style="font-size:0.8rem;display:inline-flex;align-items:center;gap:4px;">' + catName + '</span></td>'
         + '<td><div style="display:flex;gap:3px;flex-wrap:wrap">' + tagsHtml + '</div></td>'
         + '<td><span style="font-size:0.78rem;color:var(--docs-text-mut);font-weight:500;display:inline-flex;align-items:center;gap:3px;">' + Icons.get('user', { size: 12 }) + esc(d.author_name || 'Admin') + '</span></td>'

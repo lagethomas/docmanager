@@ -43,15 +43,25 @@ class ApprovalController extends Controller
         $userId = (int) $user['id'];
         $userRole = (string) ($user['role'] ?? '');
 
+        $userLocationId = Auth::locationId();
+        $userAreaId = Auth::areaId();
+
         $docs = $model->search(
             query: $q,
             status: $status !== 'todos' ? $status : null,
             sort: 'updated_desc',
             userId: $userId,
             userRole: $userRole,
+            userLocationId: $userLocationId,
+            userAreaId: $userAreaId
         );
 
-        $stats = $model->getStats(userId: $userId, userRole: $userRole);
+        $stats = $model->getStats(
+            userId: $userId,
+            userRole: $userRole,
+            userLocationId: $userLocationId,
+            userAreaId: $userAreaId
+        );
 
         $this->jsonOk([
             'docs' => $docs,
@@ -76,12 +86,20 @@ class ApprovalController extends Controller
             return;
         }
 
+        $userId = (int) $user['id'];
+        $userRole = (string) ($user['role'] ?? '');
+
+        if (!$model->canUserAccessDocument($doc, $userId, $userRole, Auth::locationId(), Auth::areaId())) {
+            $this->jsonError('Acesso negado: este documento pertence a outra localização ou área.', 403);
+            return;
+        }
+
         if (!in_array($doc['status'], ['pendente', 'rejeitado'], true)) {
             $this->jsonError('Este documento não pode ser aprovado (status atual: ' . $doc['status'] . ').', 422);
             return;
         }
 
-        $ok = $model->approve($intId, (int) $user['id']);
+        $ok = $model->approve($intId, $userId);
         if (!$ok) {
             $this->jsonError('Erro ao aprovar documento.', 500);
             return;
@@ -126,6 +144,14 @@ class ApprovalController extends Controller
 
         if ($doc === null) {
             $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+
+        $userId = (int) $user['id'];
+        $userRole = (string) ($user['role'] ?? '');
+
+        if (!$model->canUserAccessDocument($doc, $userId, $userRole, Auth::locationId(), Auth::areaId())) {
+            $this->jsonError('Acesso negado: este documento pertence a outra localização ou área.', 403);
             return;
         }
 

@@ -74,9 +74,39 @@ function renderAreaOptions(selectedAreaId) {
   select.innerHTML = html;
 }
 
+var userFilterQuery = '';
+
+function clearUserSearch() {
+  var input = document.getElementById('userSearchInput');
+  var clearBtn = document.getElementById('userSearchClear');
+  if (input) input.value = '';
+  if (clearBtn) clearBtn.hidden = true;
+  userFilterQuery = '';
+  PAGINATION.usr = 1;
+  renderAdminUsers();
+}
+window.clearUserSearch = clearUserSearch;
+
 function renderAdminUsers() {
   var sortState = TableSort.getSort('userTable');
-  var users = USERS.slice();
+  var q = userFilterQuery.toLowerCase().trim();
+  var users = USERS.filter(function (u) {
+    if (!q) return true;
+    var login = (u.login || u.username || '').toLowerCase();
+    var name = (u.name || '').toLowerCase();
+    var email = (u.email || '').toLowerCase();
+    var role = (u.role || '').toLowerCase();
+    var loc = (u.location_name || '').toLowerCase();
+    var area = (u.area_name || '').toLowerCase();
+    var status = (u.status || '').toLowerCase();
+    return login.indexOf(q) !== -1 ||
+           name.indexOf(q) !== -1 ||
+           email.indexOf(q) !== -1 ||
+           role.indexOf(q) !== -1 ||
+           loc.indexOf(q) !== -1 ||
+           area.indexOf(q) !== -1 ||
+           status.indexOf(q) !== -1;
+  });
 
   if (sortState.col) {
     users = TableSort.sortArray(users, sortState.col, sortState.dir, function(u, col) {
@@ -130,7 +160,6 @@ function renderAdminUsers() {
     PAGINATION.usr = p;
     renderAdminUsers();
   });
-  highlightFromUrl('#adminUserBody tr', 'id');
 }
 
 /* ------------------------------------------------------------------ Modal de usuário */
@@ -247,11 +276,70 @@ function confirmDelete() {
   }
 }
 
+var _autoOpenedUrlParam = false;
+
+function checkUrlEditParam() {
+  if (_autoOpenedUrlParam) return;
+  var params = new URLSearchParams(window.location.search);
+  var editParam = params.get('edit') || params.get('d');
+  if (!editParam) return;
+
+  _autoOpenedUrlParam = true;
+  var lowerParam = editParam.toLowerCase().trim();
+
+  var match = USERS.find(function (u) {
+    var login = (u.login || u.username || '').toLowerCase();
+    return login === lowerParam;
+  });
+
+  if (!match) {
+    match = USERS.find(function (u) {
+      var name = (u.name || '').toLowerCase();
+      var email = (u.email || '').toLowerCase();
+      return name === lowerParam || email === lowerParam;
+    });
+  }
+
+  if (match) {
+    var targetLogin = match.login || match.username;
+    abrirModalUsuario(targetLogin);
+    try {
+      window.history.replaceState({}, '', '/usuarios');
+    } catch (e) {}
+  } else {
+    var input = document.getElementById('userSearchInput');
+    var clearBtn = document.getElementById('userSearchClear');
+    userFilterQuery = editParam;
+    if (input) input.value = editParam;
+    if (clearBtn) clearBtn.hidden = false;
+    PAGINATION.usr = 1;
+    renderAdminUsers();
+    try {
+      window.history.replaceState({}, '', '/usuarios');
+    } catch (e) {}
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function () {
-  loadRoles().catch(function () {});
-  loadLocations().catch(function () {});
-  loadAreas().catch(function () {});
-  loadUsers().catch(function (e) { toast(e.message, 'error'); });
+  Promise.all([
+    loadRoles().catch(function () {}),
+    loadLocations().catch(function () {}),
+    loadAreas().catch(function () {}),
+    loadUsers().catch(function (e) { toast(e.message, 'error'); })
+  ]).then(function () {
+    checkUrlEditParam();
+  });
+
+  var searchInput = document.getElementById('userSearchInput');
+  var clearBtn = document.getElementById('userSearchClear');
+  if (searchInput) {
+    searchInput.addEventListener('input', function () {
+      userFilterQuery = searchInput.value;
+      if (clearBtn) clearBtn.hidden = !userFilterQuery.trim();
+      PAGINATION.usr = 1;
+      renderAdminUsers();
+    });
+  }
 
   var userTable = document.getElementById('userTable');
   if (userTable) {

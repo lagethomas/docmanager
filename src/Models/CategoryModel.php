@@ -88,16 +88,63 @@ class CategoryModel extends Repository
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function withCounts(): array
-    {
-        $stmt = $this->db->query(
-            'SELECT c.id, c.name, c.parent_id, c.icon, c.sort_order, c.color, c.created_at,
-                    COUNT(d.id) AS doc_count
-             FROM cp_doc_categories c
-             LEFT JOIN cp_documents d ON d.category_id = c.id
-             GROUP BY c.id, c.name, c.parent_id, c.icon, c.sort_order, c.color, c.created_at
-             ORDER BY c.sort_order, c.name'
-        );
+    public function withCounts(
+        ?int $userId = null,
+        ?string $userRole = null,
+        ?int $userLocationId = null,
+        ?int $userAreaId = null
+    ): array {
+        $uid = $userId !== null ? (int) $userId : 0;
+        $docConditions = ['d.deleted_at IS NULL'];
+        $params = [];
+
+        if ($userRole === 'Visualizador') {
+            $docConditions[] = "d.status = 'aprovado'";
+        } elseif ($userRole === 'Editor' && $userId !== null) {
+            $docConditions[] = "(d.status = 'aprovado' OR d.created_by = {$uid} OR EXISTS (SELECT 1 FROM cp_document_shares ds WHERE ds.document_id = d.id AND ds.user_id = {$uid}))";
+        }
+
+        if ($userRole !== 'Admin') {
+            $scopeConds = [
+                'd.created_by = ?',
+                'EXISTS (SELECT 1 FROM cp_document_shares ds_sec WHERE ds_sec.document_id = d.id AND ds_sec.user_id = ?)'
+            ];
+            $params[] = $uid;
+            $params[] = $uid;
+
+            $locPart = '';
+            if ($userLocationId !== null) {
+                $locPart = '(CASE WHEN EXISTS (SELECT 1 FROM cp_document_locations dl_chk WHERE dl_chk.document_id = d.id) THEN EXISTS (SELECT 1 FROM cp_document_locations dl_sec WHERE dl_sec.document_id = d.id AND dl_sec.location_id = ?) ELSE ((SELECT u_loc.location_id FROM cp_users u_loc WHERE u_loc.id = d.created_by) IS NULL OR (SELECT u_loc.location_id FROM cp_users u_loc WHERE u_loc.id = d.created_by) = ?) END)';
+                $params[] = $userLocationId;
+                $params[] = $userLocationId;
+            } else {
+                $locPart = '(NOT EXISTS (SELECT 1 FROM cp_document_locations dl_chk WHERE dl_chk.document_id = d.id))';
+            }
+
+            $areaPart = '';
+            if ($userAreaId !== null) {
+                $areaPart = '(CASE WHEN EXISTS (SELECT 1 FROM cp_document_areas da_chk WHERE da_chk.document_id = d.id) THEN EXISTS (SELECT 1 FROM cp_document_areas da_sec WHERE da_sec.document_id = d.id AND da_sec.area_id = ?) ELSE ((SELECT u_area.area_id FROM cp_users u_area WHERE u_area.id = d.created_by) IS NULL OR (SELECT u_area.area_id FROM cp_users u_area WHERE u_area.id = d.created_by) = ?) END)';
+                $params[] = $userAreaId;
+                $params[] = $userAreaId;
+            } else {
+                $areaPart = '(NOT EXISTS (SELECT 1 FROM cp_document_areas da_chk WHERE da_chk.document_id = d.id))';
+            }
+
+            $scopeConds[] = '(' . $locPart . ' AND ' . $areaPart . ')';
+            $docConditions[] = '(' . implode(' OR ', $scopeConds) . ')';
+        }
+
+        $joinCond = implode(' AND ', $docConditions);
+
+        $sql = "SELECT c.id, c.name, c.parent_id, c.icon, c.sort_order, c.color, c.created_at,
+                       COUNT(d.id) AS doc_count
+                FROM cp_doc_categories c
+                LEFT JOIN cp_documents d ON d.category_id = c.id AND {$joinCond}
+                GROUP BY c.id, c.name, c.parent_id, c.icon, c.sort_order, c.color, c.created_at
+                ORDER BY c.sort_order, c.name";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll() ?: [];
     }
 
