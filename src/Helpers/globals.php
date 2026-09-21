@@ -16,7 +16,14 @@ if (!function_exists('e')) {
 if (!function_exists('sanitize_input')) {
     function sanitize_input(mixed $value = null): string
     {
-        return trim((string) ($value ?? ''));
+        $str = trim((string) ($value ?? ''));
+        // Remove bytes nulos (ataques de truncamento)
+        $str = str_replace("\0", '', $str);
+        // Normaliza quebras de linha para LF
+        $str = str_replace(["\r\n", "\r"], "\n", $str);
+        // Remove backslashes soltos (evita bypass de escaping)
+        $str = stripslashes($str);
+        return $str;
     }
 }
 

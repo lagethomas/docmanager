@@ -109,6 +109,115 @@ declare(strict_types=1);
   background: #f1f5f9;
 }
 
+/* Card de Alterações de Metadados */
+.diff-metadata-card {
+  margin-bottom: 1.25rem;
+  padding: 0.9rem 1.1rem;
+  background: var(--docs-surface, #ffffff);
+  border: 1px solid var(--docs-border, #cbd5e1);
+  border-left: 4px solid var(--docs-primary, #1abb9c);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.diff-metadata-title {
+  font-weight: 700;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  color: var(--docs-text, #1e293b);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.diff-metadata-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.83rem;
+}
+.diff-metadata-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+.diff-meta-old {
+  text-decoration: line-through;
+  color: #991b1b;
+  background: #fee2e2;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+.diff-meta-new {
+  color: #166534;
+  background: #dcfce7;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+.diff-meta-arrow {
+  display: inline-flex;
+  align-items: center;
+  color: var(--docs-text-mut, #64748b);
+  margin: 0 2px;
+}
+.diff-meta-notice {
+  margin-top: 0.45rem;
+  font-style: italic;
+  color: var(--docs-text-mut, #64748b);
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.diff-badge-meta {
+  color: #0369a1;
+  background: #e0f2fe;
+  padding: 3px 9px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.diff-badge-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.diff-history-version-badge {
+  font-size: 0.75rem;
+  background: var(--docs-surface-2, #e2e8f0);
+  padding: 2px 7px;
+  border-radius: 6px;
+  color: var(--docs-text-mut);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Badges de Estatísticas */
+.diff-stats-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.diff-stat-add {
+  color: #166534;
+  background: #dcfce7;
+  padding: 3px 9px;
+  border-radius: 12px;
+}
+.diff-stat-del {
+  color: #991b1b;
+  background: #fee2e2;
+  padding: 3px 9px;
+  border-radius: 12px;
+}
+
 /* Suporte ao Modo Escuro */
 [data-theme="dark"] .diff-wrapper {
   background: var(--docs-surface, #1e293b);
@@ -152,6 +261,37 @@ declare(strict_types=1);
 [data-theme="dark"] .diff-line-empty .diff-line-num {
   background: var(--docs-surface-2, #1e293b);
 }
+[data-theme="dark"] .diff-metadata-card {
+  background: var(--docs-surface, #1e293b);
+  border-color: var(--docs-border, #334155);
+}
+[data-theme="dark"] .diff-metadata-title {
+  color: var(--docs-text, #f8fafc);
+}
+[data-theme="dark"] .diff-meta-old {
+  background: rgba(185, 28, 28, 0.3);
+  color: #fca5a5;
+}
+[data-theme="dark"] .diff-meta-new {
+  background: rgba(21, 128, 61, 0.3);
+  color: #86efac;
+}
+[data-theme="dark"] .diff-badge-meta {
+  background: rgba(3, 105, 161, 0.25);
+  color: #7dd3fc;
+}
+[data-theme="dark"] .diff-history-version-badge {
+  background: var(--docs-surface-2, #334155);
+  color: var(--docs-text-mut, #94a3b8);
+}
+[data-theme="dark"] .diff-stat-add {
+  color: #86efac;
+  background: rgba(21, 128, 61, 0.25);
+}
+[data-theme="dark"] .diff-stat-del {
+  color: #fca5a5;
+  background: rgba(185, 28, 28, 0.25);
+}
 </style>
 
 <!-- ─── MODAL DE COMPARAÇÃO DE VERSÕES E REVISÃO (GIT DIFF) ──── -->
@@ -193,7 +333,7 @@ declare(strict_types=1);
         <div id="diffVersionControls" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
           <span style="font-size: 0.8rem; color: var(--docs-text-mut); font-weight: 600;">Original:</span>
           <select id="diffOldVersionSelect" onchange="DocDiff.onVersionSelectChange()" style="font-size: 0.8rem; height: 32px; border-radius: 6px; border: 1px solid var(--docs-border, #cbd5e1); background: var(--docs-surface, #fff); color: var(--docs-text); max-width: 220px;"></select>
-          <span style="font-size: 0.8rem; color: var(--docs-text-mut); font-weight: bold;">➔</span>
+          <span class="diff-meta-arrow"><?php echo \App\Helpers\IconHelper::get('arrowRight', ['size' => 12]); ?></span>
           <span style="font-size: 0.8rem; color: var(--docs-text-mut); font-weight: 600;">Alteração:</span>
           <select id="diffNewVersionSelect" onchange="DocDiff.onVersionSelectChange()" style="font-size: 0.8rem; height: 32px; border-radius: 6px; border: 1px solid var(--docs-border, #cbd5e1); background: var(--docs-surface, #fff); color: var(--docs-text); max-width: 220px;"></select>
           <div id="diffStatsBadge" style="margin-left: 0.5rem;"></div>

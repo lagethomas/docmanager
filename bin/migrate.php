@@ -382,6 +382,12 @@ $migrations = [
         ALTER TABLE cp_comments ADD COLUMN approved_by INT UNSIGNED DEFAULT NULL AFTER approved_at;
         ALTER TABLE cp_comments ADD CONSTRAINT fk_comm_approved_by FOREIGN KEY (approved_by) REFERENCES cp_users(id) ON DELETE SET NULL;
     ",
+
+    '0027_add_title_category_to_document_versions' => "
+        ALTER TABLE cp_document_versions ADD COLUMN title VARCHAR(255) DEFAULT NULL AFTER document_id;
+        ALTER TABLE cp_document_versions ADD COLUMN category_id INT UNSIGNED DEFAULT NULL AFTER title;
+        UPDATE cp_document_versions v JOIN cp_documents d ON v.document_id = d.id SET v.title = d.title, v.category_id = d.category_id WHERE v.title IS NULL;
+    ",
 ];
 
 $stmt = $db->query('SELECT name FROM cp_migrations');
@@ -463,6 +469,10 @@ $integrityChecks = [
     ],
     'cp_doc_categories' => [
         'color' => "ALTER TABLE cp_doc_categories ADD COLUMN color VARCHAR(20) NOT NULL DEFAULT '#1abb9c'",
+    ],
+    'cp_document_versions' => [
+        'title' => "ALTER TABLE cp_document_versions ADD COLUMN title VARCHAR(255) DEFAULT NULL AFTER document_id",
+        'category_id' => "ALTER TABLE cp_document_versions ADD COLUMN category_id INT UNSIGNED DEFAULT NULL AFTER title",
     ],
 ];
 

@@ -232,9 +232,10 @@ class DocumentModel extends Repository
 
         // Versions
         $stmt3 = $this->db->prepare(
-            "SELECT v.*, u.name AS editor_name
+            "SELECT v.*, u.name AS editor_name, c.name AS category_name
              FROM cp_document_versions v
              LEFT JOIN cp_users u ON v.edited_by = u.id
+             LEFT JOIN cp_doc_categories c ON v.category_id = c.id
              WHERE v.document_id = ?
              ORDER BY v.edited_at DESC, v.id DESC"
         );
@@ -301,9 +302,9 @@ class DocumentModel extends Repository
 
         // Versão inicial
         $stmt2 = $this->db->prepare(
-            'INSERT INTO cp_document_versions (document_id, content, version_note, edited_by) VALUES (?, ?, ?, ?)'
+            'INSERT INTO cp_document_versions (document_id, title, category_id, content, version_note, edited_by) VALUES (?, ?, ?, ?, ?, ?)'
         );
-        $stmt2->execute([$id, $encryptedContent, 'Criação inicial', $createdBy]);
+        $stmt2->execute([$id, trim($title), $categoryId, $encryptedContent, 'Criação inicial', $createdBy]);
 
         $this->pruneVersions($id, $this->getMaxVersions());
 
@@ -367,9 +368,9 @@ class DocumentModel extends Repository
         if ($ok) {
             $note = trim($versionNote) !== '' ? trim($versionNote) : 'Atualização de conteúdo';
             $stmt2 = $this->db->prepare(
-                'INSERT INTO cp_document_versions (document_id, content, version_note, edited_by) VALUES (?, ?, ?, ?)'
+                'INSERT INTO cp_document_versions (document_id, title, category_id, content, version_note, edited_by) VALUES (?, ?, ?, ?, ?, ?)'
             );
-            $stmt2->execute([$id, $encryptedContent, $note, $userId]);
+            $stmt2->execute([$id, trim($title), $categoryId, $encryptedContent, $note, $userId]);
 
             $this->pruneVersions($id, $this->getMaxVersions());
         }

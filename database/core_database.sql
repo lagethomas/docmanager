@@ -213,6 +213,8 @@ CREATE TABLE IF NOT EXISTS cp_document_tags (
 CREATE TABLE IF NOT EXISTS cp_document_versions (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     document_id INT UNSIGNED NOT NULL,
+    title VARCHAR(255) DEFAULT NULL,
+    category_id INT UNSIGNED DEFAULT NULL,
     content LONGTEXT,
     version_note VARCHAR(255) DEFAULT '',
     edited_by INT UNSIGNED NOT NULL,

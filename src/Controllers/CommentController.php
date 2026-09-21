@@ -24,14 +24,45 @@ class CommentController extends Controller
         }
 
         $id = (int) $docId;
+        $userId = (int) $user['id'];
+        $userRole = (string) $user['role'];
+
         $docModel = new DocumentModel();
-        $doc = $docModel->find($id);
+        $doc = $docModel->find($id, $userId);
+
+        if ($doc === null || !empty($doc['deleted_at'])) {
+            $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+
+        // Verificar acesso ao documento
+        $isSharedWithUser = $docModel->isSharedWithUser($id, $userId);
+
+        if ($userRole === 'Visualizador' && ($doc['status'] ?? '') !== 'aprovado' && !$isSharedWithUser) {
+            $this->jsonError('Acesso negado.', 403);
+            return;
+        }
+
+        if ($userRole === 'Editor' && ($doc['status'] ?? '') !== 'aprovado') {
+            if (!$docModel->canUserEdit($id, $userId, $userRole) && !$isSharedWithUser) {
+                $this->jsonError('Acesso negado.', 403);
+                return;
+            }
+        }
+
+        if ($userRole !== 'Admin' && (int) ($doc['is_restricted'] ?? 0) === 1 && (int) ($doc['created_by'] ?? 0) !== $userId && !$isSharedWithUser) {
+            $userLocId = Auth::locationId();
+            $allowedLocIds = (new \App\Models\LocationModel())->getDocumentLocationIds($id);
+            if ($userLocId === null || !in_array($userLocId, $allowedLocIds, true)) {
+                $this->jsonError('Acesso negado.', 403);
+                return;
+            }
+        }
 
         $commentModel = new CommentModel();
         $comments = $commentModel->getByDocument($id);
 
-        $userId = (int) $user['id'];
-        $isAdmin = ((string) $user['role'] === 'Admin');
+        $isAdmin = ($userRole === 'Admin');
         $docAuthorId = $doc ? (int) $doc['created_by'] : 0;
         $isDocAuthor = ($docAuthorId === $userId);
 
@@ -60,6 +91,8 @@ class CommentController extends Controller
         }
 
         $id = (int) $docId;
+        $userId = (int) $user['id'];
+        $userRole = (string) $user['role'];
         $input = self::input();
         $text = trim((string) ($input['comment'] ?? ''));
 
@@ -69,10 +102,34 @@ class CommentController extends Controller
         }
 
         $docModel = new DocumentModel();
-        $doc = $docModel->find($id);
-        if ($doc === null) {
+        $doc = $docModel->find($id, $userId);
+        if ($doc === null || !empty($doc['deleted_at'])) {
             $this->jsonError('Documento não encontrado.', 404);
             return;
+        }
+
+        // Verificar acesso ao documento
+        $isSharedWithUser = $docModel->isSharedWithUser($id, $userId);
+
+        if ($userRole === 'Visualizador' && ($doc['status'] ?? '') !== 'aprovado' && !$isSharedWithUser) {
+            $this->jsonError('Acesso negado.', 403);
+            return;
+        }
+
+        if ($userRole === 'Editor' && ($doc['status'] ?? '') !== 'aprovado') {
+            if (!$docModel->canUserEdit($id, $userId, $userRole) && !$isSharedWithUser) {
+                $this->jsonError('Acesso negado.', 403);
+                return;
+            }
+        }
+
+        if ($userRole !== 'Admin' && (int) ($doc['is_restricted'] ?? 0) === 1 && (int) ($doc['created_by'] ?? 0) !== $userId && !$isSharedWithUser) {
+            $userLocId = Auth::locationId();
+            $allowedLocIds = (new \App\Models\LocationModel())->getDocumentLocationIds($id);
+            if ($userLocId === null || !in_array($userLocId, $allowedLocIds, true)) {
+                $this->jsonError('Acesso negado.', 403);
+                return;
+            }
         }
 
         $commentModel = new CommentModel();

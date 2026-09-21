@@ -59,6 +59,13 @@ var DocDiff = (function () {
     return ops;
   }
 
+  function getIcon(name, opts) {
+    if (window.Icons && typeof window.Icons.get === 'function') {
+      return window.Icons.get(name, opts);
+    }
+    return '';
+  }
+
   function renderSideBySideDiff(ops, oldVersionLabel, newVersionLabel) {
     var leftRows = [];
     var rightRows = [];
@@ -118,19 +125,19 @@ var DocDiff = (function () {
         + '</tr>';
     }
 
-    var statsHtml = '<div style="display:flex;align-items:center;gap:0.5rem;font-size:0.78rem;font-weight:600;">'
-      + '<span style="color:#166534;background:#dcfce7;padding:3px 9px;border-radius:12px;">+' + addCount + ' adições</span>'
-      + '<span style="color:#991b1b;background:#fee2e2;padding:3px 9px;border-radius:12px;">-' + delCount + ' remoções</span>'
+    var statsHtml = '<div class="diff-stats-wrapper">'
+      + '<span class="diff-stat-add">+' + addCount + ' adições</span>'
+      + '<span class="diff-stat-del">-' + delCount + ' remoções</span>'
       + '</div>';
 
     var containerHtml = '<div class="diff-wrapper">'
       + '<div class="diff-grid">'
       + '<div class="diff-pane diff-pane-left">'
-      + '<div class="diff-pane-header"><span>◀ ' + esc(oldVersionLabel) + '</span></div>'
+      + '<div class="diff-pane-header"><span>' + getIcon('arrowLeft', { size: 12 }) + ' ' + esc(oldVersionLabel) + '</span></div>'
       + '<table class="diff-table"><tbody>' + leftHtml + '</tbody></table>'
       + '</div>'
       + '<div class="diff-pane diff-pane-right">'
-      + '<div class="diff-pane-header"><span>▶ ' + esc(newVersionLabel) + '</span></div>'
+      + '<div class="diff-pane-header"><span>' + getIcon('arrowRight', { size: 12 }) + ' ' + esc(newVersionLabel) + '</span></div>'
       + '<table class="diff-table"><tbody>' + rightHtml + '</tbody></table>'
       + '</div>'
       + '</div>'
@@ -227,6 +234,9 @@ var DocDiff = (function () {
     var newContent = CURRENT_DOC.content || '';
     var newLabel = 'Nova Alteração (Proposta)';
 
+    var oldVer = (versions && !isNaN(oldIdx) && versions[oldIdx]) ? versions[oldIdx] : null;
+    var newVer = (versions && !isNaN(newIdx) && versions[newIdx]) ? versions[newIdx] : null;
+
     if (versions.length > 0) {
       if (!isNaN(newIdx) && versions[newIdx]) {
         newContent = versions[newIdx].content || '';
@@ -248,11 +258,64 @@ var DocDiff = (function () {
       oldLabel = 'Sem versão anterior (Documento Novo)';
     }
 
+    // Comparação de Metadados (Pasta / Categoria e Título)
+    var metaChanges = [];
+    if (oldVer && newVer && oldIdx !== newIdx) {
+      var oldCategoryName = oldVer.category_name || (oldVer.category_id ? ('Pasta #' + oldVer.category_id) : 'Geral (Sem Pasta)');
+      var newCategoryName = newVer.category_name || (newVer.category_id ? ('Pasta #' + newVer.category_id) : 'Geral (Sem Pasta)');
+      if (oldCategoryName !== newCategoryName) {
+        metaChanges.push('<div class="diff-metadata-item">'
+          + getIcon('folder', { size: 13 })
+          + ' <strong>Pasta / Categoria:</strong> '
+          + '<span class="diff-meta-old">' + esc(oldCategoryName) + '</span> '
+          + '<span class="diff-meta-arrow">' + getIcon('arrowRight', { size: 12 }) + '</span> '
+          + '<span class="diff-meta-new">' + esc(newCategoryName) + '</span>'
+          + '</div>');
+      }
+
+      var oldTitle = oldVer.title || CURRENT_DOC.title || '';
+      var newTitle = newVer.title || CURRENT_DOC.title || '';
+      if (oldTitle && newTitle && oldTitle !== newTitle) {
+        metaChanges.push('<div class="diff-metadata-item">'
+          + getIcon('pencil', { size: 13 })
+          + ' <strong>Título do Documento:</strong> '
+          + '<span class="diff-meta-old">' + esc(oldTitle) + '</span> '
+          + '<span class="diff-meta-arrow">' + getIcon('arrowRight', { size: 12 }) + '</span> '
+          + '<span class="diff-meta-new">' + esc(newTitle) + '</span>'
+          + '</div>');
+      }
+    }
+
+    var metaHtml = '';
+    if (metaChanges.length > 0) {
+      var noContentNotice = (oldContent === newContent)
+        ? '<div class="diff-meta-notice">'
+          + getIcon('infoCircle', { size: 13 })
+          + ' <span>O conteúdo de texto do documento permaneceu inalterado nesta versão.</span>'
+          + '</div>'
+        : '';
+      metaHtml = '<div class="diff-metadata-card">'
+        + '<div class="diff-metadata-title">'
+        + getIcon('settings', { size: 14 })
+        + ' <span>Alterações de Propriedades / Metadados</span>'
+        + '</div>'
+        + '<div class="diff-metadata-list">'
+        + metaChanges.join('')
+        + '</div>'
+        + noContentNotice
+        + '</div>';
+    }
+
     var ops = computeLineDiff(oldContent, newContent);
     var res = renderSideBySideDiff(ops, oldLabel, newLabel);
 
-    diffContainer.innerHTML = res.html;
-    if (statsBadge) statsBadge.innerHTML = res.statsHtml;
+    diffContainer.innerHTML = metaHtml + res.html;
+    if (statsBadge) {
+      var extraMetaBadge = metaChanges.length > 0
+        ? '<span class="diff-badge-meta">' + getIcon('settings', { size: 12 }) + ' ' + metaChanges.length + ' alteração(ões) de metadados</span>'
+        : '';
+      statsBadge.innerHTML = '<div class="diff-badge-container">' + res.statsHtml + extraMetaBadge + '</div>';
+    }
   }
 
   function renderVersionsHistoryList(versions) {
@@ -260,30 +323,32 @@ var DocDiff = (function () {
     if (!container) return;
 
     if (!versions || !versions.length) {
-      container.innerHTML = '<p style="color:var(--docs-text-mut);padding:1rem 0;">Nenhum histórico de edições anteriores registrado.</p>';
+      container.innerHTML = '<p class="text-muted" style="padding:1rem 0;">Nenhum histórico de edições anteriores registrado.</p>';
       return;
     }
 
-    var html = '<div style="display:flex;flex-direction:column;gap:0.75rem;">';
+    var html = '<div class="diff-badge-container" style="flex-direction:column;gap:0.75rem;">';
     var total = versions.length;
 
     for (var i = 0; i < total; i++) {
       var v = versions[i];
       var vNum = total - i;
       var isLatest = (i === 0);
+      var catName = v.category_name || (v.category_id ? ('Pasta #' + v.category_id) : 'Geral (Sem Pasta)');
 
-      html += '<div style="background:var(--docs-bg,#f8fafc);border:1px solid var(--docs-border,#e2e8f0);border-radius:8px;padding:0.85rem 1.1rem;display:flex;align-items:center;justify-content:space-between;">'
+      html += '<div class="diff-metadata-card" style="margin-bottom:0;display:flex;align-items:center;justify-content:space-between;border-left:none;">'
         + '<div>'
-        + '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">'
+        + '<div class="diff-badge-container" style="margin-bottom:0.25rem;">'
         + '<strong style="font-size:0.95rem;">Versão ' + vNum + '</strong>'
         + (isLatest ? '<span class="badge" style="background:rgba(26,187,156,0.15);color:var(--docs-primary,#1abb9c);font-size:0.75rem;padding:2px 8px;border-radius:10px;">Versão Atual</span>' : '')
+        + '<span class="diff-history-version-badge">' + getIcon('folder', { size: 11 }) + ' ' + esc(catName) + '</span>'
         + '</div>'
         + '<div style="font-size:0.8rem;color:var(--docs-text-mut);">'
         + 'Editado por <strong>' + esc(v.editor_name || 'Autor') + '</strong> em ' + fmtFull(v.edited_at)
         + '</div>'
         + (v.version_note ? '<div style="font-size:0.8rem;color:var(--docs-text);margin-top:0.35rem;"><em>" ' + esc(v.version_note) + ' "</em></div>' : '')
         + '</div>'
-        + '<button type="button" class="btn btn-sm btn-secondary" onclick="DocDiff.compareVersionIndex(' + i + ')" style="font-size:0.78rem;border-radius:6px;">Comparar com Anterior</button>'
+        + '<button type="button" class="btn btn-sm btn-secondary" onclick="DocDiff.compareVersionIndex(' + i + ')">Comparar com Anterior</button>'
         + '</div>';
     }
 

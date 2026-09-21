@@ -16,6 +16,15 @@ use App\Services\PdfService;
 
 class DocumentController extends Controller
 {
+    /** @var list<string> Extenções permitidas para upload */
+    private const ALLOWED_UPLOAD_EXTS = [
+        'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+        'txt', 'csv', 'rtf', 'odt', 'ods', 'odp',
+        'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg',
+        'mp3', 'mp4', 'wav', 'avi', 'mov', 'mkv',
+        'zip', 'rar', '7z',
+    ];
+
     public function index(): void
     {
         $this->render('docs/index', [
@@ -228,21 +237,45 @@ class DocumentController extends Controller
     public function getDoc(string $id): void
     {
         $intId = (int) $id;
+        $user = Auth::user();
+        if ($user === null) {
+            $this->jsonError('Não autenticado.', 401);
+            return;
+        }
+
+        $userId = (int) ($user['id'] ?? 0);
+        $userRole = (string) ($user['role'] ?? '');
+
         $model = new DocumentModel();
-        $doc = $model->find($intId);
-        if ($doc === null) {
+        $doc = $model->find($intId, $userId);
+        if ($doc === null || !empty($doc['deleted_at'])) {
             $this->jsonError('Documento não encontrado.', 404);
             return;
         }
 
-        $user = Auth::user();
-        $userId = (int) ($user['id'] ?? 0);
-        $userRole = (string) ($user['role'] ?? '');
-
-        // Se visualizador e doc não aprovado
-        if ($userRole === 'Visualizador' && ($doc['status'] ?? '') !== 'aprovado') {
+        // Se visualizador e doc não aprovado (a menos que seja compartilhado diretamente com ele)
+        $isSharedWithUser = $model->isSharedWithUser($intId, $userId);
+        if ($userRole === 'Visualizador' && ($doc['status'] ?? '') !== 'aprovado' && !$isSharedWithUser) {
             $this->jsonError('Acesso restrito: este documento ainda não foi publicado.', 403);
             return;
+        }
+
+        // Se editor, mas doc não aprovado e não é autor nem compartilhado
+        if ($userRole === 'Editor' && ($doc['status'] ?? '') !== 'aprovado') {
+            if (!$model->canUserEdit($intId, $userId, $userRole)) {
+                $this->jsonError('Acesso negado: você não tem permissão para acessar este documento.', 403);
+                return;
+            }
+        }
+
+        // Restrição por localização
+        if ($userRole !== 'Admin' && (int) ($doc['is_restricted'] ?? 0) === 1 && (int) ($doc['created_by'] ?? 0) !== $userId && !$isSharedWithUser) {
+            $userLocId = Auth::locationId();
+            $allowedLocIds = (new \App\Models\LocationModel())->getDocumentLocationIds($intId);
+            if ($userLocId === null || !in_array($userLocId, $allowedLocIds, true)) {
+                $this->jsonError('Acesso negado: este documento não está disponível na sua localização.', 403);
+                return;
+            }
         }
 
         $model->incrementViews($intId);
@@ -776,6 +809,39 @@ class DocumentController extends Controller
 
         $origName = sanitize_input((string) ($file['name'] ?? 'arquivo'));
         $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+
+        // Validação de extensão — whitelist de tipos seguros
+        if (!in_array($ext, self::ALLOWED_UPLOAD_EXTS, true)) {
+            $this->jsonError('Tipo de arquivo não permitido. Tipos aceitos: ' . implode(', ', self::ALLOWED_UPLOAD_EXTS), 422);
+            return;
+        }
+
+        // Validação de MIME type via magic bytes (não confiar no$_FILES['type'])
+        $detectedMime = @mime_content_type($tmpPath);
+        $allowedMimes = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'text/plain', 'text/csv', 'text/rtf',
+            'application/rtf',
+            'application/vnd.oasis.opendocument.text',
+            'application/vnd.oasis.opendocument.spreadsheet',
+            'application/vnd.oasis.opendocument.presentation',
+            'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml',
+            'audio/mpeg', 'audio/wav',
+            'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska',
+            'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed',
+            'application/octet-stream', // fallback para binários genéricos
+        ];
+        if ($detectedMime !== false && !in_array($detectedMime, $allowedMimes, true)) {
+            $this->jsonError('Tipo de arquivo não permitido (detectado: ' . $detectedMime . ').', 422);
+            return;
+        }
+
         $stored = uniqid('up_', true) . ($ext !== '' ? '.' . $ext : '');
         $dest = $this->storagePath('uploads/docs/' . $stored);
 
@@ -796,7 +862,7 @@ class DocumentController extends Controller
             return;
         }
 
-        $mime = !empty($file['type']) ? sanitize_input((string) $file['type']) : 'application/octet-stream';
+        $mime = ($detectedMime !== false && $detectedMime !== '') ? $detectedMime : 'application/octet-stream';
         $size = (int) ($file['size'] ?? 0);
         $userId = (int) $user['id'];
 
@@ -830,6 +896,13 @@ class DocumentController extends Controller
 
     public function serveFile(string $id): void
     {
+        $user = Auth::user();
+        if ($user === null) {
+            http_response_code(401);
+            echo 'Não autenticado.';
+            return;
+        }
+
         $db = Database::getInstance();
         $stmt = $db->prepare('SELECT * FROM cp_doc_uploads WHERE id = ? LIMIT 1');
         $stmt->execute([(int) $id]);
@@ -839,6 +912,47 @@ class DocumentController extends Controller
             http_response_code(404);
             echo 'Arquivo não encontrado.';
             return;
+        }
+
+        // Verificar se o usuário tem acesso ao documento ao qual o upload pertence
+        $userId = (int) $user['id'];
+        $userRole = (string) ($user['role'] ?? '');
+        $stmtDoc = $db->prepare(
+            'SELECT d.id, d.created_by, d.status, d.is_restricted
+             FROM cp_documents d
+             JOIN cp_document_uploads du ON du.document_id = d.id
+             WHERE du.id = ? LIMIT 1'
+        );
+        $stmtDoc->execute([(int) $id]);
+        $doc = $stmtDoc->fetch();
+
+        if ($doc !== null) {
+            $docId = (int) $doc['id'];
+            $docModel = new DocumentModel();
+
+            // Restrição por localização
+            if ($userRole !== 'Admin' && (int) $doc['is_restricted'] === 1 && (int) $doc['created_by'] !== $userId) {
+                $isShared = $docModel->isSharedWithUser($docId, $userId);
+                if (!$isShared) {
+                    $userLocId = Auth::locationId();
+                    $allowedLocIds = (new \App\Models\LocationModel())->getDocumentLocationIds($docId);
+                    if ($userLocId === null || !in_array($userLocId, $allowedLocIds, true)) {
+                        http_response_code(403);
+                        echo 'Acesso negado.';
+                        return;
+                    }
+                }
+            }
+
+            // Visualizadores só acessam documentos aprovados (exceto compartilhados)
+            if ($userRole === 'Visualizador' && ($doc['status'] ?? '') !== 'aprovado') {
+                $isShared = $docModel->isSharedWithUser($docId, $userId);
+                if (!$isShared) {
+                    http_response_code(403);
+                    echo 'Acesso negado.';
+                    return;
+                }
+            }
         }
 
         $path = $this->storagePath('uploads/docs/' . $upload['stored_name']);
@@ -868,15 +982,42 @@ class DocumentController extends Controller
         }
 
         $intId = (int) $id;
+        $userId = (int) $user['id'];
+        $userRole = (string) ($user['role'] ?? '');
+
         $docModel = new DocumentModel();
-        $doc = $docModel->find($intId);
-        if ($doc === null) {
+        $doc = $docModel->find($intId, $userId);
+        if ($doc === null || !empty($doc['deleted_at'])) {
             $this->jsonError('Documento não encontrado.', 404);
             return;
         }
 
+        // Verificar acesso ao documento antes de permitir seguir
+        $isSharedWithUser = $docModel->isSharedWithUser($intId, $userId);
+
+        if ($userRole === 'Visualizador' && ($doc['status'] ?? '') !== 'aprovado' && !$isSharedWithUser) {
+            $this->jsonError('Acesso negado.', 403);
+            return;
+        }
+
+        if ($userRole === 'Editor' && ($doc['status'] ?? '') !== 'aprovado') {
+            if (!$docModel->canUserEdit($intId, $userId, $userRole) && !$isSharedWithUser) {
+                $this->jsonError('Acesso negado.', 403);
+                return;
+            }
+        }
+
+        if ($userRole !== 'Admin' && (int) ($doc['is_restricted'] ?? 0) === 1 && (int) ($doc['created_by'] ?? 0) !== $userId && !$isSharedWithUser) {
+            $userLocId = Auth::locationId();
+            $allowedLocIds = (new \App\Models\LocationModel())->getDocumentLocationIds($intId);
+            if ($userLocId === null || !in_array($userLocId, $allowedLocIds, true)) {
+                $this->jsonError('Acesso negado.', 403);
+                return;
+            }
+        }
+
         $followerModel = new \App\Models\DocumentFollowerModel();
-        $isNowFollowing = $followerModel->toggle($intId, (int) $user['id']);
+        $isNowFollowing = $followerModel->toggle($intId, $userId);
 
         $this->jsonOk([
             'is_following' => $isNowFollowing,

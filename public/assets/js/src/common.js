@@ -36,10 +36,33 @@ function parseMarkdown(text) {
     '</span>';
   });
 
+  var html = '';
   if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
-    return marked.parse(processed);
+    html = marked.parse(processed);
+  } else {
+    html = '<div style="white-space:pre-wrap;">' + processed + '</div>';
   }
-  return '<div style="white-space:pre-wrap;">' + processed + '</div>';
+
+  // Sanitizar HTML contra XSS usando DOMPurify (se disponível)
+  if (typeof DOMPurify !== 'undefined') {
+    html = DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: [
+        'h1','h2','h3','h4','h5','h6','p','br','hr','pre','code','blockquote',
+        'ul','ol','li','a','strong','em','b','i','u','s','del','ins',
+        'table','thead','tbody','tr','th','td','caption','colgroup','col',
+        'img','figure','figcaption','span','div','details','summary',
+        'sub','sup','mark','small','abbr','kbd','var','samp',
+      ],
+      ALLOWED_ATTR: [
+        'href','src','alt','title','class','id','style','width','height',
+        'target','rel','colspan','rowspan','scope','align','valign',
+        'data-psk','onclick','type',
+      ],
+      ALLOW_DATA_ATTR: false,
+    });
+  }
+
+  return html;
 }
 
 function copySecretPsk(btn, event) {

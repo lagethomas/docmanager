@@ -16,10 +16,11 @@ $settings = (new SettingsModel())->allAsMap();
 <div class="app-footer">Desenvolvido por Thomas Marcelino</div>
 
 <script>
-window.ME = <?php echo json_encode($user ?? null, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
-window.CSRF_TOKEN = <?php echo json_encode($csrfToken ?? '', JSON_UNESCAPED_SLASHES); ?>;
-window.SETTINGS = <?php echo json_encode($settings, JSON_UNESCAPED_SLASHES); ?>;
+window.ME = <?php echo json_encode($user ?? null, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+window.CSRF_TOKEN = <?php echo json_encode($csrfToken ?? '', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+window.SETTINGS = <?php echo json_encode($settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
 <script src="<?php echo Controller::asset('/assets/js/src/icons.js'); ?>"></script>
 <script src="<?php echo Controller::asset('/assets/js/src/searchable_select.js'); ?>"></script>
 <script src="<?php echo Controller::asset('/assets/js/src/diff.js'); ?>"></script>

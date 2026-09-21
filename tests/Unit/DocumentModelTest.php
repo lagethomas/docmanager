@@ -175,5 +175,43 @@ final class DocumentModelTest extends TestCase
         // Limpeza
         $this->docModel->forceDelete($docId);
     }
+
+    public function testCategoryAndTitleChangeTracksInVersionHistory(): void
+    {
+        $catId1 = $this->catModel->create('Pasta Origem ' . uniqid(), null, 'folder', 1);
+        $catId2 = $this->catModel->create('Pasta Destino ' . uniqid(), null, 'folder', 2);
+
+        $titleInitial = 'Doc Move Test ' . uniqid();
+        $content = 'Conteúdo do documento sem alteração';
+
+        $docId = $this->docModel->create($titleInitial, $content, $catId1, $this->userId);
+        $this->assertGreaterThan(0, $docId);
+
+        // Mover para a Pasta Destino e alterar o título
+        $titleUpdated = $titleInitial . ' Renomeado';
+        $updated = $this->docModel->update($docId, $titleUpdated, $content, $catId2, $this->userId, 'Mudança de pasta');
+        $this->assertTrue($updated);
+
+        $doc = $this->docModel->find($docId);
+        $this->assertNotNull($doc);
+        $this->assertCount(2, $doc['versions']);
+
+        // Versão mais recente (índice 0)
+        $latestVersion = $doc['versions'][0];
+        $this->assertSame($titleUpdated, $latestVersion['title']);
+        $this->assertSame((int) $catId2, (int) $latestVersion['category_id']);
+        $this->assertStringContainsString('Pasta Destino', (string) $latestVersion['category_name']);
+
+        // Versão inicial (índice 1)
+        $initialVersion = $doc['versions'][1];
+        $this->assertSame($titleInitial, $initialVersion['title']);
+        $this->assertSame((int) $catId1, (int) $initialVersion['category_id']);
+        $this->assertStringContainsString('Pasta Origem', (string) $initialVersion['category_name']);
+
+        // Cleanup
+        $this->docModel->forceDelete($docId);
+        $this->catModel->delete($catId1);
+        $this->catModel->delete($catId2);
+    }
 }
 
