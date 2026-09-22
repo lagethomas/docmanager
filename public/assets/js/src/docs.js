@@ -287,6 +287,40 @@ var Docs = (function () {
           indentText(docContent, e.shiftKey);
         }
       });
+
+      // Suporte a colar (Ctrl+V) imagem diretamente no editor
+      docContent.addEventListener('paste', function (e) {
+        var clipboardData = e.clipboardData || (window.clipboardData ? window.clipboardData : null);
+        if (!clipboardData || !clipboardData.items) return;
+        var items = clipboardData.items;
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].type && items[i].type.indexOf('image') !== -1) {
+            var file = items[i].getAsFile();
+            if (file) {
+              e.preventDefault();
+              toast('Enviando imagem colada...', 'info');
+              uploadFile(file, function (url, name) {
+                insertUpload(url, name);
+              });
+              break;
+            }
+          }
+        }
+      });
+
+      // Suporte a soltar arquivo de imagem diretamente na caixa do editor
+      docContent.addEventListener('drop', function (e) {
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+          var file = e.dataTransfer.files[0];
+          if (file.type && file.type.indexOf('image') !== -1) {
+            e.preventDefault();
+            toast('Enviando imagem solta no editor...', 'info');
+            uploadFile(file, function (url, name) {
+              insertUpload(url, name);
+            });
+          }
+        }
+      });
     }
 
     // Upload Dropzone
@@ -2221,6 +2255,10 @@ var Docs = (function () {
     if (!fileInput.files || !fileInput.files.length) return;
 
     var file = fileInput.files[0];
+    uploadFile(file);
+  }
+
+  function uploadFile(file, onSuccess) {
     var fd = new FormData();
     fd.append('file', file);
 
@@ -2235,24 +2273,41 @@ var Docs = (function () {
       body: fd,
     })
       .then(function (r) { return r.json(); })
-      .then(function (data) {
+      .then(function (res) {
         if (progressBar) progressBar.hidden = true;
-        if (data.ok === false) throw new Error(data.error || 'Falha no upload');
+        if (res.ok === false) throw new Error(res.error || 'Falha no upload');
+
+        var data = res.data || res;
+        var url = data.url || '';
+        var name = data.name || file.name || 'Arquivo';
+        var size = data.size || file.size || 0;
+
+        if (!url) {
+          throw new Error('Servidor não retornou a URL do arquivo.');
+        }
+
+        if (typeof onSuccess === 'function') {
+          onSuccess(url, name, size);
+          return;
+        }
 
         var result = document.getElementById('uploadResult');
-        result.hidden = false;
+        if (result) {
+          result.hidden = false;
 
-        var isImg = /\.(png|jpg|jpeg|gif|svg|webp)$/i.test(data.name);
-        var previewHtml = isImg
-          ? '<img src="/' + data.url + '" style="max-height:140px;border-radius:6px;object-fit:contain;margin-bottom:0.5rem" />'
-          : '';
+          var isImg = /\.(png|jpg|jpeg|gif|svg|webp)$/i.test(name) || /\.(png|jpg|jpeg|gif|svg|webp)$/i.test(url);
+          var previewUrl = url.startsWith('/') ? url : '/' + url;
+          var previewHtml = isImg
+            ? '<img src="' + previewUrl + '" style="max-height:140px;border-radius:6px;object-fit:contain;margin-bottom:0.5rem" />'
+            : '';
 
-        result.innerHTML = previewHtml
-          + '<div style="font-size:0.82rem;font-weight:600;color:var(--text)">' + esc(data.name) + ' (' + formatBytes(data.size || file.size) + ')</div>'
-          + '<div style="display:flex;gap:0.4rem;margin-top:0.6rem">'
-          + '<button type="button" class="btn btn-sm btn-primary" onclick="Docs.insertUpload(\'' + data.url + '\',\'' + esc(data.name) + '\')">Inserir no Documento</button>'
-          + '<a href="/' + data.url + '" target="_blank" class="btn btn-sm btn-secondary">Abrir Arquivo</a>'
-          + '</div>';
+          result.innerHTML = previewHtml
+            + '<div style="font-size:0.82rem;font-weight:600;color:var(--text)">' + esc(name) + ' (' + formatBytes(size) + ')</div>'
+            + '<div style="display:flex;gap:0.4rem;margin-top:0.6rem">'
+            + '<button type="button" class="btn btn-sm btn-primary" onclick="Docs.insertUpload(\'' + esc(url) + '\',\'' + esc(name) + '\')">Inserir no Documento</button>'
+            + '<a href="' + previewUrl + '" target="_blank" class="btn btn-sm btn-secondary">Abrir Arquivo</a>'
+            + '</div>';
+        }
 
         toast('Arquivo enviado com sucesso!', 'success');
       })
@@ -2266,8 +2321,16 @@ var Docs = (function () {
     var ta = document.getElementById('docContent');
     if (!ta) return;
 
-    var isImg = /\.(png|jpg|jpeg|gif|svg|webp)$/i.test(name);
-    var md = isImg ? '![' + name + '](/' + url + ')' : '[' + name + '](/' + url + ')';
+    if (!url || url === 'undefined') {
+      toast('URL do arquivo inválida.', 'error');
+      return;
+    }
+
+    var cleanUrl = url.startsWith('/') ? url : '/' + url;
+    var cleanName = (name && name !== 'undefined') ? name : 'Imagem';
+
+    var isImg = /\.(png|jpg|jpeg|gif|svg|webp)$/i.test(cleanName) || /\.(png|jpg|jpeg|gif|svg|webp)$/i.test(cleanUrl);
+    var md = isImg ? '![' + cleanName + '](' + cleanUrl + ')' : '[' + cleanName + '](' + cleanUrl + ')';
 
     var pos = ta.selectionStart;
     ta.value = ta.value.substring(0, pos) + md + '\n' + ta.value.substring(pos);
