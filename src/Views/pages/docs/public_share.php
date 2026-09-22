@@ -7,78 +7,132 @@ declare(strict_types=1);
  * @var bool $requires_password
  * @var string|null $error
  */
+use App\Core\Controller;
+
 $requires_password = $requires_password ?? false;
 $error = $error ?? null;
+
+$authorName = (string) ($doc['author_name'] ?? 'Autor');
+$authorInitials = mb_strtoupper(mb_substr($authorName, 0, 2));
+$categoryName = (string) ($doc['category_name'] ?? 'Geral');
+$status = (string) ($doc['status'] ?? 'aprovado');
+$confidentiality = (string) ($doc['confidentiality_level'] ?? 'interno');
 ?>
-<div class="auth-wrapper" style="align-items: flex-start; padding: 2rem 1rem;">
-  <div class="auth-card-container" style="max-width: 860px; margin: 0 auto; width: 100%;">
-    
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
-      <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <div class="auth-brand-icon-box" style="width: 38px; height: 38px; font-size: 1.1rem;">D</div>
-        <div class="auth-brand-name-text" style="font-size: 1.2rem;">Doc<span>Manager</span></div>
-      </div>
-      <div style="font-size: 0.82rem; color: var(--text-muted, #94a3b8);">
-        Documento Público Compartilhado
-      </div>
+<div class="public-share-page">
+  <!-- Topbar com Marca e Ação Única (Imprimir / Exportar PDF) -->
+  <header class="public-share-topbar">
+    <div class="public-topbar-brand">
+      <div class="public-brand-icon">D</div>
+      <div class="public-brand-name">Doc<span>Manager</span></div>
+      <span class="public-badge-tag">Visualização Pública A4</span>
     </div>
 
-    <div class="auth-card-box" style="padding: 2.5rem; border-radius: 16px;">
-      <?php if ($requires_password): ?>
-        <!-- Formulário de senha -->
-        <div style="text-align: center; padding: 2rem 0;">
-          <div style="font-size: 2.5rem; margin-bottom: 1rem;">&#128274;</div>
-          <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text, #ffffff); margin: 0 0 0.5rem;">
-            Este documento é protegido por senha
-          </h2>
-          <p style="font-size: 0.9rem; color: var(--text-muted, #94a3b8); margin: 0 0 1.5rem;">
-            Insira a senha fornecida pelo autor para acessar o conteúdo.
-          </p>
-
-          <?php if ($error !== null): ?>
-            <div style="background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1rem;">
-              <?php echo e($error); ?>
-            </div>
-          <?php endif; ?>
-
-          <form method="POST" action="<?php echo e(\App\Core\Controller::url('/s/' . rawurlencode((string) $doc['token']))); ?>" style="max-width: 360px; margin: 0 auto;">
-            <?php echo csrf_field(); ?>
-            <div style="margin-bottom: 1rem;">
-              <input type="password" name="password" required autofocus placeholder="Digite a senha"
-                style="width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border-color, rgba(255,255,255,0.15)); background: var(--bg-input, rgba(255,255,255,0.05)); color: var(--text, #fff); font-size: 0.95rem; outline: none; box-sizing: border-box;" />
-            </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-size: 0.95rem; font-weight: 600; border-radius: 8px; cursor: pointer;">
-              Acessar Documento
-            </button>
-          </form>
-        </div>
-      <?php else: ?>
-        <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1)); padding-bottom: 1rem;">
-          <div style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.65rem; background: rgba(26, 187, 156, 0.15); border-radius: 20px; color: var(--primary, #1abb9c); font-size: 0.78rem; font-weight: 600; margin-bottom: 0.75rem;">
-            &#10003; Documento Verificado
-          </div>
-          <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--text, #ffffff); margin: 0 0 0.5rem 0; line-height: 1.3;">
-            <?php echo e($doc['title'] ?? ''); ?>
-          </h1>
-          <div style="display: flex; gap: 1.5rem; font-size: 0.85rem; color: var(--text-muted, #94a3b8);">
-            <span>Autor: <strong><?php echo e($doc['author_name'] ?? '—'); ?></strong></span>
-            <span>Publicado em: <strong><?php echo e(date('d/m/Y H:i', strtotime((string) $doc['doc_created_at']))); ?></strong></span>
-          </div>
-        </div>
-
-        <div class="public-doc-body" style="font-size: 1rem; line-height: 1.7; color: var(--text, #e2e8f0); white-space: pre-wrap;">
-          <?php echo e($doc['content'] ?? ''); ?>
-        </div>
-
-        <div style="margin-top: 2.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color, rgba(255,255,255,0.1)); display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted, #64748b);">
-          <span>&#128274; Acesso seguro via link único &bull; DocManager</span>
-          <a href="<?php echo e(\App\Core\Controller::url('/s/' . rawurlencode((string)$doc['token']) . '/pdf')); ?>" target="_blank" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color, rgba(255,255,255,0.12)); color: #fff; padding: 0.4rem 0.85rem; border-radius: 8px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 0.4rem; text-decoration: none;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-            Imprimir / Exportar PDF
-          </a>
-        </div>
-      <?php endif; ?>
+    <?php if (!$requires_password): ?>
+    <div class="public-topbar-actions">
+      <a href="<?php echo e(Controller::url('/s/' . rawurlencode((string)($doc['token'] ?? '')) . '/pdf')); ?>" target="_blank" class="btn btn-primary btn-sm public-print-btn" title="Imprimir ou salvar como PDF">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        <span>Imprimir</span>
+      </a>
     </div>
+    <?php endif; ?>
+  </header>
 
-  </div>
+  <main class="public-share-container">
+    <?php if ($requires_password): ?>
+      <!-- Tela de Autenticação por Senha -->
+      <div class="a4-password-card">
+        <div class="password-icon-box">&#128274;</div>
+        <h2>Documento Protegido por Senha</h2>
+        <p>Insira a senha fornecida pelo autor para ter acesso a este documento público.</p>
+
+        <?php if ($error !== null): ?>
+          <div class="password-error-alert">
+            <?php echo e($error); ?>
+          </div>
+        <?php endif; ?>
+
+        <form method="POST" action="<?php echo e(Controller::url('/s/' . rawurlencode((string)($doc['token'] ?? '')))); ?>" class="password-form">
+          <?php echo csrf_field(); ?>
+          <div class="form-group-custom">
+            <input type="password" name="password" required autofocus placeholder="Digite a senha do documento" class="form-input-custom" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Acessar Documento</button>
+        </form>
+      </div>
+    <?php else: ?>
+      <!-- Folha A4 do Documento -->
+      <article class="a4-paper-sheet">
+        <header class="docs-single-header">
+          <div class="docs-single-badges">
+            <span class="doc-category-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="badge-svg"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <?php echo e($categoryName); ?>
+            </span>
+
+            <span class="doc-status-badge confidentiality-badge" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); display: inline-flex; align-items: center; gap: 4px;">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+              <?php echo e(ucfirst($confidentiality)); ?>
+            </span>
+
+            <?php if ($status === 'aprovado'): ?>
+            <span class="doc-status-badge approved">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="badge-svg"><polyline points="20 6 9 17 4 12"/></svg>
+              Verificado / Publicado
+            </span>
+            <?php endif; ?>
+          </div>
+
+          <h1 class="docs-single-title"><?php echo e($doc['title'] ?? ''); ?></h1>
+
+          <div class="docs-single-meta">
+            <div class="docs-meta-author">
+              <div class="docs-author-avatar"><?php echo e($authorInitials); ?></div>
+              <div class="docs-author-info">
+                <span class="author-name"><?php echo e($authorName); ?></span>
+                <span class="author-role">Autor do Documento</span>
+              </div>
+            </div>
+
+            <div class="docs-meta-stats">
+              <span class="meta-item" title="Data de publicação">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-svg"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <?php echo !empty($doc['doc_created_at']) ? date('d/m/Y', strtotime((string)$doc['doc_created_at'])) : '-'; ?>
+              </span>
+
+              <?php if (!empty($doc['doc_updated_at'])): ?>
+              <span class="meta-item" title="Última atualização">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="meta-svg"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                Atualizado em <?php echo date('d/m/Y H:i', strtotime((string)$doc['doc_updated_at'])); ?>
+              </span>
+              <?php endif; ?>
+            </div>
+          </div>
+        </header>
+
+        <div class="docs-single-divider"></div>
+
+        <!-- Conteúdo Formatado Markdown na Folha A4 -->
+        <div class="docs-single-body public-doc-body" id="publicDocRenderedBody">
+          <!-- Renderizado via JavaScript usando parseMarkdown -->
+        </div>
+
+        <div class="a4-paper-footer">
+          <span>&#128274; Documento Público Autenticado &bull; DocManager</span>
+        </div>
+      </article>
+
+      <!-- Conteúdo Bruto para Renderização via JS -->
+      <textarea id="rawPublicDocContent" hidden><?php echo e($doc['content'] ?? ''); ?></textarea>
+    <?php endif; ?>
+  </main>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var raw = document.getElementById('rawPublicDocContent');
+  var target = document.getElementById('publicDocRenderedBody');
+  if (raw && target && typeof window.parseMarkdown === 'function') {
+    target.innerHTML = window.parseMarkdown(raw.value || '');
+  }
+});
+</script>

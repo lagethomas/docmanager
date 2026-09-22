@@ -12,6 +12,7 @@ use App\Core\Logger;
 use App\Models\CategoryModel;
 use App\Models\DocumentModel;
 use App\Models\TagModel;
+use App\Services\DocConverterService;
 use App\Services\PdfService;
 
 class DocumentController extends Controller
@@ -762,6 +763,73 @@ class DocumentController extends Controller
         );
         $tags = $stmt->fetchAll() ?: [];
         $this->jsonOk(['tags' => $tags]);
+    }
+
+    // ─── API: CONVERSÃO DE WORD/PDF PARA MARKDOWN ────────
+    public function convertMd(): void
+    {
+        $user = Auth::user();
+        if ($user === null || !PermissionManager::can($user['role'], 'docs.upload')) {
+            $this->jsonError('Acesso negado: seu perfil não possui permissão para conversão de arquivos.', 403);
+            return;
+        }
+
+        if (empty($_FILES['file'])) {
+            $this->jsonError('Nenhum arquivo enviado para conversão.', 400);
+            return;
+        }
+
+        $file = $_FILES['file'];
+        $errorCode = (int) ($file['error'] ?? UPLOAD_ERR_OK);
+        if ($errorCode !== UPLOAD_ERR_OK) {
+            $this->jsonError('Erro no upload do arquivo (código: ' . $errorCode . ').', 400);
+            return;
+        }
+
+        $tmpPath = (string) ($file['tmp_name'] ?? '');
+        if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+            $this->jsonError('Arquivo enviado é inválido.', 400);
+            return;
+        }
+
+        $origName = sanitize_input((string) ($file['name'] ?? 'documento'));
+        $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+        $allowedExts = ['docx', 'doc', 'pdf', 'txt', 'md', 'markdown'];
+
+        if (!in_array($ext, $allowedExts, true)) {
+            $this->jsonError('Extensão de arquivo não suportada para conversão. Permitidos: .docx, .doc, .pdf, .txt, .md', 422);
+            return;
+        }
+
+        // Move para local temporário para processamento seguro
+        $tempDest = $this->storagePath('uploads/tmp_conv_' . uniqid('', true) . '.' . $ext);
+        $dir = dirname($tempDest);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0777, true);
+        }
+
+        if (!@move_uploaded_file($tmpPath, $tempDest)) {
+            $this->jsonError('Falha ao mover arquivo temporário no servidor.', 500);
+            return;
+        }
+
+        try {
+            $converter = new DocConverterService();
+            $result = $converter->convertFileToMarkdown($tempDest, $origName);
+            if (ob_get_length()) {
+                @ob_clean();
+            }
+            $this->jsonOk($result);
+        } catch (\Throwable $e) {
+            if (file_exists($tempDest)) {
+                @unlink($tempDest);
+            }
+            if (ob_get_length()) {
+                @ob_clean();
+            }
+            Logger::log('convert_md_error', 'Erro ao converter documento: ' . $e->getMessage());
+            $this->jsonError('Falha ao converter o documento em Markdown: ' . $e->getMessage(), 500);
+        }
     }
 
     // ─── API: UPLOAD ─────────────────────────────────────

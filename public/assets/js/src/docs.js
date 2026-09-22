@@ -2296,14 +2296,20 @@ var Docs = (function () {
           result.hidden = false;
 
           var isImg = /\.(png|jpg|jpeg|gif|svg|webp)$/i.test(name) || /\.(png|jpg|jpeg|gif|svg|webp)$/i.test(url);
+          var isConvertible = /\.(docx|doc|pdf|txt|md|markdown)$/i.test(name);
           var previewUrl = url.startsWith('/') ? url : '/' + url;
           var previewHtml = isImg
             ? '<img src="' + previewUrl + '" style="max-height:140px;border-radius:6px;object-fit:contain;margin-bottom:0.5rem" />'
             : '';
 
+          var convertBtnHtml = isConvertible
+            ? '<button type="button" class="btn btn-sm btn-success" onclick="Docs.convertFileFromUpload()">Converter para Markdown & Editar</button>'
+            : '';
+
           result.innerHTML = previewHtml
             + '<div style="font-size:0.82rem;font-weight:600;color:var(--text)">' + esc(name) + ' (' + formatBytes(size) + ')</div>'
-            + '<div style="display:flex;gap:0.4rem;margin-top:0.6rem">'
+            + '<div style="display:flex;gap:0.4rem;margin-top:0.6rem;flex-wrap:wrap">'
+            + convertBtnHtml
             + '<button type="button" class="btn btn-sm btn-primary" onclick="Docs.insertUpload(\'' + esc(url) + '\',\'' + esc(name) + '\')">Inserir no Documento</button>'
             + '<a href="' + previewUrl + '" target="_blank" class="btn btn-sm btn-secondary">Abrir Arquivo</a>'
             + '</div>';
@@ -2315,6 +2321,102 @@ var Docs = (function () {
         if (progressBar) progressBar.hidden = true;
         toast(err.message || 'Erro no upload.', 'error');
       });
+  }
+
+  function triggerConvertWordPdf() {
+    var input = document.getElementById('convertWordPdfInput');
+    if (!input) return;
+
+    var overlay = document.getElementById('editorOverlay');
+    if (overlay && overlay.hidden) {
+      newDoc();
+    }
+
+    input.value = '';
+    input.onchange = function () {
+      if (input.files && input.files.length) {
+        convertFileToMd(input.files[0]);
+      }
+    };
+    input.click();
+  }
+
+  function convertFileFromUpload() {
+    var fileInput = document.getElementById('fileInput');
+    if (!fileInput || !fileInput.files || !fileInput.files.length) {
+      toast('Nenhum arquivo selecionado no upload.', 'error');
+      return;
+    }
+
+    var overlay = document.getElementById('editorOverlay');
+    if (overlay && overlay.hidden) {
+      newDoc();
+    }
+
+    convertFileToMd(fileInput.files[0]);
+  }
+
+  function convertFileToMd(file) {
+    if (!file) return;
+
+    var fd = new FormData();
+    fd.append('file', file);
+
+    toast('Convertendo arquivo "' + file.name + '" para Markdown...', 'info');
+
+    fetch('/api/docs/convert-md', {
+      method: 'POST',
+      headers: { 'X-CSRF-Token': window.CSRF_TOKEN || '' },
+      body: fd
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res.ok === false) throw new Error(res.error || 'Erro ao converter arquivo');
+
+        var data = res.data || res;
+        var markdown = data.markdown || '';
+        var extractedTitle = data.title || '';
+
+        var ta = document.getElementById('docContent');
+        var titleInput = document.getElementById('docTitle');
+
+        if (ta) {
+          if (ta.value.trim() !== '') {
+            ta.value = ta.value + '\n\n' + markdown;
+          } else {
+            ta.value = markdown;
+          }
+          ta.focus();
+        }
+
+        if (titleInput && !titleInput.value.trim() && extractedTitle) {
+          titleInput.value = extractedTitle;
+        }
+
+        updateWordStats();
+        var rawTarget = document.getElementById('rawDocContent');
+        if (rawTarget && ta) rawTarget.value = ta.value;
+
+        toast('Arquivo convertido com sucesso e inserido no editor! O arquivo original foi removido.', 'success');
+        closeUploadModal();
+      })
+      .catch(function (err) {
+        toast(err.message || 'Erro ao converter o documento: ' + err.message, 'error');
+      });
+  }
+
+  function scrollActionsLeft() {
+    var container = document.getElementById('doceditorActionsScroll');
+    if (container) {
+      container.scrollBy({ left: -220, behavior: 'smooth' });
+    }
+  }
+
+  function scrollActionsRight() {
+    var container = document.getElementById('doceditorActionsScroll');
+    if (container) {
+      container.scrollBy({ left: 220, behavior: 'smooth' });
+    }
   }
 
   function insertUpload(url, name) {
@@ -2669,6 +2771,10 @@ var Docs = (function () {
     openUploadModal: openUploadModal,
     closeUploadModal: closeUploadModal,
     insertUpload: insertUpload,
+    triggerConvertWordPdf: triggerConvertWordPdf,
+    convertFileFromUpload: convertFileFromUpload,
+    scrollActionsLeft: scrollActionsLeft,
+    scrollActionsRight: scrollActionsRight,
     openShareModal: openShareModal,
     closeShareModal: closeShareModal,
     selectShareUser: selectShareUser,

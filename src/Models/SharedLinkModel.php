@@ -36,10 +36,12 @@ class SharedLinkModel extends Repository
     public function findByToken(string $token): ?array
     {
         $stmt = $this->db->prepare(
-            'SELECT sl.*, d.title, d.content, d.status, d.created_at AS doc_created_at, u.name AS author_name
+            'SELECT sl.*, d.title, d.content, d.status, d.confidentiality_level, d.created_at AS doc_created_at, d.updated_at AS doc_updated_at,
+                    c.name AS category_name, u.name AS author_name
              FROM cp_shared_links sl
              JOIN cp_documents d ON d.id = sl.document_id
              JOIN cp_users u ON u.id = d.created_by
+             LEFT JOIN cp_doc_categories c ON c.id = d.category_id
              WHERE sl.token = ? AND d.deleted_at IS NULL'
         );
         $stmt->execute([$token]);

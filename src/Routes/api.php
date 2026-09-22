@@ -61,6 +61,7 @@ return [
     ['POST', '/api/docs/categories', [DocumentController::class, 'createCategory'], [AuthMiddleware::class]],
     ['GET', '/api/docs/tags', [DocumentController::class, 'listTags'], [AuthMiddleware::class]],
     ['POST', '/api/docs/upload', [DocumentController::class, 'upload'], [AuthMiddleware::class]],
+    ['POST', '/api/docs/convert-md', [DocumentController::class, 'convertMd'], [AuthMiddleware::class]],
     ['GET', '/api/docs/file/{id}', [DocumentController::class, 'serveFile'], [AuthMiddleware::class]],
     ['POST', '/api/docs/trash/empty', [DocumentController::class, 'emptyTrash'], [AuthMiddleware::class]],
     ['POST', '/api/docs/export-pdf-preview', [DocumentController::class, 'exportPdfPreview'], [AuthMiddleware::class]],

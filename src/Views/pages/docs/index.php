@@ -198,105 +198,118 @@ $user = $user ?? [];
         <input type="text" id="docTitle" class="doceditor-title-input" placeholder="Título do documento..." autocomplete="off" />
       </div>
 
-      <div class="doceditor-topbar-right">
-        <div class="doceditor-cat-select-wrap">
-          <?php echo icon('folder', ['class' => 'select-icon', 'size' => 15]); ?>
-          <select id="docCategory" class="doceditor-select" title="Pasta do Documento"></select>
-        </div>
+      <div class="doceditor-actions-wrapper">
+        <button type="button" class="doceditor-scroll-arrow left" onclick="Docs.scrollActionsLeft()" title="Rolar opções para a esquerda">&#8249;</button>
 
-        <label class="toggle-switch" title="Tornar documento livremente visível na Biblioteca sem login">
-          <input type="checkbox" id="chkDocIsPublic" />
-          <span class="toggle-slider"></span>
-          <span style="display:flex;align-items:center;gap:4px;"><?php echo icon('globe', ['size' => 13]); ?> Público</span>
-        </label>
-
-        <label class="toggle-switch" title="Restringir acesso por localização/unidade">
-          <input type="checkbox" id="chkDocIsRestricted" onchange="Docs.toggleRestricted(this.checked)" />
-          <span class="toggle-slider"></span>
-          <span style="display:flex;align-items:center;gap:4px;"><?php echo icon('location', ['size' => 13]); ?> Restringir</span>
-        </label>
-
-        <div id="docLocationPicker" class="doceditor-dropdown-wrap" hidden style="position: relative;">
-          <button type="button" class="btn btn-sm btn-outline" id="btnDocLocations" onclick="Docs.toggleLocationDropdown()" title="Selecionar localizações permitidas" style="display: flex; align-items: center; gap: 4px; border-color: rgba(239, 68, 68, 0.4); color: #ef4444;">
-            <?php echo icon('location', ['size' => 13]); ?>
-            <span id="docLocationsLabel">Localizações (0)</span>
-          </button>
-          <div id="docLocationsDropdown" class="doceditor-dropdown-menu" hidden style="min-width: 250px; max-width: 320px; padding: 10px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.25); z-index: 1050;">
-            <div style="font-size: 0.72rem; font-weight: 700; color: var(--docs-text-mut); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--docs-border); display: flex; align-items: center; justify-content: space-between;">
-              <span>LOCALIZAÇÕES AUTORIZADAS</span>
-              <span id="docLocationsCountBadge" style="font-size: 0.7rem; color: #ef4444; font-weight: 600;"></span>
-            </div>
-            <div style="position: relative; margin-bottom: 8px;">
-              <?php echo icon('search', ['size' => 13, 'style' => 'position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--docs-text-mut); pointer-events: none;']); ?>
-              <input type="text" id="docLocationSearchInput" placeholder="Buscar localização..." autocomplete="off" style="width: 100%; height: 30px; font-size: 0.8rem; padding: 2px 8px 2px 28px; border: 1px solid var(--docs-border); border-radius: 6px; background: var(--docs-bg); color: var(--docs-text); outline: none; box-sizing: border-box;" oninput="Docs.filterLocations(this.value)" />
-            </div>
-            <div id="docLocationsList" style="display: flex; flex-direction: column; gap: 2px; max-height: 238px; overflow-y: auto; scrollbar-width: thin; padding-right: 2px;"></div>
+        <div class="doceditor-topbar-right" id="doceditorActionsScroll">
+          <div class="doceditor-cat-select-wrap">
+            <?php echo icon('folder', ['class' => 'select-icon', 'size' => 15]); ?>
+            <select id="docCategory" class="doceditor-select" title="Pasta do Documento"></select>
           </div>
-        </div>
 
-        <div id="docAreaPicker" class="doceditor-dropdown-wrap" hidden style="position: relative;">
-          <button type="button" class="btn btn-sm btn-outline" id="btnDocAreas" onclick="Docs.toggleAreaDropdown()" title="Selecionar áreas/setores permitidos" style="display: flex; align-items: center; gap: 4px; border-color: rgba(99, 102, 241, 0.4); color: #6366f1;">
-            <?php echo icon('area', ['size' => 13]); ?>
-            <span id="docAreasLabel">Áreas (0)</span>
-          </button>
-          <div id="docAreasDropdown" class="doceditor-dropdown-menu" hidden style="min-width: 250px; max-width: 320px; padding: 10px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.25); z-index: 1050;">
-            <div style="font-size: 0.72rem; font-weight: 700; color: var(--docs-text-mut); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--docs-border); display: flex; align-items: center; justify-content: space-between;">
-              <span>ÁREAS AUTORIZADAS</span>
-              <span id="docAreasCountBadge" style="font-size: 0.7rem; color: #6366f1; font-weight: 600;"></span>
+          <label class="toggle-switch" title="Tornar documento livremente visível na Biblioteca sem login">
+            <input type="checkbox" id="chkDocIsPublic" />
+            <span class="toggle-slider"></span>
+            <span style="display:flex;align-items:center;gap:4px;"><?php echo icon('globe', ['size' => 13]); ?> Público</span>
+          </label>
+
+          <label class="toggle-switch" title="Restringir acesso por localização/unidade">
+            <input type="checkbox" id="chkDocIsRestricted" onchange="Docs.toggleRestricted(this.checked)" />
+            <span class="toggle-slider"></span>
+            <span style="display:flex;align-items:center;gap:4px;"><?php echo icon('location', ['size' => 13]); ?> Restringir</span>
+          </label>
+
+          <div id="docLocationPicker" class="doceditor-dropdown-wrap" hidden style="position: relative;">
+            <button type="button" class="btn btn-sm btn-outline" id="btnDocLocations" onclick="Docs.toggleLocationDropdown()" title="Selecionar localizações permitidas" style="display: flex; align-items: center; gap: 4px; border-color: rgba(239, 68, 68, 0.4); color: #ef4444;">
+              <?php echo icon('location', ['size' => 13]); ?>
+              <span id="docLocationsLabel">Localizações (0)</span>
+            </button>
+            <div id="docLocationsDropdown" class="doceditor-dropdown-menu" hidden style="min-width: 250px; max-width: 320px; padding: 10px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.25); z-index: 1050;">
+              <div style="font-size: 0.72rem; font-weight: 700; color: var(--docs-text-mut); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--docs-border); display: flex; align-items: center; justify-content: space-between;">
+                <span>LOCALIZAÇÕES AUTORIZADAS</span>
+                <span id="docLocationsCountBadge" style="font-size: 0.7rem; color: #ef4444; font-weight: 600;"></span>
+              </div>
+              <div style="position: relative; margin-bottom: 8px;">
+                <?php echo icon('search', ['size' => 13, 'style' => 'position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--docs-text-mut); pointer-events: none;']); ?>
+                <input type="text" id="docLocationSearchInput" placeholder="Buscar localização..." autocomplete="off" style="width: 100%; height: 30px; font-size: 0.8rem; padding: 2px 8px 2px 28px; border: 1px solid var(--docs-border); border-radius: 6px; background: var(--docs-bg); color: var(--docs-text); outline: none; box-sizing: border-box;" oninput="Docs.filterLocations(this.value)" />
+              </div>
+              <div id="docLocationsList" style="display: flex; flex-direction: column; gap: 2px; max-height: 238px; overflow-y: auto; scrollbar-width: thin; padding-right: 2px;"></div>
             </div>
-            <div style="position: relative; margin-bottom: 8px;">
-              <?php echo icon('search', ['size' => 13, 'style' => 'position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--docs-text-mut); pointer-events: none;']); ?>
-              <input type="text" id="docAreaSearchInput" placeholder="Buscar área/setor..." autocomplete="off" style="width: 100%; height: 30px; font-size: 0.8rem; padding: 2px 8px 2px 28px; border: 1px solid var(--docs-border); border-radius: 6px; background: var(--docs-bg); color: var(--docs-text); outline: none; box-sizing: border-box;" oninput="Docs.filterAreas(this.value)" />
+          </div>
+
+          <div id="docAreaPicker" class="doceditor-dropdown-wrap" hidden style="position: relative;">
+            <button type="button" class="btn btn-sm btn-outline" id="btnDocAreas" onclick="Docs.toggleAreaDropdown()" title="Selecionar áreas/setores permitidos" style="display: flex; align-items: center; gap: 4px; border-color: rgba(99, 102, 241, 0.4); color: #6366f1;">
+              <?php echo icon('area', ['size' => 13]); ?>
+              <span id="docAreasLabel">Áreas (0)</span>
+            </button>
+            <div id="docAreasDropdown" class="doceditor-dropdown-menu" hidden style="min-width: 250px; max-width: 320px; padding: 10px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.25); z-index: 1050;">
+              <div style="font-size: 0.72rem; font-weight: 700; color: var(--docs-text-mut); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--docs-border); display: flex; align-items: center; justify-content: space-between;">
+                <span>ÁREAS AUTORIZADAS</span>
+                <span id="docAreasCountBadge" style="font-size: 0.7rem; color: #6366f1; font-weight: 600;"></span>
+              </div>
+              <div style="position: relative; margin-bottom: 8px;">
+                <?php echo icon('search', ['size' => 13, 'style' => 'position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--docs-text-mut); pointer-events: none;']); ?>
+                <input type="text" id="docAreaSearchInput" placeholder="Buscar área/setor..." autocomplete="off" style="width: 100%; height: 30px; font-size: 0.8rem; padding: 2px 8px 2px 28px; border: 1px solid var(--docs-border); border-radius: 6px; background: var(--docs-bg); color: var(--docs-text); outline: none; box-sizing: border-box;" oninput="Docs.filterAreas(this.value)" />
+              </div>
+              <div id="docAreasList" style="display: flex; flex-direction: column; gap: 2px; max-height: 238px; overflow-y: auto; scrollbar-width: thin; padding-right: 2px;"></div>
             </div>
-            <div id="docAreasList" style="display: flex; flex-direction: column; gap: 2px; max-height: 238px; overflow-y: auto; scrollbar-width: thin; padding-right: 2px;"></div>
           </div>
-        </div>
 
-        <button type="button" class="btn btn-sm btn-outline" id="btnDocUpload" onclick="Docs.openUploadModal()" title="Anexar arquivo ou imagem">
-          <?php echo icon('paperclip', ['class' => 'btn-svg', 'size' => 14]); ?>
-          <span>Anexo</span>
-        </button>
-
-        <button type="button" class="btn btn-sm btn-outline" id="btnToggleVersions" onclick="Docs.toggleVersions()" title="Histórico de Versões">
-          <?php echo icon('history', ['class' => 'btn-svg', 'size' => 14]); ?>
-          <span>Histórico</span>
-        </button>
-
-        <!-- Dropdown de Exportação -->
-        <div class="doceditor-dropdown-wrap">
-          <button type="button" class="btn btn-sm btn-outline" onclick="Docs.toggleExportMenu()" title="Opções de Exportação">
-            <?php echo icon('download', ['class' => 'btn-svg', 'size' => 14]); ?>
-            <span>Exportar</span>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="btnDocConvertWordPdf" onclick="Docs.triggerConvertWordPdf()" title="Importar e converter arquivo Word (.docx/.doc), txt ou PDF para Markdown">
+            <?php echo icon('upload', ['class' => 'btn-svg', 'size' => 14]); ?>
+            <span>Word / PDF / TXT</span>
           </button>
-          <div class="doceditor-dropdown-menu" id="exportDropdownMenu" hidden>
-            <button type="button" class="dropdown-item" onclick="Docs.exportMarkdown()">
-              <?php echo icon('file', ['size' => 14]); ?>
-              <span>Baixar arquivo .MD</span>
+
+          <input type="file" id="convertWordPdfInput" accept=".docx,.doc,.pdf,.txt,.md,.markdown" hidden />
+
+          <button type="button" class="btn btn-sm btn-outline" id="btnDocUpload" onclick="Docs.openUploadModal()" title="Anexar arquivo ou imagem">
+            <?php echo icon('paperclip', ['class' => 'btn-svg', 'size' => 14]); ?>
+            <span>Anexo</span>
+          </button>
+
+          <button type="button" class="btn btn-sm btn-outline" id="btnToggleVersions" onclick="Docs.toggleVersions()" title="Histórico de Versões">
+            <?php echo icon('history', ['class' => 'btn-svg', 'size' => 14]); ?>
+            <span>Histórico</span>
+          </button>
+
+          <!-- Dropdown de Exportação -->
+          <div class="doceditor-dropdown-wrap">
+            <button type="button" class="btn btn-sm btn-outline" onclick="Docs.toggleExportMenu()" title="Opções de Exportação">
+              <?php echo icon('download', ['class' => 'btn-svg', 'size' => 14]); ?>
+              <span>Exportar</span>
             </button>
-            <button type="button" class="dropdown-item" onclick="Docs.printDocument()">
-              <?php echo icon('printer', ['size' => 14]); ?>
-              <span>Imprimir / Salvar PDF</span>
-            </button>
-            <button type="button" class="dropdown-item" onclick="Docs.copyMarkdown()">
-              <?php echo icon('copy', ['size' => 14]); ?>
-              <span>Copiar Markdown</span>
-            </button>
+            <div class="doceditor-dropdown-menu" id="exportDropdownMenu" hidden>
+              <button type="button" class="dropdown-item" onclick="Docs.exportMarkdown()">
+                <?php echo icon('file', ['size' => 14]); ?>
+                <span>Baixar arquivo .MD</span>
+              </button>
+              <button type="button" class="dropdown-item" onclick="Docs.printDocument()">
+                <?php echo icon('printer', ['size' => 14]); ?>
+                <span>Imprimir / Salvar PDF</span>
+              </button>
+              <button type="button" class="dropdown-item" onclick="Docs.copyMarkdown()">
+                <?php echo icon('copy', ['size' => 14]); ?>
+                <span>Copiar Markdown</span>
+              </button>
+            </div>
           </div>
+
+          <button type="button" class="btn btn-sm btn-outline" id="btnShareDoc" onclick="Docs.openShareModal()" hidden title="Compartilhar documento com outros usuários">
+            <?php echo icon('share', ['size' => 13, 'style' => 'margin-right:4px']); ?>
+            <span>Compartilhar</span>
+          </button>
+
+          <button type="button" class="btn btn-sm btn-danger-outline" id="btnDeleteDoc" onclick="Docs.deleteDoc()" hidden title="Excluir documento permanentemente">
+            <?php echo icon('trash', ['class' => 'btn-svg', 'size' => 14]); ?>
+          </button>
+
+          <button type="button" class="btn btn-sm btn-primary" id="btnSaveDoc" onclick="Docs.saveDoc()" title="Salvar alterações (Ctrl+S)">
+            <?php echo icon('check', ['class' => 'btn-svg', 'size' => 14]); ?>
+            <span>Salvar</span>
+          </button>
         </div>
 
-        <button type="button" class="btn btn-sm btn-outline" id="btnShareDoc" onclick="Docs.openShareModal()" hidden title="Compartilhar documento com outros usuários">
-          <?php echo icon('share', ['size' => 13, 'style' => 'margin-right:4px']); ?>
-          <span>Compartilhar</span>
-        </button>
-
-        <button type="button" class="btn btn-sm btn-danger-outline" id="btnDeleteDoc" onclick="Docs.deleteDoc()" hidden title="Excluir documento permanentemente">
-          <?php echo icon('trash', ['class' => 'btn-svg', 'size' => 14]); ?>
-        </button>
-
-        <button type="button" class="btn btn-sm btn-primary" id="btnSaveDoc" onclick="Docs.saveDoc()" title="Salvar alterações (Ctrl+S)">
-          <?php echo icon('check', ['class' => 'btn-svg', 'size' => 14]); ?>
-          <span>Salvar</span>
-        </button>
+        <button type="button" class="doceditor-scroll-arrow right" onclick="Docs.scrollActionsRight()" title="Rolar opções para a direita">&#8250;</button>
       </div>
     </header>
 
