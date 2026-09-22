@@ -139,6 +139,14 @@ class SharedLinkController extends Controller
 
         $model->incrementViews((int) $link['id']);
 
+        // Regra de segurança: Revela senhas APENAS se o link tiver AMBOS: data de expiração E senha definida
+        $hasExpiration = !empty($link['expires_at']);
+        if ($hasPassword && $hasExpiration) {
+            $link['content'] = SecurityHelper::decryptPskTags((string) $link['content']);
+        } else {
+            $link['content'] = SecurityHelper::maskPskTags((string) $link['content']);
+        }
+
         $this->render('docs/public_share', [
             'title' => (string) $link['title'],
             'doc' => $link,
@@ -164,6 +172,14 @@ class SharedLinkController extends Controller
         if ($hasPassword && !$authenticatedViaSession) {
             $this->redirect('/s/' . $token);
             return;
+        }
+
+        // Regra de segurança para PDF do link compartilhado
+        $hasExpiration = !empty($link['expires_at']);
+        if ($hasPassword && $hasExpiration) {
+            $link['content'] = SecurityHelper::decryptPskTags((string) $link['content']);
+        } else {
+            $link['content'] = SecurityHelper::maskPskTags((string) $link['content']);
         }
 
         $download = isset($_GET['download']) && $_GET['download'] === '1';

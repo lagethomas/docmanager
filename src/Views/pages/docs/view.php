@@ -15,6 +15,7 @@ $authorInitials = mb_strtoupper(mb_substr($authorName, 0, 2));
 $categoryName = $doc['category_name'] ?? 'Geral';
 $viewsCount = (int) ($doc['views_count'] ?? 0);
 $status = $doc['status'] ?? 'aprovado';
+$timbradoConfig = (new \App\Models\SettingsModel())->getTimbradoConfig();
 ?>
 
 <div class="docs-view-page">
@@ -107,6 +108,12 @@ $status = $doc['status'] ?? 'aprovado';
 
   <!-- Container Principal do Artigo / Documento -->
   <article class="docs-single-container">
+    <?php if (!empty($timbradoConfig['enabled']) && !empty($timbradoConfig['header_img_data_uri'])): ?>
+    <div class="timbrado-print-header">
+      <img src="<?php echo e($timbradoConfig['header_img_data_uri']); ?>" alt="Timbrado Cabeçalho" class="timbrado-img-hdr" />
+    </div>
+    <?php endif; ?>
+
     <header class="docs-single-header">
       <div class="docs-single-badges">
         <span class="doc-category-badge">
@@ -242,6 +249,12 @@ $status = $doc['status'] ?? 'aprovado';
       <div id="commentsList" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
         <div style="font-size: 0.85rem; color: var(--docs-text-mut); text-align: center; padding: 1.5rem;">Carregando issues...</div>
       </div>
+    </div>
+    <?php endif; ?>
+
+    <?php if (!empty($timbradoConfig['enabled']) && !empty($timbradoConfig['footer_img_data_uri'])): ?>
+    <div class="timbrado-print-footer">
+      <img src="<?php echo e($timbradoConfig['footer_img_data_uri']); ?>" alt="Timbrado Rodapé" class="timbrado-img-ftr" />
     </div>
     <?php endif; ?>
   </article>

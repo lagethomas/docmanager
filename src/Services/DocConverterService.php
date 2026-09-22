@@ -57,6 +57,126 @@ class DocConverterService
     }
 
     /**
+     * Extrai elementos de cabeçalho, rodapé e mídias de imagem de um modelo Word (.docx) para Papel Timbrado.
+     * Extrai TODAS as imagens de header e footer, em ordem, para compor o timbrado fielmente ao Word.
+     *
+     * @return array{header_text: string, footer_text: string, header_images: list<string>, footer_images: list<string>, header_img: string, footer_img: string}
+     */
+    public function extractTimbradoElements(string $docxPath, string $outputDir): array
+    {
+        $result = [
+            'header_text'   => '',
+            'footer_text'   => '',
+            'header_images' => [],   // lista de paths relativos, em ordem do rels
+            'footer_images' => [],   // lista de paths relativos, em ordem do rels
+            'header_img'    => '',   // compat legado — 1ª imagem header
+            'footer_img'    => '',   // compat legado — 1ª imagem footer
+        ];
+
+        if (!class_exists(\ZipArchive::class) || !file_exists($docxPath)) {
+            return $result;
+        }
+
+        $zip = new \ZipArchive();
+        if ($zip->open($docxPath) !== true) {
+            return $result;
+        }
+
+        // 1. Extrair texto de cabeçalho
+        foreach (['word/header1.xml', 'word/header2.xml', 'word/header3.xml'] as $hdrXml) {
+            $hdrContent = $zip->getFromName($hdrXml);
+            if ($hdrContent !== false && $hdrContent !== '') {
+                $txt = trim($this->parseWordXmlToMarkdown($hdrContent));
+                if ($txt !== '') {
+                    $result['header_text'] .= ($result['header_text'] !== '' ? "\n" : '') . $txt;
+                }
+            }
+        }
+
+        // 2. Extrair texto de rodapé
+        foreach (['word/footer1.xml', 'word/footer2.xml', 'word/footer3.xml'] as $ftrXml) {
+            $ftrContent = $zip->getFromName($ftrXml);
+            if ($ftrContent !== false && $ftrContent !== '') {
+                $txt = trim($this->parseWordXmlToMarkdown($ftrContent));
+                if ($txt !== '') {
+                    $result['footer_text'] .= ($result['footer_text'] !== '' ? "\n" : '') . $txt;
+                }
+            }
+        }
+
+        if (!is_dir($outputDir)) {
+            @mkdir($outputDir, 0777, true);
+        }
+
+        // 3. Extrair TODAS as imagens do header, em ordem do arquivo rels
+        $headerImgPaths = $this->extractAllImagesFromRels($zip, 'word/_rels/header1.xml.rels', $outputDir, 'header');
+        $result['header_images'] = $headerImgPaths;
+        if (!empty($headerImgPaths)) {
+            $result['header_img'] = $headerImgPaths[0];
+        }
+
+        // 4. Extrair TODAS as imagens do footer, em ordem do arquivo rels
+        $footerImgPaths = $this->extractAllImagesFromRels($zip, 'word/_rels/footer1.xml.rels', $outputDir, 'footer');
+        $result['footer_images'] = $footerImgPaths;
+        if (!empty($footerImgPaths)) {
+            $result['footer_img'] = $footerImgPaths[0];
+        }
+
+        $zip->close();
+        return $result;
+    }
+
+    /**
+     * Extrai TODAS as imagens referenciadas em um arquivo .rels do Word, em ordem de rId.
+     *
+     * @return list<string> Lista de caminhos relativos (storage/uploads/timbrado/...)
+     */
+    private function extractAllImagesFromRels(\ZipArchive $zip, string $relsPath, string $outputDir, string $prefix): array
+    {
+        $savedPaths = [];
+        $relsContent = $zip->getFromName($relsPath);
+        if ($relsContent === false || $relsContent === '') {
+            return $savedPaths;
+        }
+
+        // Extrair todos os targets de imagem em ordem de rId (rId1, rId2, ...)
+        if (!preg_match_all('/Id="(rId\d+)"[^>]+Target="([^"]+\.(png|jpg|jpeg|gif|webp))"/i', $relsContent, $matches, PREG_SET_ORDER)) {
+            return $savedPaths;
+        }
+
+        // Ordenar por rId numericamente
+        usort($matches, function (array $a, array $b): int {
+            $numA = (int) preg_replace('/\D/', '', $a[1]);
+            $numB = (int) preg_replace('/\D/', '', $b[1]);
+            return $numA <=> $numB;
+        });
+
+        $idx = 1;
+        foreach ($matches as $match) {
+            $target = $match[2];
+            $ext = strtolower($match[3]);
+            // Os targets do rels costumam ser relativos ao diretório word/
+            $fullPath = str_starts_with($target, 'word/') ? $target : ('word/' . ltrim($target, '/'));
+            $imgData = $zip->getFromName($fullPath);
+            if ($imgData === false || strlen($imgData) === 0) {
+                // Tentar sem prefixo "word/"
+                $altPath = 'word/media/' . basename($target);
+                $imgData = $zip->getFromName($altPath);
+            }
+            if ($imgData !== false && strlen($imgData) > 0) {
+                $filename = $prefix . '_img' . $idx . '.' . $ext;
+                $destPath = $outputDir . '/' . $filename;
+                if (@file_put_contents($destPath, $imgData) !== false) {
+                    $savedPaths[] = 'storage/uploads/timbrado/' . $filename;
+                }
+                $idx++;
+            }
+        }
+
+        return $savedPaths;
+    }
+
+    /**
      * Extrai estrutura de texto de arquivo .docx (XML de Word processing).
      */
     private function convertDocxToMarkdown(string $filePath): string

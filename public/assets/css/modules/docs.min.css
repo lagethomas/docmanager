@@ -4026,6 +4026,73 @@ body.dark-mode .a4-paper-sheet {
   display: none;
 }
 
+/* ─── PAPEL TIMBRADO (EXIBIDO APENAS NA IMPRESSÃO) ─── */
+.timbrado-print-header,
+.timbrado-print-footer {
+  display: none !important;
+  width: 100%;
+  text-align: center;
+}
+
+.timbrado-img-hdr {
+  max-width: 100%;
+  max-height: 120px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+.timbrado-img-ftr {
+  max-width: 100%;
+  max-height: 70px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 10mm 12mm 10mm 12mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .public-share-topbar,
+  .public-topbar-actions,
+  .docs-view-topbar,
+  .btn,
+  .no-print {
+    display: none !important;
+  }
+
+  .a4-paper-sheet,
+  .docs-single-container {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: transparent !important;
+  }
+
+  .timbrado-print-header {
+    display: block !important;
+    margin-bottom: 20px !important;
+  }
+
+  .timbrado-print-footer {
+    display: block !important;
+    margin-top: 30px !important;
+    padding-top: 10px !important;
+  }
+}
+
+
 
 
 

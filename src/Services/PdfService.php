@@ -48,15 +48,16 @@ class PdfService
     {
         $title = (string) ($doc['title'] ?? 'Documento');
         $rawContent = (string) ($doc['content'] ?? '');
+        $rawContent = str_replace('\n', "\n", $rawContent);
         $authorName = (string) ($doc['author_name'] ?? 'Administrador');
         $categoryName = (string) ($doc['category_name'] ?? 'Geral');
         $createdAt = !empty($doc['created_at']) ? date('d/m/Y \à\s H:i', strtotime((string) $doc['created_at'])) : date('d/m/Y H:i');
         $status = (string) ($doc['status'] ?? 'aprovado');
 
-        // Mascarar tags de senhas !psk=...! no PDF impresso
+        // Mascarar tags de senhas !psk=...! e !psk_enc=...! no PDF impresso
         $processedContent = (string) preg_replace(
-            '/!psk=([^!\r\n]+)!/',
-            '<span class="pdf-psk-badge">&#128273; [SENHA PROTEGIDA: &bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;]</span>',
+            '/!(?:psk|psk_enc)=([^!\r\n]+)!/',
+            '<span class="pdf-psk-badge">&#128273; ***</span>',
             $rawContent
         );
 
@@ -74,12 +75,166 @@ class PdfService
             $versionStr = 'v1.0';
         }
 
+        $settingsModel = new \App\Models\SettingsModel();
+        $timbradoConfig = $settingsModel->getTimbradoConfig();
+        $isTimbradoEnabled = $timbradoConfig['enabled'];
+
         $statusText = mb_strtoupper($status);
         $escapedTitle = e($title);
         $escapedAuthor = e($authorName);
         $escapedCategory = e($categoryName);
         $escapedVersion = e($versionStr);
         $generatedAt = date('d/m/Y H:i');
+
+        $headerHtml = '';
+        $footerHtml = '';
+        $pageMarginTop = '100px';
+        $pageMarginBottom = '70px';
+        $pageMarginLeftRight = '45px';
+        $bodyPadding = '0';
+        $headerTop = '-75px';
+        $headerHeight = '55px';
+        $footerBottom = '-50px';
+        $footerHeight = '35px';
+
+        if ($isTimbradoEnabled) {
+            $hdrUris = $timbradoConfig['header_data_uris'];
+            $ftrUris = $timbradoConfig['footer_data_uris'];
+
+            $pageMarginLeftRight = '0px';
+            $bodyPadding = '0 40px';
+
+            // Timbrado 100%: cabeçalho preenche 100% da largura da página
+            if (count($hdrUris) >= 2) {
+                $decoTop = $hdrUris[0];   // faixa decorativa azul
+                $logoImg = $hdrUris[1];   // logo valgroup grande
+
+                $pageMarginTop = '125px';
+                $headerTop     = '-125px';
+                $headerHeight  = '120px';
+
+                $headerHtml = <<<HTML
+    <header style="border-bottom: none; padding: 0; margin: 0; overflow: hidden; position: fixed; top: {$headerTop}; left: 0; right: 0; width: 100%; height: {$headerHeight};">
+        <table style="width: 100%; border-collapse: collapse; margin: 0; padding: 0; height: {$headerHeight};">
+            <tr>
+                <td style="vertical-align: top; padding: 0 0 0 40px; width: 50%;">
+                    <img src="{$logoImg}" style="max-height: 55px; width: auto; display: block;" />
+                </td>
+                <td style="vertical-align: top; padding: 0; text-align: right; width: 50%;">
+                    <img src="{$decoTop}" style="height: 55px; width: auto; display: block; margin-left: auto; margin-top: 0;" />
+                </td>
+            </tr>
+        </table>
+    </header>
+HTML;
+            } elseif (count($hdrUris) === 1) {
+                $logoImg = $hdrUris[0];
+                $pageMarginTop = '120px';
+                $headerTop     = '-120px';
+                $headerHeight  = '115px';
+
+                $headerHtml = <<<HTML
+    <header style="border-bottom: none; padding: 0; margin: 0; position: fixed; top: {$headerTop}; left: 0; right: 0; width: 100%; height: {$headerHeight};">
+        <img src="{$logoImg}" style="width: 100%; height: auto; display: block;" />
+    </header>
+HTML;
+            } else {
+                // Fallback texto
+                $pageMarginTop = '100px';
+                $headerTop     = '-75px';
+                $headerHeight  = '55px';
+                $hdrText = e(mb_substr($timbradoConfig['header_text'] !== '' ? $timbradoConfig['header_text'] : 'PAPEL TIMBRADO OFICIAL', 0, 180));
+                $headerHtml = <<<HTML
+    <header style="border-bottom: 3px solid #1abb9c; padding-bottom: 8px; position: fixed; top: {$headerTop}; left: 0; right: 0; height: {$headerHeight};">
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td><div style="font-size: 14pt; font-weight: bold; color: #1abb9c;">DocManager <span style="font-size:8pt;">TIMBRADO OFICIAL</span></div>
+                    <div style="font-size: 8pt; color: #475569;">{$hdrText}</div>
+                </td>
+                <td style="text-align: right; font-size: 9pt; color: #475569; font-weight: bold;">
+                    Categorização: {$escapedCategory}
+                </td>
+            </tr>
+        </table>
+    </header>
+HTML;
+            }
+
+            // Footer 100%: rodapé preenche 100% da largura da página e encosta no final da folha
+            if (count($ftrUris) >= 1) {
+                $footerBarImg = $ftrUris[0];
+                $decoGreen    = count($ftrUris) >= 2 ? $ftrUris[1] : '';
+
+                $pageMarginBottom = '85px';
+                $footerBottom     = '-85px';
+                $footerHeight     = '85px';
+
+                if ($decoGreen !== '') {
+                    $footerHtml = <<<HTML
+    <footer style="border-top: none; padding: 0; margin: 0; position: fixed; bottom: {$footerBottom}; left: 0; right: 0; width: 100%; height: {$footerHeight}; font-size: 0; line-height: 0;">
+        <table style="width: 100%; height: {$footerHeight}; border-collapse: collapse; margin: 0; padding: 0; border: none;">
+            <tr style="height: {$footerHeight}; margin: 0; padding: 0;">
+                <td style="vertical-align: bottom; padding: 0 0 0 40px; width: 75%; height: {$footerHeight}; line-height: 0;">
+                    <img src="{$footerBarImg}" style="width: 100%; max-height: 48px; display: block; margin: 0; padding: 0;" />
+                </td>
+                <td style="vertical-align: bottom; text-align: right; padding: 0; width: 25%; height: {$footerHeight}; line-height: 0;">
+                    <img src="{$decoGreen}" style="height: 48px; width: auto; display: block; margin-left: auto; margin-bottom: 0; padding: 0;" />
+                </td>
+            </tr>
+        </table>
+    </footer>
+HTML;
+                } else {
+                    $footerHtml = <<<HTML
+    <footer style="border-top: none; padding: 0; margin: 0; position: fixed; bottom: {$footerBottom}; left: 0; right: 0; width: 100%; height: {$footerHeight}; font-size: 0; line-height: 0;">
+        <img src="{$footerBarImg}" style="width: 100%; height: auto; display: block; margin: 0; padding: 0;" />
+    </footer>
+HTML;
+                }
+            } else {
+                // Fallback footer texto
+                $pageMarginBottom = '70px';
+                $footerBottom     = '-50px';
+                $footerHeight     = '35px';
+                $footerHtml = <<<HTML
+    <footer style="border-top: 1px solid #e2e8f0; padding-top: 8px; font-size: 8pt; color: #64748b; position: fixed; bottom: {$footerBottom}; left: 0; right: 0; height: {$footerHeight};">
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td>Gerado em {$generatedAt} — Documento Timbrado Oficial</td>
+                <td style="text-align: right;">Confidencial • Versão {$escapedVersion}</td>
+            </tr>
+        </table>
+    </footer>
+HTML;
+            }
+        } else {
+            $headerHtml = <<<HTML
+    <header style="border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; position: fixed; top: {$headerTop}; left: 0; right: 0; height: {$headerHeight};">
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td>
+                    <div class="header-brand">DocManager</div>
+                    <div class="header-sub">Gestão de Documentos do Acervo</div>
+                </td>
+                <td class="header-category">
+                    Categorização: {$escapedCategory}
+                </td>
+            </tr>
+        </table>
+    </header>
+HTML;
+
+            $footerHtml = <<<HTML
+    <footer style="border-top: 1px solid #e2e8f0; padding-top: 8px; font-size: 8pt; color: #64748b; position: fixed; bottom: {$footerBottom}; left: 0; right: 0; height: {$footerHeight};">
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td>Gerado em {$generatedAt} — Documento Oficial DocManager</td>
+                <td style="text-align: right;">Confidencial • Versão {$escapedVersion}</td>
+            </tr>
+        </table>
+    </footer>
+HTML;
+        }
 
         $html = <<<HTML
 <!DOCTYPE html>
@@ -89,29 +244,23 @@ class PdfService
     <title>{$escapedTitle}</title>
     <style>
         @page {
-            margin: 100px 45px 70px 45px;
+            margin: {$pageMarginTop} {$pageMarginLeftRight} {$pageMarginBottom} {$pageMarginLeftRight};
         }
 
         header {
             position: fixed;
-            top: -75px;
-            left: 0px;
-            right: 0px;
-            height: 55px;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 8px;
+            top: {$headerTop};
+            left: 0;
+            right: 0;
+            height: {$headerHeight};
         }
 
         footer {
             position: fixed;
-            bottom: -50px;
-            left: 0px;
-            right: 0px;
-            height: 35px;
-            border-top: 1px solid #e2e8f0;
-            padding-top: 8px;
-            font-size: 8pt;
-            color: #64748b;
+            bottom: {$footerBottom};
+            left: 0;
+            right: 0;
+            height: {$footerHeight};
         }
 
         .header-table, .footer-table {
@@ -147,6 +296,10 @@ class PdfService
             font-size: 10pt;
             line-height: 1.6;
             color: #1e293b;
+            padding: {$bodyPadding};
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: break-word;
         }
 
         .doc-header-box {
@@ -317,32 +470,9 @@ class PdfService
 </head>
 <body>
 
-    <header>
-        <table class="header-table">
-            <tr>
-                <td>
-                    <div class="header-brand">DocManager</div>
-                    <div class="header-sub">Gestão de Documentos do Acervo</div>
-                </td>
-                <td class="header-category">
-                    Categorização: {$escapedCategory}
-                </td>
-            </tr>
-        </table>
-    </header>
+    {$headerHtml}
 
-    <footer>
-        <table class="footer-table">
-            <tr>
-                <td>
-                    Gerado em {$generatedAt} — Documento Oficial DocManager
-                </td>
-                <td style="text-align: right;">
-                    Confidencial • Versão {$escapedVersion}
-                </td>
-            </tr>
-        </table>
-    </footer>
+    {$footerHtml}
 
     <main>
         <div class="doc-header-box">

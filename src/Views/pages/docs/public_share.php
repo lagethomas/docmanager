@@ -17,6 +17,8 @@ $authorInitials = mb_strtoupper(mb_substr($authorName, 0, 2));
 $categoryName = (string) ($doc['category_name'] ?? 'Geral');
 $status = (string) ($doc['status'] ?? 'aprovado');
 $confidentiality = (string) ($doc['confidentiality_level'] ?? 'interno');
+
+$timbradoConfig = (new \App\Models\SettingsModel())->getTimbradoConfig();
 ?>
 <div class="public-share-page">
   <!-- Topbar com Marca e Ação Única (Imprimir / Exportar PDF) -->
@@ -62,6 +64,12 @@ $confidentiality = (string) ($doc['confidentiality_level'] ?? 'interno');
     <?php else: ?>
       <!-- Folha A4 do Documento -->
       <article class="a4-paper-sheet">
+        <?php if (!empty($timbradoConfig['enabled']) && !empty($timbradoConfig['header_img_data_uri'])): ?>
+        <div class="timbrado-print-header">
+          <img src="<?php echo e($timbradoConfig['header_img_data_uri']); ?>" alt="Timbrado Cabeçalho" class="timbrado-img-hdr" />
+        </div>
+        <?php endif; ?>
+
         <header class="docs-single-header">
           <div class="docs-single-badges">
             <span class="doc-category-badge">
@@ -119,6 +127,12 @@ $confidentiality = (string) ($doc['confidentiality_level'] ?? 'interno');
         <div class="a4-paper-footer">
           <span>&#128274; Documento Público Autenticado &bull; DocManager</span>
         </div>
+
+        <?php if (!empty($timbradoConfig['enabled']) && !empty($timbradoConfig['footer_img_data_uri'])): ?>
+        <div class="timbrado-print-footer">
+          <img src="<?php echo e($timbradoConfig['footer_img_data_uri']); ?>" alt="Timbrado Rodapé" class="timbrado-img-ftr" />
+        </div>
+        <?php endif; ?>
       </article>
 
       <!-- Conteúdo Bruto para Renderização via JS -->

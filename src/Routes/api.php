@@ -47,6 +47,10 @@ return [
     // Configurações (somente Admin)
     ['GET', '/api/settings', [SettingsController::class, 'get'], [AuthMiddleware::class, AdminMiddleware::class]],
     ['POST', '/api/settings', [SettingsController::class, 'save'], [AuthMiddleware::class, AdminMiddleware::class]],
+    ['POST', '/api/settings/timbrado', [SettingsController::class, 'uploadTimbrado'], [AuthMiddleware::class, AdminMiddleware::class]],
+    ['POST', '/api/settings/timbrado/images', [SettingsController::class, 'uploadTimbradoImage'], [AuthMiddleware::class, AdminMiddleware::class]],
+    ['DELETE', '/api/settings/timbrado', [SettingsController::class, 'deleteTimbrado'], [AuthMiddleware::class, AdminMiddleware::class]],
+    ['GET', '/api/settings/timbrado/download', [SettingsController::class, 'downloadTimbrado'], [AuthMiddleware::class]],
 
     // Módulo Aprovações (Admin e Aprovador)
     ['GET', '/api/approvals', [ApprovalController::class, 'listApprovals'], [AuthMiddleware::class]],

@@ -69,6 +69,7 @@ class PublicDocController extends Controller
 
         $docModel->incrementViews($intId);
         $doc['views_count'] = ((int) ($doc['views_count'] ?? 0)) + 1;
+        $doc['content'] = \App\Helpers\SecurityHelper::maskPskTags((string) ($doc['content'] ?? ''));
 
         $this->render('docs/public_view', [
             'title' => ($doc['title'] ?? 'Documento') . ' — Biblioteca',
@@ -90,6 +91,8 @@ class PublicDocController extends Controller
             ], 'public_header');
             return;
         }
+
+        $doc['content'] = \App\Helpers\SecurityHelper::maskPskTags((string) ($doc['content'] ?? ''));
 
         $download = isset($_GET['download']) && $_GET['download'] === '1';
 

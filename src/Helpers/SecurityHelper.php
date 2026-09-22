@@ -129,4 +129,16 @@ final class SecurityHelper
             return '!psk=' . ($decrypted !== null ? $decrypted : '[ERRO_DESCRIPTOGRAFIA]') . '!';
         }, $content);
     }
+
+    /**
+     * Mascara todas as tags de senha !psk=...! e !psk_enc=...! para '***' em ambientes públicos.
+     */
+    public static function maskPskTags(string $content): string
+    {
+        if (!str_contains($content, '!psk')) {
+            return $content;
+        }
+
+        return (string) preg_replace('/!(?:psk|psk_enc)=([^!\r\n]+)!/', '***', $content);
+    }
 }
