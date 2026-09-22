@@ -2391,11 +2391,17 @@ var Docs = (function () {
 
         if (titleInput && !titleInput.value.trim() && extractedTitle) {
           titleInput.value = extractedTitle;
+          titleInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
 
         updateWordStats();
         var rawTarget = document.getElementById('rawDocContent');
         if (rawTarget && ta) rawTarget.value = ta.value;
+
+        if (ta) {
+          ta.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        renderMarkdownPreview();
 
         toast('Arquivo convertido com sucesso e inserido no editor! O arquivo original foi removido.', 'success');
         closeUploadModal();
