@@ -4667,46 +4667,50 @@ input[type=range].slider:focus-visible {
     cursor:not-allowed
 }
 .alert {
-    border-radius:var(--radius);
+    border-radius:var(--radius-lg, 10px);
     border:1px solid;
-    gap:10px;
-    margin-bottom:12px;
-    padding:10px 12px;
-    font-size:12.5px;
+    gap:12px;
+    margin-bottom:14px;
+    padding:12px 16px;
+    font-size:13px;
     line-height:1.45;
-    display:flex
+    display:flex;
+    align-items:center;
 }
 .alert .alert-icon {
     flex-shrink:0;
-    width:16px;
-    height:16px;
-    margin-top:1px
+    width:18px;
+    height:18px;
+    margin-top:0;
 }
 .alert .alert-body {
-    flex:1
+    flex:1;
+    font-size:13px;
+    line-height:1.45;
+    word-break:break-word;
 }
 .alert strong {
-    font-weight:var(--font-weight-medium)
+    font-weight:var(--font-weight-medium);
 }
 .alert-info {
     color:var(--blue);
     background:var(--blue-lt);
-    border-color:#066fd133
+    border-color:#066fd133;
 }
 .alert-success {
-    color:var(--green);
-    background:var(--green-lt);
-    border-color:#2fb34433
+    color:#10b981;
+    background:rgba(16, 185, 129, 0.1);
+    border-color:rgba(16, 185, 129, 0.28);
 }
 .alert-warning {
     color:#b45309;
     background:var(--yellow-lt);
-    border-color:#f59f0033
+    border-color:#f59f0033;
 }
 .alert-error {
-    color:var(--red);
-    background:var(--red-lt);
-    border-color:#d6393933
+    color:#ef4444;
+    background:rgba(239, 68, 68, 0.1);
+    border-color:rgba(239, 68, 68, 0.28);
 }
 .chip {
     align-items:center;
@@ -6813,7 +6817,66 @@ table.dataTable .dt-empty {
     line-height:1.5
 }
 .auth-error {
-    margin-bottom:16px
+    margin-bottom:16px;
+}
+.auth-alert {
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 16px !important;
+    border-radius:10px;
+    font-size:13px;
+    line-height:1.45;
+    font-weight:500;
+    margin-bottom:16px;
+    animation:authAlertSlideIn .25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow:0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.auth-alert .alert-icon,
+.auth-alert-icon {
+    width:18px;
+    height:18px;
+    flex-shrink:0;
+    margin-top:0;
+}
+.auth-alert .alert-body,
+.auth-alert-body {
+    flex:1;
+    word-break:break-word;
+    font-size:13px;
+    line-height:1.45;
+}
+.auth-alert-error,
+.auth-card .alert-error {
+    color:#ef4444;
+    background:rgba(239, 68, 68, 0.1);
+    border:1px solid rgba(239, 68, 68, 0.28);
+}
+.auth-alert-success,
+.auth-card .alert-success {
+    color:#10b981;
+    background:rgba(16, 185, 129, 0.1);
+    border:1px solid rgba(16, 185, 129, 0.28);
+}
+[data-theme=dark] .auth-alert-error,
+[data-theme=dark] .auth-card .alert-error {
+    color:#f87171;
+    background:rgba(239, 68, 68, 0.14);
+    border:1px solid rgba(239, 68, 68, 0.3);
+}
+[data-theme=dark] .auth-alert-success,
+[data-theme=dark] .auth-card .alert-success {
+    color:#34d399;
+    background:rgba(16, 185, 129, 0.14);
+    border:1px solid rgba(16, 185, 129, 0.3);
+}
+@keyframes authAlertSlideIn {
+    from{opacity:0;transform:translateY(-6px)}
+    to{opacity:1;transform:translateY(0)}
+}
+.auth-success {
+    text-align:center;
+    padding:16px;
 }
 .input-group .input-icon.auth-eye {
     pointer-events:auto;

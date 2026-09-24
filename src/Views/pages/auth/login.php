@@ -61,14 +61,14 @@ $errorMessageMap = [
 $errKey = (string) ($error ?? '');
 $serverError = $errKey !== '' ? ($errorMessageMap[$errKey] ?? 'Ocorreu um erro na autenticação com o Office 365.') : '';
 ?>
-          <div class="alert alert-error auth-error" id="loginError" <?php echo empty($serverError) ? 'hidden' : ''; ?>>
-            <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-            <div class="alert-body" id="loginErrorText"><?php echo e($serverError); ?></div>
+          <div class="auth-alert auth-alert-error" id="loginError" <?php echo empty($serverError) ? 'hidden' : ''; ?>>
+            <svg class="auth-alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div class="auth-alert-body" id="loginErrorText"><?php echo e($serverError); ?></div>
           </div>
 
-          <div class="alert alert-success auth-success" id="loginSuccess" hidden style="margin-bottom: 16px;">
-            <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            <div class="alert-body" id="loginSuccessText">Autenticado com sucesso! Redirecionando...</div>
+          <div class="auth-alert auth-alert-success" id="loginSuccess" hidden>
+            <svg class="auth-alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <div class="auth-alert-body" id="loginSuccessText">Autenticado com sucesso! Redirecionando...</div>
           </div>
 
           <button id="btnLogin" class="btn btn-primary btn-lg btn-block">
