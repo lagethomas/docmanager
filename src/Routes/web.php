@@ -51,6 +51,9 @@ return [
     ['GET', '/s/{token}', [App\Controllers\SharedLinkController::class, 'showPublic'], []],
     ['GET', '/s/{token}/pdf', [App\Controllers\SharedLinkController::class, 'exportPublicPdf'], []],
 
+    // Aprovação de documento via link mágico do e-mail (sem login)
+    ['GET', '/aprovar/{token}', [App\Controllers\ApprovalLinkController::class, 'approveViaToken'], []],
+
     // Base de Conhecimento / Documentos Públicos (sem login)
     ['GET', '/public-docs', [App\Controllers\PublicDocController::class, 'index'], []],
     ['GET', '/public-docs/view/{id}', [App\Controllers\PublicDocController::class, 'show'], []],

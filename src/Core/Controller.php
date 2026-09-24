@@ -41,6 +41,23 @@ abstract class Controller
         $this->jsonResponse(['ok' => false, 'error' => $message], $status);
     }
 
+    /**
+     * Envia a resposta HTTP ao cliente e encerra o processamento visível,
+     * permitindo trabalhos pesados (ex.: e-mail SMTP) sem travar a UI.
+     */
+    protected function flushResponse(): void
+    {
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+            return;
+        }
+
+        while (ob_get_level() > 0) {
+            @ob_end_flush();
+        }
+        @flush();
+    }
+
     protected function redirect(string $path): void
     {
         header('Location: ' . SITE_URL . $path);

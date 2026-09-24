@@ -208,18 +208,19 @@ async function salvarPerfil(event) {
         });
         
         const data = await response.json();
-        
-        if (response.ok && data.status === 'ok') {
-            mostrarAlertaPerfil('success', data.data?.message || 'Perfil atualizado com sucesso!');
+        const success = response.ok && (data.ok === true || data.status === 'ok');
+
+        if (success) {
+            mostrarAlertaPerfil('success', data.data?.message || data.message || 'Perfil atualizado com sucesso!');
             document.getElementById('profileNewPassword').value = '';
             document.getElementById('profileConfirmPassword').value = '';
-            
+
             const uName = document.getElementById('uName');
             if (uName) uName.textContent = name;
             const dropdownUserName = document.getElementById('dropdownUserName');
             if (dropdownUserName) dropdownUserName.textContent = name;
         } else {
-            mostrarAlertaPerfil('danger', data.message || 'Ocorreu um erro ao atualizar o perfil.');
+            mostrarAlertaPerfil('danger', data.error || data.message || 'Ocorreu um erro ao atualizar o perfil.');
         }
     } catch (err) {
         mostrarAlertaPerfil('danger', 'Erro de conexão com o servidor. Tente novamente.');

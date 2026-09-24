@@ -299,6 +299,11 @@ $user = $user ?? [];
             <span>Compartilhar</span>
           </button>
 
+          <button type="button" class="btn btn-sm btn-outline-primary" id="btnSubmitApproval" onclick="Docs.openApprovalModal()" hidden title="Solicitar aprovação deste documento a outro usuário">
+            <?php echo icon('check', ['size' => 13, 'style' => 'margin-right:4px']); ?>
+            <span>Submeter p/ Aprovação</span>
+          </button>
+
           <button type="button" class="btn btn-sm btn-danger-outline" id="btnDeleteDoc" onclick="Docs.deleteDoc()" hidden title="Excluir documento permanentemente">
             <?php echo icon('trash', ['class' => 'btn-svg', 'size' => 14]); ?>
           </button>
@@ -775,6 +780,61 @@ $user = $user ?? [];
 
     <div class="modal-footer-custom">
       <button type="button" class="btn btn-secondary" onclick="Docs.closeShareModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MODAL DE SUBMISSÃO PARA APROVAÇÃO ─────────────── -->
+<div class="modal-backdrop-custom" id="approvalModalOverlay" hidden>
+  <div class="modal-dialog-custom" style="max-width: 560px">
+    <div class="modal-header-custom">
+      <div class="modal-header-title">
+        <span class="modal-icon-badge">
+          <?php echo icon('check', ['class' => 'badge-svg', 'size' => 16]); ?>
+        </span>
+        <div>
+          <h3 id="approvalModalDocTitle" style="margin:0;font-size:1.1rem;font-weight:700;">Submeter para Aprovação</h3>
+          <p style="font-size:0.8rem;color:var(--docs-text-mut);margin:3px 0 0;" id="approvalModalDocAuthor"></p>
+        </div>
+      </div>
+      <button type="button" class="modal-btn-close" onclick="Docs.closeApprovalModal()">×</button>
+    </div>
+
+    <div class="modal-body-custom">
+      <div id="approvalPendingStatus" hidden style="background:rgba(217,119,6,0.08);border:1px solid rgba(217,119,6,0.35);border-radius:8px;padding:12px 14px;margin-bottom:14px;">
+        <p style="margin:0 0 8px;font-size:0.85rem;color:#b45309;font-weight:600;" id="approvalPendingText"></p>
+        <button type="button" class="btn btn-sm btn-danger-outline" onclick="Docs.cancelApprovalRequest()" title="Cancelar solicitação pendente">
+          Cancelar solicitação
+        </button>
+      </div>
+
+      <div id="approvalAddSection">
+        <label style="font-weight:600;font-size:0.82rem;margin-bottom:6px;display:block;">Selecionar Aprovador</label>
+
+        <div class="user-autocomplete-wrapper" style="position:relative;margin-bottom:8px;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" id="approvalUserSearchInput" class="form-input-custom" placeholder="Digite para buscar usuário..." autocomplete="off" style="flex:1;" />
+            <button type="button" class="btn btn-primary" onclick="Docs.submitForApproval()" id="btnConfirmSubmitApproval" disabled style="white-space:nowrap;">
+              <span>Enviar Solicitação</span>
+            </button>
+          </div>
+          <div id="approvalUserDropdownList" class="user-autocomplete-dropdown" hidden></div>
+        </div>
+
+        <div id="approvalSelectedUserChip" class="selected-user-chip" hidden>
+          <span id="approvalSelectedUserName"></span>
+          <button type="button" onclick="Docs.clearApprovalUser()" class="btn-clear-user">✕</button>
+        </div>
+
+        <p style="font-size:0.75rem;color:var(--docs-text-mut);margin-top:6px;">
+          Selecione um <strong>Editor</strong>, <strong>Aprovador</strong> ou <strong>Admin</strong> (exceto você, o autor).
+          A pessoa indicada receberá uma notificação no sistema e um e-mail com botão de aprovação.
+        </p>
+      </div>
+    </div>
+
+    <div class="modal-footer-custom">
+      <button type="button" class="btn btn-secondary" onclick="Docs.closeApprovalModal()">Fechar</button>
     </div>
   </div>
 </div>

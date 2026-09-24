@@ -421,6 +421,28 @@ $migrations = [
             CONSTRAINT fk_docarea_area FOREIGN KEY (area_id) REFERENCES cp_areas(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ",
+
+    '0029_create_approval_requests_table' => "
+        CREATE TABLE IF NOT EXISTS cp_approval_requests (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            document_id INT UNSIGNED NOT NULL,
+            requested_by INT UNSIGNED NOT NULL,
+            approver_id INT UNSIGNED NOT NULL,
+            status ENUM('pendente','aprovado','rejeitado','cancelado') NOT NULL DEFAULT 'pendente',
+            token VARCHAR(64) NOT NULL,
+            expires_at DATETIME NOT NULL,
+            decided_at DATETIME NULL,
+            decided_by INT UNSIGNED NULL,
+            decision_reason TEXT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uq_approval_token (token),
+            KEY idx_approval_doc_status (document_id, status),
+            KEY idx_approval_approver_status (approver_id, status),
+            CONSTRAINT fk_approval_doc FOREIGN KEY (document_id) REFERENCES cp_documents(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ",
 ];
 
 $stmt = $db->query('SELECT name FROM cp_migrations');

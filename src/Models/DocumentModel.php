@@ -92,8 +92,9 @@ class DocumentModel extends Repository
             $conditions[] = 'd.status = ?';
             $params[] = $status;
         } elseif ($userRole === 'Editor' && !$trash && $userId !== null) {
-            // Editor visualiza aprovados OU seus próprios criados OU compartilhados com ele
-            $conditions[] = "(d.status = 'aprovado' OR d.created_by = ? OR EXISTS (SELECT 1 FROM cp_document_shares ds WHERE ds.document_id = d.id AND ds.user_id = ?))";
+            // Editor visualiza aprovados OU seus próprios criados OU compartilhados OU onde é aprovador designado
+            $conditions[] = "(d.status = 'aprovado' OR d.created_by = ? OR EXISTS (SELECT 1 FROM cp_document_shares ds WHERE ds.document_id = d.id AND ds.user_id = ?) OR EXISTS (SELECT 1 FROM cp_approval_requests ar WHERE ar.document_id = d.id AND ar.approver_id = ? AND ar.status = 'pendente'))";
+            $params[] = $userId;
             $params[] = $userId;
             $params[] = $userId;
         }

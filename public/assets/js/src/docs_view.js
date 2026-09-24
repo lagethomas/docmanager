@@ -9,10 +9,14 @@ var DocsView = (function () {
   var CURRENT_DOC_ID = null;
   var ELIGIBLE_USERS = [];
   var SELECTED_USER_ID = null;
+  var ELIGIBLE_APPROVAL_USERS = [];
+  var SELECTED_APPROVAL_USER_ID = null;
+  var REJECT_APPROVAL_DOC_ID = null;
 
   function init() {
     renderMarkdown();
     bindAutocomplete();
+    bindApprovalAutocomplete();
     var docIdMatch = window.location.pathname.match(/\/docs\/view\/(\d+)/);
     if (docIdMatch && docIdMatch[1]) {
       CURRENT_DOC_ID = parseInt(docIdMatch[1], 10);
@@ -488,6 +492,213 @@ var DocsView = (function () {
     });
   }
 
+  // ─── SUBMISSÃO / DECISÃO DE APROVAÇÃO ─────────────
+  function openApprovalModal(docId) {
+    CURRENT_DOC_ID = docId;
+    SELECTED_APPROVAL_USER_ID = null;
+    clearApprovalUser();
+    setSubmitApprovalBusy(false);
+
+    var overlay = document.getElementById('approvalModalOverlay');
+    if (overlay) overlay.hidden = false;
+
+    var searchInput = document.getElementById('approvalUserSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    loadApprovalModalData(docId);
+  }
+
+  function closeApprovalModal() {
+    SELECTED_APPROVAL_USER_ID = null;
+    clearApprovalUser();
+    var overlay = document.getElementById('approvalModalOverlay');
+    if (overlay) overlay.hidden = true;
+  }
+
+  function loadApprovalModalData(docId) {
+    Promise.all([
+      api('GET', '/api/docs/' + docId + '/approval-request'),
+      api('GET', '/api/docs/' + docId + '/approval-users')
+    ]).then(function (results) {
+      var reqRes = results[0];
+      var usersRes = results[1];
+      ELIGIBLE_APPROVAL_USERS = usersRes.users || [];
+      renderApprovalPending(reqRes.request);
+    }).catch(function (err) {
+      toast(err.message || 'Erro ao carregar dados de aprovação.', 'error');
+    });
+  }
+
+  function renderApprovalPending(request) {
+    var box = document.getElementById('approvalPendingStatus');
+    var text = document.getElementById('approvalPendingText');
+    if (!box || !text) return;
+
+    if (request && request.status === 'pendente') {
+      text.textContent = '⏳ Aguardando aprovação de ' + (request.approver_name || 'usuário') + '.';
+      box.hidden = false;
+    } else {
+      box.hidden = true;
+    }
+  }
+
+  function bindApprovalAutocomplete() {
+    var input = document.getElementById('approvalUserSearchInput');
+    var dropdown = document.getElementById('approvalUserDropdownList');
+    if (!input || !dropdown) return;
+
+    input.addEventListener('input', function () {
+      var q = input.value.trim().toLowerCase();
+      if (!q) {
+        dropdown.hidden = true;
+        dropdown.innerHTML = '';
+        return;
+      }
+
+      var matches = ELIGIBLE_APPROVAL_USERS.filter(function (u) {
+        return (u.name && u.name.toLowerCase().indexOf(q) !== -1) ||
+               (u.login && u.login.toLowerCase().indexOf(q) !== -1);
+      });
+
+      if (!matches.length) {
+        dropdown.innerHTML = '<div class="autocomplete-empty">Nenhum usuário encontrado para "' + esc(q) + '"</div>';
+        dropdown.hidden = false;
+        return;
+      }
+
+      var html = '';
+      matches.forEach(function (u) {
+        var initials = (u.name || 'U').substring(0, 2).toUpperCase();
+        var roleBadge = u.role ? (' (' + u.role + ')') : '';
+        html += '<div class="autocomplete-item" onclick="DocsView.selectApprovalUser(' + u.id + ', \'' + esc(u.name) + '\', \'' + esc(u.login) + '\')">'
+          + '<div class="avatar-small" style="width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;">' + esc(initials) + '</div>'
+          + '<div class="user-meta">'
+          + '<span class="user-name">' + esc(u.name) + '</span>'
+          + '<span class="user-login">@' + esc(u.login) + roleBadge + '</span>'
+          + '</div>'
+          + '</div>';
+      });
+
+      dropdown.innerHTML = html;
+      dropdown.hidden = false;
+    });
+
+    document.addEventListener('click', function (e) {
+      if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.hidden = true;
+      }
+    });
+  }
+
+  function selectApprovalUser(id, name, login) {
+    SELECTED_APPROVAL_USER_ID = id;
+    var dropdown = document.getElementById('approvalUserDropdownList');
+    var chip = document.getElementById('approvalSelectedUserChip');
+    var nameEl = document.getElementById('approvalSelectedUserName');
+    var input = document.getElementById('approvalUserSearchInput');
+    var btn = document.getElementById('btnConfirmSubmitApproval');
+
+    if (dropdown) dropdown.hidden = true;
+    if (input) input.value = '';
+    if (nameEl) nameEl.textContent = '👤 ' + name + ' (@' + login + ')';
+    if (chip) chip.hidden = false;
+    if (btn) btn.disabled = false;
+  }
+
+  function clearApprovalUser() {
+    SELECTED_APPROVAL_USER_ID = null;
+    var chip = document.getElementById('approvalSelectedUserChip');
+    var btn = document.getElementById('btnConfirmSubmitApproval');
+    if (chip) chip.hidden = true;
+    if (btn) btn.disabled = true;
+  }
+
+  function setSubmitApprovalBusy(busy) {
+    var btn = document.getElementById('btnConfirmSubmitApproval');
+    if (!btn) return;
+    btn.disabled = !!busy;
+    var label = btn.querySelector('span');
+    if (label) {
+      label.textContent = busy ? 'Enviando...' : 'Enviar Solicitação';
+    }
+  }
+
+  function submitForApproval() {
+    var btn = document.getElementById('btnConfirmSubmitApproval');
+    if (!CURRENT_DOC_ID || !SELECTED_APPROVAL_USER_ID) return;
+    if (btn && btn.disabled) return;
+
+    setSubmitApprovalBusy(true);
+
+    api('POST', '/api/docs/' + CURRENT_DOC_ID + '/submit-approval', {
+      approver_id: SELECTED_APPROVAL_USER_ID
+    }).then(function (res) {
+      toast(res.message || 'Documento enviado para aprovação!', 'success');
+      clearApprovalUser();
+      loadApprovalModalData(CURRENT_DOC_ID);
+      setTimeout(function () { window.location.reload(); }, 900);
+    }).catch(function (err) {
+      toast(err.message || 'Erro ao submeter para aprovação.', 'error');
+      setSubmitApprovalBusy(false);
+    });
+  }
+
+  function cancelApprovalRequest() {
+    if (!CURRENT_DOC_ID) return;
+    showConfirm({
+      title: 'Cancelar Solicitação?',
+      message: 'O aprovador designado será notificado sobre o cancelamento.',
+      confirmText: 'Cancelar Solicitação',
+      confirmClass: 'btn btn-danger'
+    }, function () {
+      api('POST', '/api/docs/' + CURRENT_DOC_ID + '/approval/cancel', {}).then(function (res) {
+        toast(res.message || 'Solicitação cancelada.', 'success');
+        setTimeout(function () { window.location.reload(); }, 700);
+      }).catch(function (err) {
+        toast(err.message || 'Erro ao cancelar solicitação.', 'error');
+      });
+    });
+  }
+
+  function decideApproval(docId, action, reason) {
+    api('POST', '/api/docs/' + docId + '/approval/decide', {
+      action: action,
+      reason: reason || undefined
+    }).then(function (res) {
+      toast(res.message || 'Decisão registrada com sucesso!', 'success');
+      setTimeout(function () { window.location.reload(); }, 900);
+    }).catch(function (err) {
+      toast(err.message || 'Erro ao processar decisão.', 'error');
+    });
+  }
+
+  function openRejectApprovalModal(docId) {
+    REJECT_APPROVAL_DOC_ID = docId;
+    var txt = document.getElementById('rejectApprovalReasonText');
+    if (txt) txt.value = '';
+    var overlay = document.getElementById('rejectApprovalModal');
+    if (overlay) overlay.hidden = false;
+  }
+
+  function closeRejectApprovalModal() {
+    REJECT_APPROVAL_DOC_ID = null;
+    var overlay = document.getElementById('rejectApprovalModal');
+    if (overlay) overlay.hidden = true;
+  }
+
+  function confirmRejectApproval() {
+    var txt = document.getElementById('rejectApprovalReasonText');
+    var reason = txt ? txt.value.trim() : '';
+    if (!reason) {
+      toast('Informe o motivo da rejeição.', 'info');
+      if (txt) txt.focus();
+      return;
+    }
+    if (!REJECT_APPROVAL_DOC_ID) return;
+    closeRejectApprovalModal();
+    decideApproval(REJECT_APPROVAL_DOC_ID, 'reject', reason);
+  }
+
   function toggleFavorite(id) {
     var btn = document.getElementById('btnSingleFavorite');
     var textEl = document.getElementById('btnSingleFavoriteText');
@@ -549,6 +760,16 @@ var DocsView = (function () {
     downloadMarkdown: downloadMarkdown,
     openShareModal: openShareModal,
     closeShareModal: closeShareModal,
+    openApprovalModal: openApprovalModal,
+    closeApprovalModal: closeApprovalModal,
+    selectApprovalUser: selectApprovalUser,
+    clearApprovalUser: clearApprovalUser,
+    submitForApproval: submitForApproval,
+    cancelApprovalRequest: cancelApprovalRequest,
+    decideApproval: decideApproval,
+    openRejectApprovalModal: openRejectApprovalModal,
+    closeRejectApprovalModal: closeRejectApprovalModal,
+    confirmRejectApproval: confirmRejectApproval,
     openPublicLinkModal: openPublicLinkModal,
     closePublicLinkModal: closePublicLinkModal,
     createPublicLink: createPublicLink,

@@ -9,10 +9,14 @@ use App\Core\Controller;
 use App\Core\CSRF;
 use App\Core\Database;
 use App\Core\Logger;
+use App\Models\ApprovalRequestModel;
 use App\Models\CategoryModel;
 use App\Models\DocumentModel;
+use App\Models\NotificationModel;
 use App\Models\TagModel;
+use App\Models\UserModel;
 use App\Services\DocConverterService;
+use App\Services\EmailService;
 use App\Services\PdfService;
 
 class DocumentController extends Controller
@@ -52,15 +56,20 @@ class DocumentController extends Controller
 
         $isSharedWithUser = $model->isSharedWithUser($intId, $userId);
 
+        $approvalModel = new ApprovalRequestModel();
+        $approvalRequest = $approvalModel->getPendingForDoc($intId);
+        $isDesignatedApprover = $approvalRequest !== null && (int) $approvalRequest['approver_id'] === $userId;
+        $isDocAuthor = (int) ($doc['created_by'] ?? 0) === $userId;
+
         // Se visualizador e doc não aprovado (a menos que seja compartilhado diretamente com ele)
         if ($userRole === 'Visualizador' && ($doc['status'] ?? '') !== 'aprovado' && !$isSharedWithUser) {
             $this->redirect('/docs');
             return;
         }
 
-        // Se editor, mas doc não aprovado e não é autor nem compartilhado
+        // Se editor, mas doc não aprovado e não é autor, compartilhado nem aprovador designado
         if ($userRole === 'Editor' && ($doc['status'] ?? '') !== 'aprovado') {
-            if (!$model->canUserEdit($intId, $userId, $userRole)) {
+            if (!$model->canUserEdit($intId, $userId, $userRole) && !$isDesignatedApprover) {
                 $this->redirect('/docs');
                 return;
             }
@@ -79,6 +88,9 @@ class DocumentController extends Controller
         $canManageShares = $model->canUserManageShares($intId, $userId, $userRole);
         $canComment = in_array($userRole, ['Admin', 'Editor', 'Aprovador', 'Visualizador'], true);
         $canViewVersions = ($userRole !== 'Visualizador');
+        $canSubmitApproval = $isDocAuthor
+            && ($userRole === 'Editor' || $userRole === 'Admin')
+            && ($doc['status'] ?? '') !== 'aprovado';
 
         $followerModel = new \App\Models\DocumentFollowerModel();
         $isFollowing = $followerModel->isFollowing($intId, $userId);
@@ -94,6 +106,9 @@ class DocumentController extends Controller
             'user' => $user,
             'csrfToken' => CSRF::token(),
             'page' => 'docs_view',
+            'approvalRequest' => $approvalRequest,
+            'isDesignatedApprover' => $isDesignatedApprover,
+            'canSubmitApproval' => $canSubmitApproval,
         ], 'header');
     }
 
@@ -269,6 +284,14 @@ class DocumentController extends Controller
         $doc['can_edit'] = $model->canUserEdit($intId, $userId, $userRole);
         $doc['is_owner'] = ((int) ($doc['created_by'] ?? 0) === $userId);
         $doc['can_manage_shares'] = $model->canUserManageShares($intId, $userId, $userRole);
+
+        $approvalModel = new ApprovalRequestModel();
+        $pendingApproval = $approvalModel->getPendingForDoc($intId);
+        $doc['approval_request'] = $pendingApproval;
+        $doc['is_designated_approver'] = $pendingApproval !== null && (int) $pendingApproval['approver_id'] === $userId;
+        $doc['can_submit_approval'] = $doc['is_owner']
+            && in_array($userRole, ['Editor', 'Admin'], true)
+            && ($doc['status'] ?? '') !== 'aprovado';
 
         $this->jsonOk(['doc' => $doc]);
     }
@@ -648,6 +671,371 @@ class DocumentController extends Controller
 
         $users = $model->getEligibleUsersForShare($intId);
         $this->jsonOk(['users' => $users]);
+    }
+
+    // ─── APROVAÇÃO DE DOCUMENTOS (SUBMISSÃO DELEGADA) ───
+
+    public function getApprovalUsers(string $id): void
+    {
+        $intId = (int) $id;
+        $model = new DocumentModel();
+        $doc = $model->find($intId);
+        if ($doc === null) {
+            $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+
+        $user = Auth::user();
+        $userId = (int) ($user['id'] ?? 0);
+        $role = (string) ($user['role'] ?? '');
+
+        if (!$model->canUserManageShares($intId, $userId, $role)) {
+            $this->jsonError('Acesso negado: apenas o autor ou Administrador pode indicar um aprovador.', 403);
+            return;
+        }
+
+        $candidates = (new ApprovalRequestModel())->getEligibleApprovers($intId);
+        $users = [];
+        foreach ($candidates as $candidate) {
+            $candId = (int) $candidate['id'];
+            $candRole = (string) $candidate['role'];
+            $candLoc = !empty($candidate['location_id']) ? (int) $candidate['location_id'] : null;
+            $candArea = !empty($candidate['area_id']) ? (int) $candidate['area_id'] : null;
+            if ($model->canUserAccessDocument($doc, $candId, $candRole, $candLoc, $candArea)) {
+                $users[] = $candidate;
+            }
+        }
+
+        $this->jsonOk(['users' => $users]);
+    }
+
+    public function getApprovalRequest(string $id): void
+    {
+        $intId = (int) $id;
+        $model = new DocumentModel();
+        $doc = $model->find($intId);
+        if ($doc === null) {
+            $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+
+        $user = Auth::user();
+        $userId = (int) ($user['id'] ?? 0);
+        $role = (string) ($user['role'] ?? '');
+
+        $isOwner = $model->canUserManageShares($intId, $userId, $role);
+        $approvalModel = new ApprovalRequestModel();
+        $pending = $approvalModel->getPendingForDoc($intId);
+
+        if (!$isOwner && ($pending === null || (int) $pending['approver_id'] !== $userId) && $role !== 'Admin') {
+            $this->jsonError('Acesso negado.', 403);
+            return;
+        }
+
+        $this->jsonOk([
+            'request' => $pending,
+            'is_designated_approver' => $pending !== null && (int) $pending['approver_id'] === $userId,
+            'can_submit' => $isOwner && ($doc['status'] ?? '') !== 'aprovado',
+        ]);
+    }
+
+    public function submitForApproval(string $id): void
+    {
+        $intId = (int) $id;
+        $model = new DocumentModel();
+        $doc = $model->find($intId);
+        if ($doc === null || !empty($doc['deleted_at'])) {
+            $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+
+        $user = Auth::user();
+        $userId = (int) ($user['id'] ?? 0);
+        $role = (string) ($user['role'] ?? '');
+
+        if (!$model->canUserManageShares($intId, $userId, $role)) {
+            $this->jsonError('Acesso negado: apenas o autor ou Administrador pode submeter para aprovação.', 403);
+            return;
+        }
+
+        if (($doc['status'] ?? '') === 'aprovado') {
+            $this->jsonError('Este documento já está aprovado. Edite-o para gerar uma nova revisão.', 422);
+            return;
+        }
+
+        $input = self::input();
+        $approverId = (int) ($input['approver_id'] ?? 0);
+        if ($approverId <= 0) {
+            $this->jsonError('Selecione um aprovador.', 422);
+            return;
+        }
+
+        if ($approverId === $userId || $approverId === (int) ($doc['created_by'] ?? 0)) {
+            $this->jsonError('O autor do documento não pode aprovar o próprio documento (regra de auditoria).', 422);
+            return;
+        }
+
+        $approver = (new UserModel())->findById($approverId);
+        if (!$approver || ($approver['status'] ?? '') !== 'ativo' || !in_array($approver['role'] ?? '', ['Editor', 'Aprovador', 'Admin'], true)) {
+            $this->jsonError('Usuário elegível para aprovação não encontrado.', 422);
+            return;
+        }
+
+        if (!$model->canUserAccessDocument(
+            $doc,
+            $approverId,
+            (string) $approver['role'],
+            !empty($approver['location_id']) ? (int) $approver['location_id'] : null,
+            !empty($approver['area_id']) ? (int) $approver['area_id'] : null
+        )) {
+            $this->jsonError('O aprovador selecionado não tem acesso a este documento (restrição de localização/área).', 422);
+            return;
+        }
+
+        $approvalModel = new ApprovalRequestModel();
+        $request = $approvalModel->createFor($intId, $userId, $approverId);
+        $docTitle = (string) $doc['title'];
+
+        Logger::log(
+            'submit_approval',
+            "Documento #{$intId} (\"{$docTitle}\") submetido para aprovação de {$approver['name']}"
+        );
+
+        (new NotificationModel())->notify(
+            $approverId,
+            'aprovacao_solicitada',
+            'Aprovação solicitada',
+            "{$user['name']} solicitou sua aprovação no documento \"{$docTitle}\".",
+            "/docs/view/{$intId}"
+        );
+
+        $this->jsonOk([
+            'message' => 'Documento enviado para aprovação de ' . $approver['name'] . '.',
+            'request' => $request,
+        ]);
+
+        // Responde primeiro; o e-mail SMTP roda depois do flush para não travar a UI.
+        $this->flushResponse();
+        $this->sendApprovalRequestEmail($request, $doc, $approver);
+    }
+
+    public function cancelApproval(string $id): void
+    {
+        $intId = (int) $id;
+        $model = new DocumentModel();
+        $doc = $model->find($intId);
+        if ($doc === null) {
+            $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+
+        $user = Auth::user();
+        $userId = (int) ($user['id'] ?? 0);
+        $role = (string) ($user['role'] ?? '');
+
+        if (!$model->canUserManageShares($intId, $userId, $role)) {
+            $this->jsonError('Acesso negado: apenas o autor ou Administrador pode cancelar a solicitação.', 403);
+            return;
+        }
+
+        $approvalModel = new ApprovalRequestModel();
+        $pending = $approvalModel->getPendingForDoc($intId);
+        if ($pending === null) {
+            $this->jsonError('Não há solicitação de aprovação pendente para este documento.', 422);
+            return;
+        }
+
+        $approverId = (int) $pending['approver_id'];
+        $approvalModel->settle((int) $pending['id'], 'cancelado', $userId, 'Cancelado pelo solicitante');
+
+        Logger::log('cancel_approval', "Solicitação de aprovação do documento #{$intId} cancelada");
+
+        if ($approverId !== $userId) {
+            (new NotificationModel())->notify(
+                $approverId,
+                'aprovacao_cancelada',
+                'Solicitação cancelada',
+                "A solicitação de aprovação do documento \"{$doc['title']}\" foi cancelada.",
+                "/docs/view/{$intId}"
+            );
+        }
+
+        $this->jsonOk(['message' => 'Solicitação de aprovação cancelada.']);
+    }
+
+    public function decideApproval(string $id): void
+    {
+        $intId = (int) $id;
+        $model = new DocumentModel();
+        $doc = $model->find($intId);
+        if ($doc === null || !empty($doc['deleted_at'])) {
+            $this->jsonError('Documento não encontrado.', 404);
+            return;
+        }
+
+        $user = Auth::user();
+        $userId = (int) ($user['id'] ?? 0);
+        $role = (string) ($user['role'] ?? '');
+
+        $approvalModel = new ApprovalRequestModel();
+        $pending = $approvalModel->getPendingForDoc($intId);
+        $isDesignated = $pending !== null && (int) $pending['approver_id'] === $userId;
+        $isPrivileged = PermissionManager::can($role, 'docs.approve');
+
+        if (!$isDesignated && !$isPrivileged) {
+            $this->jsonError('Acesso negado: você não é o aprovador designado deste documento.', 403);
+            return;
+        }
+
+        if ($pending === null) {
+            $this->jsonError('Não há solicitação de aprovação pendente para este documento.', 422);
+            return;
+        }
+
+        if (!$model->canUserAccessDocument($doc, $userId, $role, Auth::locationId(), Auth::areaId())) {
+            $this->jsonError('Acesso negado: este documento pertence a outra localização ou área.', 403);
+            return;
+        }
+
+        $input = self::input();
+        $action = (string) ($input['action'] ?? '');
+        $reason = sanitize_input((string) ($input['reason'] ?? ''));
+        $authorId = (int) ($doc['created_by'] ?? 0);
+        $docTitle = (string) $doc['title'];
+
+        if ($action === 'approve') {
+            if (!in_array($doc['status'], ['pendente', 'rejeitado'], true)) {
+                $this->jsonError('Este documento não pode ser aprovado (status atual: ' . $doc['status'] . ').', 422);
+                return;
+            }
+            if (!$approvalModel->settle((int) $pending['id'], 'aprovado', $userId, null)) {
+                $this->jsonError('Solicitação já processada.', 409);
+                return;
+            }
+            if (!$model->approve($intId, $userId)) {
+                $this->jsonError('Erro ao aprovar documento.', 500);
+                return;
+            }
+
+            Logger::log('approve_doc', "Documento #{$intId} (\"{$docTitle}\") aprovado por {$user['name']} (designado)");
+
+            if ($authorId > 0 && $authorId !== $userId) {
+                (new NotificationModel())->notify(
+                    $authorId,
+                    'aprovacao',
+                    'Documento Aprovado',
+                    "Seu documento \"{$docTitle}\" (#{$intId}) foi aprovado por {$user['name']}.",
+                    "/docs/view/{$intId}"
+                );
+            }
+
+            $this->jsonOk(['message' => 'Documento aprovado e publicado com sucesso!', 'status' => 'aprovado']);
+            $this->flushResponse();
+            $this->sendApprovalResultEmail($doc, $authorId, (string) $user['name'], 'aprovado', null);
+            return;
+        }
+
+        if ($action === 'reject') {
+            if ($reason === '') {
+                $this->jsonError('Informe o motivo da rejeição.', 422);
+                return;
+            }
+            if ($doc['status'] !== 'pendente') {
+                $this->jsonError('Este documento não pode ser rejeitado (status atual: ' . $doc['status'] . ').', 422);
+                return;
+            }
+            if (!$approvalModel->settle((int) $pending['id'], 'rejeitado', $userId, $reason)) {
+                $this->jsonError('Solicitação já processada.', 409);
+                return;
+            }
+            if (!$model->reject($intId, $userId, $reason)) {
+                $this->jsonError('Erro ao rejeitar documento.', 500);
+                return;
+            }
+
+            CommentController::addSystemComment($intId, $userId, "[Rejeição] {$reason}");
+            Logger::log('reject_doc', "Documento #{$intId} (\"{$docTitle}\") rejeitado por {$user['name']} (designado)");
+
+            if ($authorId > 0 && $authorId !== $userId) {
+                (new NotificationModel())->notify(
+                    $authorId,
+                    'rejeicao',
+                    'Documento Rejeitado',
+                    "Seu documento \"{$docTitle}\" (#{$intId}) foi rejeitado por {$user['name']}. Motivo: {$reason}",
+                    "/docs/view/{$intId}"
+                );
+            }
+
+            $this->jsonOk(['message' => 'Documento rejeitado.', 'status' => 'rejeitado']);
+            $this->flushResponse();
+            $this->sendApprovalResultEmail($doc, $authorId, (string) $user['name'], 'rejeitado', $reason);
+            return;
+        }
+
+        $this->jsonError('Ação inválida. Use "approve" ou "reject".', 422);
+    }
+
+    /**
+     * @param array<string, mixed> $request
+     * @param array<string, mixed> $doc
+     * @param array<string, mixed> $approver
+     */
+    private function sendApprovalRequestEmail(array $request, array $doc, array $approver): void
+    {
+        $email = (string) ($approver['email'] ?? '');
+        if ($email === '') {
+            return;
+        }
+        try {
+            $token = (string) ($request['token'] ?? '');
+            if ($token === '') {
+                return;
+            }
+            $docId = (int) $doc['id'];
+            $html = EmailService::renderTemplate('approval_request', [
+                'docTitle' => (string) $doc['title'],
+                'excerpt' => EmailService::excerpt((string) ($doc['content'] ?? '')),
+                'requesterName' => (string) (Auth::name() ?? 'Um usuário'),
+                'approverName' => (string) ($approver['name'] ?? ''),
+                'approveUrl' => EmailService::absoluteUrl('/aprovar/' . $token),
+                'viewUrl' => EmailService::absoluteUrl('/docs/view/' . $docId),
+                'expiresAt' => date('d/m/Y H:i', strtotime((string) ($request['expires_at'] ?? 'now')) ?: time()),
+            ]);
+            EmailService::send($email, '[Aprovação necessária] ' . (string) $doc['title'], $html);
+        } catch (\Throwable $e) {
+            Logger::log('email_error', 'Falha ao enviar e-mail de aprovação: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $doc
+     */
+    private function sendApprovalResultEmail(array $doc, int $authorId, string $deciderName, string $action, ?string $reason): void
+    {
+        if ($authorId <= 0) {
+            return;
+        }
+        try {
+            $author = (new UserModel())->findById($authorId);
+            $email = (string) ($author['email'] ?? '');
+            if ($email === '') {
+                return;
+            }
+            $docId = (int) $doc['id'];
+            $html = EmailService::renderTemplate('approval_result', [
+                'docTitle' => (string) $doc['title'],
+                'excerpt' => EmailService::excerpt((string) ($doc['content'] ?? '')),
+                'authorName' => (string) ($author['name'] ?? ''),
+                'deciderName' => $deciderName,
+                'action' => $action,
+                'reason' => $reason,
+                'viewUrl' => EmailService::absoluteUrl('/docs/view/' . $docId),
+            ]);
+            $prefix = $action === 'aprovado' ? '[Aprovado] ' : '[Rejeitado] ';
+            EmailService::send($email, $prefix . (string) $doc['title'], $html);
+        } catch (\Throwable $e) {
+            Logger::log('email_error', 'Falha ao enviar e-mail de resultado: ' . $e->getMessage());
+        }
     }
 
     public function emptyTrash(): void

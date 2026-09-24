@@ -38,6 +38,7 @@ define('SMTP_USER', (string) ($_ENV['SMTP_USER'] ?? ''));
 define('SMTP_PASS', (string) ($_ENV['SMTP_PASS'] ?? ''));
 define('SMTP_FROM', (string) ($_ENV['SMTP_FROM'] ?? 'nao-responda@docmanager.local'));
 define('SMTP_FROM_NAME', (string) ($_ENV['SMTP_FROM_NAME'] ?? 'DocManager'));
+define('SMTP_ENCRYPTION', strtolower((string) ($_ENV['SMTP_ENCRYPTION'] ?? 'tls')));
 
 date_default_timezone_set((string) ($_ENV['APP_TIMEZONE'] ?? 'America/Sao_Paulo'));
 

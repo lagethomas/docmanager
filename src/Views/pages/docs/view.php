@@ -9,6 +9,9 @@ $canManageShares = $canManageShares ?? false;
 $user = $user ?? [];
 $canComment = $canComment ?? false;
 $isFollowing = $isFollowing ?? false;
+$approvalRequest = $approvalRequest ?? null;
+$isDesignatedApprover = $isDesignatedApprover ?? false;
+$canSubmitApproval = $canSubmitApproval ?? false;
 
 $authorName = $doc['author_name'] ?? 'Admin';
 $authorInitials = mb_strtoupper(mb_substr($authorName, 0, 2));
@@ -63,6 +66,23 @@ $timbradoConfig = (new \App\Models\SettingsModel())->getTimbradoConfig();
       <button type="button" class="btn btn-sm btn-outline" onclick="DocsView.openShareModal(<?php echo (int)$doc['id']; ?>)" title="Compartilhar documento com outros editores">
         <?php echo icon('share', ['size' => 13, 'style' => 'margin-right:4px']); ?>
         <span>Compartilhar</span>
+      </button>
+      <?php endif; ?>
+
+      <?php if (!empty($canSubmitApproval)): ?>
+      <button type="button" class="btn btn-sm btn-outline-primary" id="btnSubmitApprovalView" onclick="DocsView.openApprovalModal(<?php echo (int)$doc['id']; ?>)" title="Solicitar aprovação deste documento a outro usuário">
+        <?php echo icon('check', ['size' => 13, 'style' => 'margin-right:4px']); ?>
+        <span>Submeter p/ Aprovação</span>
+      </button>
+      <?php endif; ?>
+
+      <?php if (!empty($isDesignatedApprover) && !empty($approvalRequest) && ($doc['status'] ?? '') === 'pendente'): ?>
+      <button type="button" class="btn btn-sm btn-success" onclick="DocsView.decideApproval(<?php echo (int)$doc['id']; ?>, 'approve')" title="Aprovar este documento como aprovador designado">
+        <?php echo icon('check', ['size' => 13, 'style' => 'margin-right:4px']); ?>
+        <span>Aprovar</span>
+      </button>
+      <button type="button" class="btn btn-sm btn-danger-outline" onclick="DocsView.openRejectApprovalModal(<?php echo (int)$doc['id']; ?>)" title="Rejeitar este documento como aprovador designado" style="color:#dc2626;border-color:rgba(220,38,38,0.35);">
+        <span>Rejeitar</span>
       </button>
       <?php endif; ?>
 
@@ -309,6 +329,91 @@ $timbradoConfig = (new \App\Models\SettingsModel())->getTimbradoConfig();
 
     <div class="modal-footer-custom">
       <button type="button" class="btn btn-secondary" onclick="DocsView.closeShareModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Submissão para Aprovação -->
+<div class="modal-backdrop-custom" id="approvalModalOverlay" hidden>
+  <div class="modal-dialog-custom" style="max-width: 560px">
+    <div class="modal-header-custom">
+      <div class="modal-header-title">
+        <span class="modal-icon-badge">
+          <?php echo icon('check', ['class' => 'badge-svg', 'size' => 16]); ?>
+        </span>
+        <div>
+          <h3 style="margin:0;font-size:1.1rem;font-weight:700;">Submeter: <?php echo e($doc['title'] ?? ''); ?></h3>
+          <p style="font-size:0.8rem;color:var(--docs-text-mut);margin:3px 0 0;">Criado por: <?php echo e($authorName); ?></p>
+        </div>
+      </div>
+      <button type="button" class="modal-btn-close" onclick="DocsView.closeApprovalModal()">×</button>
+    </div>
+
+    <div class="modal-body-custom">
+      <div id="approvalPendingStatus" hidden style="background:rgba(217,119,6,0.08);border:1px solid rgba(217,119,6,0.35);border-radius:8px;padding:12px 14px;margin-bottom:14px;">
+        <p style="margin:0 0 8px;font-size:0.85rem;color:#b45309;font-weight:600;" id="approvalPendingText"></p>
+        <button type="button" class="btn btn-sm btn-danger-outline" onclick="DocsView.cancelApprovalRequest()" title="Cancelar solicitação pendente">
+          Cancelar solicitação
+        </button>
+      </div>
+
+      <div>
+        <label style="font-weight:600;font-size:0.82rem;margin-bottom:6px;display:block;">Selecionar Aprovador</label>
+
+        <div class="user-autocomplete-wrapper" style="position:relative;margin-bottom:8px;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" id="approvalUserSearchInput" class="form-input-custom" placeholder="Digite para buscar usuário..." autocomplete="off" style="flex:1;" />
+            <button type="button" class="btn btn-primary" onclick="DocsView.submitForApproval()" id="btnConfirmSubmitApproval" disabled style="white-space:nowrap;">
+              <span>Enviar Solicitação</span>
+            </button>
+          </div>
+          <div id="approvalUserDropdownList" class="user-autocomplete-dropdown" hidden></div>
+        </div>
+
+        <div id="approvalSelectedUserChip" class="selected-user-chip" hidden>
+          <span id="approvalSelectedUserName"></span>
+          <button type="button" onclick="DocsView.clearApprovalUser()" class="btn-clear-user">✕</button>
+        </div>
+
+        <p style="font-size:0.75rem;color:var(--docs-text-mut);margin-top:6px;">
+          Selecione um <strong>Editor</strong>, <strong>Aprovador</strong> ou <strong>Admin</strong> (exceto o autor).
+          A pessoa indicada receberá notificação no sistema e e-mail com botão de aprovação.
+        </p>
+      </div>
+    </div>
+
+    <div class="modal-footer-custom">
+      <button type="button" class="btn btn-secondary" onclick="DocsView.closeApprovalModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Rejeição (aprovador designado) -->
+<div class="modal-backdrop-custom" id="rejectApprovalModal" hidden>
+  <div class="modal-dialog-custom" style="max-width: 500px;">
+    <div class="modal-header-custom">
+      <div class="modal-header-title">
+        <span class="modal-icon-badge" style="background: rgba(214, 57, 57, 0.12); color: var(--danger, #d63939);display:flex;align-items:center;justify-content:center;">
+          <?php echo icon('alert', ['size' => 16]); ?>
+        </span>
+        <h3>Rejeitar Documento</h3>
+      </div>
+      <button type="button" class="modal-btn-close" onclick="DocsView.closeRejectApprovalModal()">×</button>
+    </div>
+
+    <div class="modal-body-custom">
+      <p style="font-size: 0.88rem; color: var(--docs-text-mut); margin-bottom: 0.75rem;">
+        Informe o motivo da rejeição para que o autor possa ajustar o documento:
+      </p>
+      <div class="form-group-custom">
+        <label for="rejectApprovalReasonText">Motivo da Rejeição *</label>
+        <textarea id="rejectApprovalReasonText" class="form-input-custom" rows="4" placeholder="Ex: Necessário complementar a seção de requisitos..." style="resize: vertical; font-family: inherit; font-size: 0.88rem;"></textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer-custom">
+      <button type="button" class="btn btn-secondary" onclick="DocsView.closeRejectApprovalModal()">Cancelar</button>
+      <button type="button" class="btn btn-danger" onclick="DocsView.confirmRejectApproval()">Confirmar Rejeição</button>
     </div>
   </div>
 </div>

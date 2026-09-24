@@ -8,7 +8,9 @@ use App\Core\Auth\PermissionManager;
 use App\Core\Controller;
 use App\Core\CSRF;
 use App\Core\Logger;
+use App\Models\ApprovalRequestModel;
 use App\Models\DocumentModel;
+use App\Services\EmailService;
 
 class ApprovalController extends Controller
 {
@@ -105,6 +107,13 @@ class ApprovalController extends Controller
             return;
         }
 
+        // Encerra solicitação delegada pendente, se houver (auditoria).
+        $approvalModel = new ApprovalRequestModel();
+        $pending = $approvalModel->getPendingForDoc($intId);
+        if ($pending !== null) {
+            $approvalModel->settle((int) $pending['id'], 'aprovado', $userId, null);
+        }
+
         Logger::log('approve_doc', "Documento #{$intId} (\"{$doc['title']}\") aprovado por {$user['name']}");
 
         // Send notification to document author
@@ -120,6 +129,8 @@ class ApprovalController extends Controller
         }
 
         $this->jsonOk(['id' => $intId, 'message' => 'Documento aprovado e publicado com sucesso!']);
+        $this->flushResponse();
+        $this->sendResultEmail($doc, $authorId, (string) $user['name'], 'aprovado', null);
     }
 
     public function reject(string $id): void
@@ -166,6 +177,13 @@ class ApprovalController extends Controller
             return;
         }
 
+        // Encerra solicitação delegada pendente, se houver (auditoria).
+        $approvalModel = new ApprovalRequestModel();
+        $pending = $approvalModel->getPendingForDoc($intId);
+        if ($pending !== null) {
+            $approvalModel->settle((int) $pending['id'], 'rejeitado', $userId, $reason);
+        }
+
         // Adicionar comentário automático com o motivo da rejeição
         CommentController::addSystemComment(
             $intId,
@@ -188,5 +206,38 @@ class ApprovalController extends Controller
         }
 
         $this->jsonOk(['id' => $intId, 'message' => 'Documento rejeitado com sucesso.']);
+        $this->flushResponse();
+        $this->sendResultEmail($doc, $authorId, (string) $user['name'], 'rejeitado', $reason);
+    }
+
+    /**
+     * @param array<string, mixed> $doc
+     */
+    private function sendResultEmail(array $doc, int $authorId, string $deciderName, string $action, ?string $reason): void
+    {
+        if ($authorId <= 0) {
+            return;
+        }
+        try {
+            $author = (new \App\Models\UserModel())->findById($authorId);
+            $email = (string) ($author['email'] ?? '');
+            if ($email === '') {
+                return;
+            }
+            $intId = (int) $doc['id'];
+            $html = EmailService::renderTemplate('approval_result', [
+                'docTitle' => (string) $doc['title'],
+                'excerpt' => EmailService::excerpt((string) ($doc['content'] ?? '')),
+                'authorName' => (string) ($author['name'] ?? ''),
+                'deciderName' => $deciderName,
+                'action' => $action,
+                'reason' => $reason,
+                'viewUrl' => EmailService::absoluteUrl('/docs/view/' . $intId),
+            ]);
+            $prefix = $action === 'aprovado' ? '[Aprovado] ' : '[Rejeitado] ';
+            EmailService::send($email, $prefix . (string) $doc['title'], $html);
+        } catch (\Throwable $e) {
+            Logger::log('email_error', 'Falha ao enviar e-mail de resultado: ' . $e->getMessage());
+        }
     }
 }
