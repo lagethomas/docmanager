@@ -456,9 +456,28 @@ var Docs = (function () {
 
   var CURRENT_LOCATION_QUERY = '';
 
+  function positionTopBarDropdown(btnEl, dropdownEl) {
+    if (!btnEl || !dropdownEl || dropdownEl.hidden) return;
+    var rect = btnEl.getBoundingClientRect();
+    dropdownEl.style.position = 'fixed';
+    dropdownEl.style.top = (rect.bottom + 4) + 'px';
+    dropdownEl.style.right = 'auto';
+    dropdownEl.style.zIndex = '9999999';
+
+    var dw = Math.max(dropdownEl.offsetWidth || 260, 260);
+    var leftPos = rect.left;
+    if (leftPos + dw > window.innerWidth - 12) {
+      leftPos = Math.max(12, window.innerWidth - dw - 12);
+    }
+    dropdownEl.style.left = leftPos + 'px';
+  }
+
   function toggleLocationDropdown() {
+    var btn = document.getElementById('btnDocLocations');
     var dropdown = document.getElementById('docLocationsDropdown');
     if (!dropdown) return;
+    var areaDropdown = document.getElementById('docAreasDropdown');
+    if (areaDropdown) areaDropdown.hidden = true;
     dropdown.hidden = !dropdown.hidden;
     if (!dropdown.hidden) {
       CURRENT_LOCATION_QUERY = '';
@@ -468,6 +487,7 @@ var Docs = (function () {
         setTimeout(function () { searchInput.focus(); }, 40);
       }
       renderDocLocationsList();
+      if (btn) positionTopBarDropdown(btn, dropdown);
     }
   }
 
@@ -533,8 +553,11 @@ var Docs = (function () {
   var CURRENT_AREA_QUERY = '';
 
   function toggleAreaDropdown() {
+    var btn = document.getElementById('btnDocAreas');
     var dropdown = document.getElementById('docAreasDropdown');
     if (!dropdown) return;
+    var locDropdown = document.getElementById('docLocationsDropdown');
+    if (locDropdown) locDropdown.hidden = true;
     dropdown.hidden = !dropdown.hidden;
     if (!dropdown.hidden) {
       CURRENT_AREA_QUERY = '';
@@ -544,6 +567,7 @@ var Docs = (function () {
         setTimeout(function () { searchInput.focus(); }, 40);
       }
       renderDocAreasList();
+      if (btn) positionTopBarDropdown(btn, dropdown);
     }
   }
 
@@ -2049,9 +2073,15 @@ var Docs = (function () {
   }
 
   // ─── EXPORTAÇÃO & IMPRESSÃO ─────────────────────────
-  function toggleExportMenu() {
+  function toggleExportMenu(btnEl) {
+    var btn = btnEl || document.getElementById('btnExportDoc');
     var menu = document.getElementById('exportDropdownMenu');
-    if (menu) menu.hidden = !menu.hidden;
+    if (menu) {
+      menu.hidden = !menu.hidden;
+      if (!menu.hidden && btn) {
+        positionTopBarDropdown(btn, menu);
+      }
+    }
   }
 
   function exportMarkdown() {

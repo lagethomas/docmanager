@@ -274,7 +274,7 @@ $user = $user ?? [];
 
           <!-- Dropdown de Exportação -->
           <div class="doceditor-dropdown-wrap">
-            <button type="button" class="btn btn-sm btn-outline" onclick="Docs.toggleExportMenu()" title="Opções de Exportação">
+            <button type="button" class="btn btn-sm btn-outline" id="btnExportDoc" onclick="Docs.toggleExportMenu(this)" title="Opções de Exportação">
               <?php echo icon('download', ['class' => 'btn-svg', 'size' => 14]); ?>
               <span>Exportar</span>
             </button>
