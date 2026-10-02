@@ -120,7 +120,7 @@ $timbradoConfig = (new \App\Models\SettingsModel())->getTimbradoConfig();
         <div class="docs-single-divider"></div>
 
         <!-- Conteúdo Formatado Markdown na Folha A4 -->
-        <div class="docs-single-body public-doc-body" id="publicDocRenderedBody">
+        <div class="docs-single-body preview-content public-doc-body markdown-body" id="publicDocRenderedBody">
           <!-- Renderizado via JavaScript usando parseMarkdown -->
         </div>
 

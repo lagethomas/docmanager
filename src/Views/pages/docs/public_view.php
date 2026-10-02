@@ -41,7 +41,7 @@
     </div>
 
     <!-- Conteúdo do Documento -->
-    <div id="publicDocBody" class="markdown-body" style="line-height: 1.8; font-size: 1rem; color: var(--docs-text, #334155);">
+    <div id="publicDocBody" class="docs-single-body preview-content markdown-body" style="line-height: 1.8; font-size: 1rem; color: var(--docs-text, #334155);">
       <!-- Renderizado via JavaScript usando parseMarkdown -->
     </div>
   </article>

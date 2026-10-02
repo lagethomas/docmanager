@@ -430,8 +430,8 @@ HTML;
 
         .markdown-body code {
             font-family: 'Courier New', Courier, monospace;
-            background-color: #f1f5f9;
-            color: #0f172a;
+            background-color: rgba(26, 187, 156, 0.08);
+            color: #1abb9c;
             padding: 2px 4px;
             border-radius: 3px;
             font-size: 9pt;

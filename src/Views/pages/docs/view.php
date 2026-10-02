@@ -209,7 +209,7 @@ $timbradoConfig = (new \App\Models\SettingsModel())->getTimbradoConfig();
     <div class="docs-single-divider"></div>
 
     <!-- Conteúdo Formatado do Documento (Markdown Renderizado) -->
-    <div class="docs-single-body" id="docRenderedBody">
+    <div class="docs-single-body preview-content markdown-body" id="docRenderedBody">
       <!-- Injetado via JavaScript usando marked.js -->
     </div>
 
