@@ -56,6 +56,12 @@ $articles = $articles ?? [];
     <button type="button" class="btn btn-primary btn-sm doc-filter-btn active" onclick="filterCategory('all', event)">
       Todos os Tópicos (<?php echo count($articles); ?>)
     </button>
+    <button type="button" class="btn btn-secondary btn-sm doc-filter-btn" onclick="filterCategory('funcionalidades', event)">
+      Módulos do Sistema
+    </button>
+    <button type="button" class="btn btn-secondary btn-sm doc-filter-btn" onclick="filterCategory('desenvolvimento', event)">
+      Desenvolvimento & Build
+    </button>
     <button type="button" class="btn btn-secondary btn-sm doc-filter-btn" onclick="filterCategory('configuracao', event)">
       Configuração (.env)
     </button>

@@ -371,6 +371,17 @@
   overflow: visible !important;
 }
 
+.has-open-actions-row {
+  position: relative !important;
+  z-index: 999 !important;
+}
+
+.has-open-actions-card {
+  position: relative !important;
+  z-index: 9999 !important;
+  overflow: visible !important;
+}
+
 .doc-actions-menu {
   position: absolute;
   right: 0;

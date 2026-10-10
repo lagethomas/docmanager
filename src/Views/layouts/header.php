@@ -21,10 +21,7 @@ function navActive(string $current, string $target): string
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="<?php echo Controller::asset('/assets/css/gentelella.css'); ?>">
-<link rel="stylesheet" href="<?php echo Controller::asset('/assets/css/modules/table.min.css'); ?>">
-<link rel="stylesheet" href="<?php echo Controller::asset('/assets/css/modules/docs.min.css'); ?>">
-<link rel="stylesheet" href="<?php echo Controller::asset('/assets/css/modules/reports.min.css'); ?>">
+<link rel="stylesheet" href="<?php echo Controller::asset('/assets/css/utils.min.css'); ?>">
 
 <meta name="csrf-token" content="<?php echo e(CSRF::token()); ?>">
 </head>
@@ -110,30 +107,30 @@ function navActive(string $current, string $target): string
       <?php echo icon('menu', ['size' => 18]); ?>
     </button>
   </div>
-  <div class="topbar-center" style="flex: 1; max-width: 540px; margin: 0 auto; display: flex; justify-content: center; position: relative;">
-    <div class="topbar-global-search" style="position: relative; width: 100%;">
-      <div style="position: relative; display: flex; align-items: center;">
-        <?php echo icon('search', ['style' => 'position: absolute; left: 10px; width: 14px; height: 14px; color: var(--text-muted); pointer-events: none;']); ?>
-        <input type="text" id="globalDocSearchInput" class="form-control" placeholder="Buscar documentos no sistema... (/)" autocomplete="off" style="padding-left: 30px; padding-right: 28px; height: 34px; font-size: 0.82rem; border-radius: 8px; width: 100%; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-color);" />
-        <button type="button" id="globalDocSearchClear" onclick="clearGlobalDocSearch()" hidden style="position: absolute; right: 8px; background: none; border: none; color: var(--text-muted); font-size: 0.9rem; cursor: pointer; padding: 2px;">✕</button>
+  <div class="topbar-center">
+    <div class="topbar-global-search">
+      <div class="topbar-global-search-wrap">
+        <?php echo icon('search', ['class' => 'topbar-search-icon']); ?>
+        <input type="text" id="globalDocSearchInput" class="form-control topbar-search-input" placeholder="Buscar documentos no sistema... (/)" autocomplete="off" />
+        <button type="button" id="globalDocSearchClear" onclick="clearGlobalDocSearch()" hidden class="topbar-search-clear">✕</button>
       </div>
-      <div id="globalDocSearchDropdown" class="tb-dropdown" hidden style="position: absolute; top: 40px; left: 0; width: 100%; max-height: 360px; overflow-y: auto; z-index: 1050; padding: 0; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);"></div>
+      <div id="globalDocSearchDropdown" class="tb-dropdown topbar-search-dropdown" hidden></div>
     </div>
   </div>
   <div class="topbar-right">
     <!-- Sino de Notificações -->
-    <div class="notif-wrap" style="position: relative;">
-      <button class="tb-btn notif-toggle" id="notifBtn" title="Notificações" aria-label="Notificações" style="position: relative;">
+    <div class="notif-wrap">
+      <button class="tb-btn notif-toggle" id="notifBtn" title="Notificações" aria-label="Notificações">
         <?php echo icon('bell', ['size' => 16]); ?>
         <span class="notif-badge" id="notifBadge" hidden>0</span>
       </button>
-      <div class="tb-dropdown notif-dropdown" id="notifDropdown" hidden style="width: 320px; right: 0; padding: 0;">
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border-color); font-weight: 700; font-size: 0.9rem;">
+      <div class="tb-dropdown notif-dropdown" id="notifDropdown" hidden>
+        <div class="notif-dropdown-header">
           <span>Notificações</span>
-          <button onclick="markAllNotificationsRead()" style="background: none; border: none; color: var(--primary); font-size: 0.75rem; cursor: pointer; font-weight: 600;">Marcar todas como lidas</button>
+          <button onclick="markAllNotificationsRead()" class="notif-mark-read-btn">Marcar todas como lidas</button>
         </div>
-        <div id="notifList" style="max-height: 320px; overflow-y: auto; padding: 0.5rem 0;">
-          <div style="padding: 1.5rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">Carregando...</div>
+        <div id="notifList" class="notif-list-container">
+          <div class="notif-loading-text">Carregando...</div>
         </div>
       </div>
     </div>

@@ -54,6 +54,7 @@ composer lint          # PHP syntax check (src, public, bin)
 vendor/bin/phpunit     # Run tests (tests/Unit/)
 composer migrate       # Run pending migrations (bin/migrate.php)
 composer seed          # Seed data
+composer build-assets  # Compile & minify CSS/JS bundles (bin/build_assets.php)
 ```
 
 PHPStan (level 5):
@@ -68,7 +69,8 @@ Only analyzes: `src/Core`, `src/Controllers`, `src/Models`, `src/Middlewares`, `
 ## Gotchas
 
 - `src/Helpers/globals.php` defines `e()`, `sanitize_input()`, `csrf_field()` globally — loaded by both bootstrap and phpstan-bootstrap.
-- `Controller::asset()` reads `public/assets/css/manifest.json` for cache-busting. If adding CSS modules, compute hash: `php -r "echo substr(md5_file('path/to/file.min.css'), 0, 8), PHP_EOL;"`
+- `Controller::asset()` reads `public/assets/css/manifest.json` for cache-busting.
+- Asset compilation: `composer build-assets` (ou `php bin/build_assets.php`) utiliza `matthiasmullie/minify` para compilar e minificar `gentelella.css`, `table.min.css`, `docs.min.css` e `reports.min.css` em `public/assets/css/utils.min.css` e atualiza os hashes do `manifest.json` automaticamente.
 - `Router` matches routes with regex. `{param}` captures become controller method arguments.
 - Database singleton: `Database::getInstance()` or global alias `DB`.
 - `bin/migrate.php` creates `cp_migrations` table on first run.

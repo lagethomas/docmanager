@@ -14,14 +14,14 @@ $user = $user ?? [];
 <div class="approvals-app" id="approvalsApp">
 
   <!-- ─── HEADER ────────────────────────────────────────── -->
-  <div class="page-header-row" style="margin-bottom: 1.5rem;">
-    <div style="display: flex; align-items: center; gap: 0.75rem;">
-      <div style="width: 40px; height: 40px; border-radius: 8px; background: var(--primary-lt); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:22px;height:22px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+  <div class="page-header-row">
+    <div class="page-title-wrap">
+      <div class="page-title-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       </div>
       <div>
         <h1 class="page-title">Aprovações de Documentos</h1>
-        <p class="page-pretitle" style="margin-top: 4px; text-transform: none; letter-spacing: normal; font-weight: 400; font-size: 13px;">
+        <p class="page-pretitle page-pretitle-sub">
           Revise, aprove ou devolva documentos enviados pela equipe para publicação.
         </p>
       </div>
@@ -31,8 +31,8 @@ $user = $user ?? [];
   <!-- ─── METRIC CARDS ─────────────────────────────────── -->
   <div class="approvals-stats-row">
     <div class="approval-stat-card active" onclick="Approvals.filterStatus('pendente', this)">
-      <div class="stat-icon pending" style="display:flex;align-items:center;justify-content:center;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <div class="stat-icon pending">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       </div>
       <div class="stat-info">
         <span class="stat-val" id="statPendingCount">0</span>
@@ -40,8 +40,8 @@ $user = $user ?? [];
       </div>
     </div>
     <div class="approval-stat-card" onclick="Approvals.filterStatus('aprovado', this)">
-      <div class="stat-icon approved" style="display:flex;align-items:center;justify-content:center;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <div class="stat-icon approved">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
       </div>
       <div class="stat-info">
         <span class="stat-val" id="statApprovedCount">0</span>
@@ -49,8 +49,8 @@ $user = $user ?? [];
       </div>
     </div>
     <div class="approval-stat-card" onclick="Approvals.filterStatus('rejeitado', this)">
-      <div class="stat-icon rejected" style="display:flex;align-items:center;justify-content:center;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <div class="stat-icon rejected">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </div>
       <div class="stat-info">
         <span class="stat-val" id="statRejectedCount">0</span>
@@ -58,8 +58,8 @@ $user = $user ?? [];
       </div>
     </div>
     <div class="approval-stat-card" onclick="Approvals.filterStatus('todos', this)">
-      <div class="stat-icon all" style="display:flex;align-items:center;justify-content:center;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <div class="stat-icon all">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
       <div class="stat-info">
         <span class="stat-val" id="statTotalCount">0</span>
@@ -93,11 +93,11 @@ $user = $user ?? [];
     <!-- Toggle Card / Lista -->
     <div class="approvals-view-toggle" role="group" aria-label="Modo de visualização">
       <button type="button" id="approvalsBtnCard" class="view-toggle-btn" onclick="Approvals.setViewMode('card')" title="Visualização em Cards">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         <span>Cards</span>
       </button>
       <button type="button" id="approvalsBtnList" class="view-toggle-btn active" onclick="Approvals.setViewMode('list')" title="Visualização em Lista">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
         <span>Lista</span>
       </button>
     </div>
@@ -115,7 +115,7 @@ $user = $user ?? [];
       <table class="table" id="approvalsTable">
         <thead>
           <tr>
-            <th style="width: 40px"></th>
+            <th class="th-icon-cell"></th>
             <th data-sort="title" class="sortable-th">Título <span class="sort-icon"></span></th>
             <th data-sort="category" class="sortable-th">Pasta <span class="sort-icon"></span></th>
             <th data-sort="author" class="sortable-th">Autor <span class="sort-icon"></span></th>
@@ -136,8 +136,8 @@ $user = $user ?? [];
 
   <!-- ─── EMPTY STATE ──────────────────────────────────── -->
   <div class="approvals-empty-state" id="approvalsEmptyState" hidden>
-    <div class="empty-icon" style="display:flex;align-items:center;justify-content:center;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:36px;height:36px;color:var(--docs-primary);"><polyline points="20 6 9 17 4 12"/></svg>
+    <div class="empty-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg>
     </div>
     <h3 id="emptyTitle">Tudo limpo por aqui!</h3>
     <p id="emptyDesc">Não há documentos com este status aguardando ação no momento.</p>
@@ -147,11 +147,11 @@ $user = $user ?? [];
 
 <!-- ─── MODAL DE REJEIÇÃO COM JUSTIFICATIVA ─────────────── -->
 <div class="modal-backdrop-custom" id="rejectReasonModal" hidden>
-  <div class="modal-dialog-custom" style="max-width: 500px;">
+  <div class="modal-dialog-custom modal-dialog-sm-500">
     <div class="modal-header-custom">
       <div class="modal-header-title">
-        <span class="modal-icon-badge" style="background: rgba(214, 57, 57, 0.12); color: var(--danger, #d63939);display:flex;align-items:center;justify-content:center;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span class="modal-icon-badge modal-icon-badge-danger">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         </span>
         <h3>Rejeitar Documento</h3>
       </div>
@@ -159,12 +159,12 @@ $user = $user ?? [];
     </div>
 
     <div class="modal-body-custom">
-      <p style="font-size: 0.88rem; color: var(--docs-text-mut); margin-bottom: 0.75rem;">
+      <p class="modal-sub-text">
         Por favor, forneça o motivo ou as alterações necessárias para que o autor possa ajustar o documento:
       </p>
       <div class="form-group-custom">
         <label for="rejectReasonText">Motivo da Rejeição *</label>
-        <textarea id="rejectReasonText" class="form-input-custom" rows="4" placeholder="Ex: Necessário complementar a seção de requisitos de segurança..." style="resize: vertical; font-family: inherit; font-size: 0.88rem;"></textarea>
+        <textarea id="rejectReasonText" class="form-input-custom modal-textarea-reason" rows="4" placeholder="Ex: Necessário complementar a seção de requisitos de segurança..."></textarea>
       </div>
     </div>
 

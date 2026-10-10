@@ -66,11 +66,11 @@ class SettingsModel extends Repository
         $rawFooterImages = $this->get('timbrado_footer_images', '');
 
         /** @var list<string> $headerImageRels */
-        $headerImageRels = is_string($rawHeaderImages) && $rawHeaderImages !== ''
+        $headerImageRels = $rawHeaderImages !== ''
             ? (json_decode($rawHeaderImages, true) ?: [])
             : [];
         /** @var list<string> $footerImageRels */
-        $footerImageRels = is_string($rawFooterImages) && $rawFooterImages !== ''
+        $footerImageRels = $rawFooterImages !== ''
             ? (json_decode($rawFooterImages, true) ?: [])
             : [];
 
@@ -78,7 +78,7 @@ class SettingsModel extends Repository
         $needsExtraction = $enabled && file_exists($docxFile) && (count($headerImageRels) === 0 || count($footerImageRels) === 0);
         // Também verificar se algum arquivo de imagem já não existe no disco
         if (!$needsExtraction && $enabled && count($headerImageRels) > 0) {
-            $firstPath = $baseDir . '/' . ltrim((string) ($headerImageRels[0] ?? ''), '/');
+            $firstPath = $baseDir . '/' . ltrim($headerImageRels[0], '/');
             if (!file_exists($firstPath)) {
                 $needsExtraction = true;
             }
@@ -112,7 +112,7 @@ class SettingsModel extends Repository
         // Gerar Data URIs para TODAS as imagens de header e footer
         $headerDataUris = [];
         foreach ($headerImageRels as $rel) {
-            if (!is_string($rel) || $rel === '') {
+            if ($rel === '') {
                 continue;
             }
             $absPath = $baseDir . '/' . ltrim($rel, '/');
@@ -127,7 +127,7 @@ class SettingsModel extends Repository
 
         $footerDataUris = [];
         foreach ($footerImageRels as $rel) {
-            if (!is_string($rel) || $rel === '') {
+            if ($rel === '') {
                 continue;
             }
             $absPath = $baseDir . '/' . ltrim($rel, '/');

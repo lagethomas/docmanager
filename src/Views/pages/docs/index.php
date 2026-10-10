@@ -208,24 +208,24 @@ $user = $user ?? [];
           </div>
 
           <!-- Dropdown Agendamento & Validade -->
-          <div id="docSchedulePicker" class="doceditor-dropdown-wrap" style="position: relative;">
-            <button type="button" class="btn btn-sm btn-outline" id="btnDocSchedule" onclick="Docs.toggleScheduleDropdown()" title="Agendar publicação e data de validade/expiração" style="display: flex; align-items: center; gap: 4px;">
+          <div id="docSchedulePicker" class="doceditor-dropdown-wrap">
+            <button type="button" class="btn btn-sm btn-outline doceditor-btn-schedule" id="btnDocSchedule" onclick="Docs.toggleScheduleDropdown()" title="Agendar publicação e data de validade/expiração">
               <?php echo icon('clock', ['size' => 13]); ?>
               <span id="docScheduleLabel">Agendamento &amp; Validade</span>
             </button>
-            <div id="docScheduleDropdown" class="doceditor-dropdown-menu" hidden style="width: 310px; min-width: 280px; max-width: calc(100vw - 24px); padding: 12px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.25); z-index: 1050; background: var(--docs-surface); border: 1px solid var(--docs-border); box-sizing: border-box; white-space: normal;">
-              <div style="font-size: 0.72rem; font-weight: 700; color: var(--docs-text-mut); margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--docs-border); display: flex; align-items: center; justify-content: space-between;">
+            <div id="docScheduleDropdown" class="doceditor-dropdown-menu doceditor-schedule-dropdown" hidden>
+              <div class="doceditor-dropdown-header-title">
                 <span>AGENDAMENTO &amp; VALIDADE</span>
               </div>
-              <div style="margin-bottom: 10px;">
-                <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--docs-text-mut); margin-bottom: 4px;">Agendar Publicação</label>
-                <input type="datetime-local" id="docPublishAt" class="form-control form-control-sm" style="width: 100%; font-size: 0.8rem; padding: 4px 8px; border: 1px solid var(--docs-border); border-radius: 6px; background: var(--docs-bg); color: var(--docs-text); box-sizing: border-box;" />
-                <span style="font-size: 0.7rem; color: var(--docs-text-mut); display: block; margin-top: 2px; white-space: normal; line-height: 1.35; word-wrap: break-word;">O documento ficará agendado até esta data.</span>
+              <div class="doceditor-form-group">
+                <label class="doceditor-field-label">Agendar Publicação</label>
+                <input type="datetime-local" id="docPublishAt" class="form-control form-control-sm doceditor-field-input" />
+                <span class="doceditor-field-help">O documento ficará agendado até esta data.</span>
               </div>
               <div>
-                <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--docs-text-mut); margin-bottom: 4px;">Data de Validade / Revisão</label>
-                <input type="datetime-local" id="docExpiresAt" class="form-control form-control-sm" style="width: 100%; font-size: 0.8rem; padding: 4px 8px; border: 1px solid var(--docs-border); border-radius: 6px; background: var(--docs-bg); color: var(--docs-text); box-sizing: border-box;" />
-                <span style="font-size: 0.7rem; color: var(--docs-text-mut); display: block; margin-top: 2px; white-space: normal; line-height: 1.35; word-wrap: break-word;">Após a data, o documento é marcado para revisão.</span>
+                <label class="doceditor-field-label">Data de Validade / Revisão</label>
+                <input type="datetime-local" id="docExpiresAt" class="form-control form-control-sm doceditor-field-input" />
+                <span class="doceditor-field-help">Após a data, o documento é marcado para revisão.</span>
               </div>
             </div>
           </div>
@@ -233,48 +233,48 @@ $user = $user ?? [];
           <label class="toggle-switch" title="Tornar documento livremente visível na Biblioteca sem login">
             <input type="checkbox" id="chkDocIsPublic" />
             <span class="toggle-slider"></span>
-            <span style="display:flex;align-items:center;gap:4px;"><?php echo icon('globe', ['size' => 13]); ?> Público</span>
+            <span class="doceditor-toggle-label"><?php echo icon('globe', ['size' => 13]); ?> Público</span>
           </label>
 
           <label class="toggle-switch" title="Restringir acesso por localização/unidade">
             <input type="checkbox" id="chkDocIsRestricted" onchange="Docs.toggleRestricted(this.checked)" />
             <span class="toggle-slider"></span>
-            <span style="display:flex;align-items:center;gap:4px;"><?php echo icon('location', ['size' => 13]); ?> Restringir</span>
+            <span class="doceditor-toggle-label"><?php echo icon('location', ['size' => 13]); ?> Restringir</span>
           </label>
 
-          <div id="docLocationPicker" class="doceditor-dropdown-wrap" hidden style="position: relative;">
-            <button type="button" class="btn btn-sm btn-outline" id="btnDocLocations" onclick="Docs.toggleLocationDropdown()" title="Selecionar localizações permitidas" style="display: flex; align-items: center; gap: 4px; border-color: rgba(239, 68, 68, 0.4); color: #ef4444;">
+          <div id="docLocationPicker" class="doceditor-dropdown-wrap" hidden>
+            <button type="button" class="btn btn-sm btn-outline doceditor-btn-locations" id="btnDocLocations" onclick="Docs.toggleLocationDropdown()" title="Selecionar localizações permitidas">
               <?php echo icon('location', ['size' => 13]); ?>
               <span id="docLocationsLabel">Localizações (0)</span>
             </button>
-            <div id="docLocationsDropdown" class="doceditor-dropdown-menu" hidden style="min-width: 250px; max-width: 320px; padding: 10px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.25); z-index: 1050;">
-              <div style="font-size: 0.72rem; font-weight: 700; color: var(--docs-text-mut); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--docs-border); display: flex; align-items: center; justify-content: space-between;">
+            <div id="docLocationsDropdown" class="doceditor-dropdown-menu doceditor-picker-dropdown" hidden>
+              <div class="doceditor-picker-header">
                 <span>LOCALIZAÇÕES AUTORIZADAS</span>
-                <span id="docLocationsCountBadge" style="font-size: 0.7rem; color: #ef4444; font-weight: 600;"></span>
+                <span id="docLocationsCountBadge" class="badge-location-count"></span>
               </div>
-              <div style="position: relative; margin-bottom: 8px;">
-                <?php echo icon('search', ['size' => 13, 'style' => 'position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--docs-text-mut); pointer-events: none;']); ?>
-                <input type="text" id="docLocationSearchInput" placeholder="Buscar localização..." autocomplete="off" style="width: 100%; height: 30px; font-size: 0.8rem; padding: 2px 8px 2px 28px; border: 1px solid var(--docs-border); border-radius: 6px; background: var(--docs-bg); color: var(--docs-text); outline: none; box-sizing: border-box;" oninput="Docs.filterLocations(this.value)" />
+              <div class="doceditor-picker-search-wrap">
+                <?php echo icon('search', ['size' => 13, 'class' => 'doceditor-picker-search-icon']); ?>
+                <input type="text" id="docLocationSearchInput" placeholder="Buscar localização..." autocomplete="off" class="doceditor-picker-search-input" oninput="Docs.filterLocations(this.value)" />
               </div>
-              <div id="docLocationsList" style="display: flex; flex-direction: column; gap: 2px; max-height: 238px; overflow-y: auto; scrollbar-width: thin; padding-right: 2px;"></div>
+              <div id="docLocationsList" class="doceditor-picker-list"></div>
             </div>
           </div>
 
-          <div id="docAreaPicker" class="doceditor-dropdown-wrap" hidden style="position: relative;">
-            <button type="button" class="btn btn-sm btn-outline" id="btnDocAreas" onclick="Docs.toggleAreaDropdown()" title="Selecionar áreas/setores permitidos" style="display: flex; align-items: center; gap: 4px; border-color: rgba(99, 102, 241, 0.4); color: #6366f1;">
+          <div id="docAreaPicker" class="doceditor-dropdown-wrap" hidden>
+            <button type="button" class="btn btn-sm btn-outline doceditor-btn-areas" id="btnDocAreas" onclick="Docs.toggleAreaDropdown()" title="Selecionar áreas/setores permitidos">
               <?php echo icon('area', ['size' => 13]); ?>
               <span id="docAreasLabel">Áreas (0)</span>
             </button>
-            <div id="docAreasDropdown" class="doceditor-dropdown-menu" hidden style="min-width: 250px; max-width: 320px; padding: 10px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.25); z-index: 1050;">
-              <div style="font-size: 0.72rem; font-weight: 700; color: var(--docs-text-mut); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--docs-border); display: flex; align-items: center; justify-content: space-between;">
+            <div id="docAreasDropdown" class="doceditor-dropdown-menu doceditor-picker-dropdown" hidden>
+              <div class="doceditor-picker-header">
                 <span>ÁREAS AUTORIZADAS</span>
-                <span id="docAreasCountBadge" style="font-size: 0.7rem; color: #6366f1; font-weight: 600;"></span>
+                <span id="docAreasCountBadge" class="badge-area-count"></span>
               </div>
-              <div style="position: relative; margin-bottom: 8px;">
-                <?php echo icon('search', ['size' => 13, 'style' => 'position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--docs-text-mut); pointer-events: none;']); ?>
-                <input type="text" id="docAreaSearchInput" placeholder="Buscar área/setor..." autocomplete="off" style="width: 100%; height: 30px; font-size: 0.8rem; padding: 2px 8px 2px 28px; border: 1px solid var(--docs-border); border-radius: 6px; background: var(--docs-bg); color: var(--docs-text); outline: none; box-sizing: border-box;" oninput="Docs.filterAreas(this.value)" />
+              <div class="doceditor-picker-search-wrap">
+                <?php echo icon('search', ['size' => 13, 'class' => 'doceditor-picker-search-icon']); ?>
+                <input type="text" id="docAreaSearchInput" placeholder="Buscar área/setor..." autocomplete="off" class="doceditor-picker-search-input" oninput="Docs.filterAreas(this.value)" />
               </div>
-              <div id="docAreasList" style="display: flex; flex-direction: column; gap: 2px; max-height: 238px; overflow-y: auto; scrollbar-width: thin; padding-right: 2px;"></div>
+              <div id="docAreasList" class="doceditor-picker-list"></div>
             </div>
           </div>
 
@@ -436,7 +436,7 @@ $user = $user ?? [];
       <div class="meta-tags-section">
         <span class="meta-label">Tags:</span>
         <div class="meta-tags-container" id="tagsContainer">
-          <div class="tag-input-autocomplete-wrapper" style="position:relative;display:inline-flex;align-items:center;">
+          <div class="tag-input-autocomplete-wrapper">
             <input type="text" id="tagInput" class="meta-tag-input" placeholder="+ tag (pressione Enter)" autocomplete="off" />
             <div id="tagSuggestionsDropdown" class="tag-suggestions-dropdown" hidden></div>
           </div>
@@ -499,7 +499,7 @@ $user = $user ?? [];
   <div class="modal-dialog-custom">
     <div class="modal-header-custom">
       <div class="modal-header-title">
-        <span class="modal-icon-badge" id="catModalIconBadge" style="display:flex;align-items:center;justify-content:center;color:var(--docs-primary);">
+        <span class="modal-icon-badge" id="catModalIconBadge">
           <?php echo icon('folder', ['size' => 20]); ?>
         </span>
         <h3 id="catModalTitle">Nova Pasta</h3>

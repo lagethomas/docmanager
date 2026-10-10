@@ -97,11 +97,3 @@ $user = $user ?? [];
     </div>
   </div>
 </div>
-
-<style>
-.active-tab {
-  background: var(--primary, #2563eb) !important;
-  color: #ffffff !important;
-  box-shadow: 0 2px 4px rgba(37,99,235,0.2);
-}
-</style>

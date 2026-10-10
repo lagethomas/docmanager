@@ -235,7 +235,7 @@ class DocConverterService
             }
         }
 
-        return implode("\n\n", array_filter($lines, fn($line) => $line !== null));
+        return implode("\n\n", array_filter($lines, fn($line) => trim($line) !== ''));
     }
 
     private function parseParagraphNode(\DOMElement $pNode, \DOMXPath $xpath): string

@@ -114,13 +114,7 @@ $serverError = $errKey !== '' ? ($errorMessageMap[$errKey] ?? 'Ocorreu um erro n
       </div>
     </div>
   </div>
-</div>
-<style>
-@keyframes authSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-</style>
+
 <script>
 (function () {
   'use strict';

@@ -1137,11 +1137,15 @@ var Docs = (function () {
     if (emptyState) emptyState.hidden = true;
 
     if (CURRENT_VIEW === 'grid') {
+      if (tableBody) tableBody.innerHTML = '';
       if (grid) grid.hidden = false;
       if (tableWrapper) tableWrapper.hidden = true;
       renderGridView(grid);
     } else {
-      if (grid) grid.hidden = true;
+      if (grid) {
+        grid.innerHTML = '';
+        grid.hidden = true;
+      }
       if (tableWrapper) tableWrapper.hidden = false;
       renderTableView(tableBody);
     }
@@ -1288,11 +1292,25 @@ var Docs = (function () {
     for (var j = 0; j < openContainers.length; j++) {
       openContainers[j].classList.remove('has-open-actions-menu');
     }
+    var openRows = document.querySelectorAll('.has-open-actions-row');
+    for (var k = 0; k < openRows.length; k++) {
+      openRows[k].classList.remove('has-open-actions-row');
+      openRows[k].style.zIndex = '';
+      openRows[k].style.position = '';
+    }
+    var openCards = document.querySelectorAll('.has-open-actions-card');
+    for (var c = 0; c < openCards.length; c++) {
+      openCards[c].classList.remove('has-open-actions-card');
+      openCards[c].style.zIndex = '';
+      openCards[c].style.overflow = '';
+    }
   }
 
   function toggleActionsMenu(docId, event) {
     if (event) event.stopPropagation();
-    var menu = document.getElementById('doc-actions-menu-' + docId);
+    var btn = (event && event.currentTarget) ? event.currentTarget : null;
+    var dropdown = btn ? btn.closest('.doc-actions-dropdown') : null;
+    var menu = dropdown ? dropdown.querySelector('.doc-actions-menu') : document.getElementById('doc-actions-menu-' + docId);
     if (!menu) return;
 
     var isHidden = menu.hasAttribute('hidden');
@@ -1302,17 +1320,32 @@ var Docs = (function () {
       menu.removeAttribute('hidden');
       var parent = menu.closest('.doc-actions-dropdown');
       if (parent) {
-        var rect = parent.getBoundingClientRect();
-        var spaceBelowViewport = window.innerHeight - rect.bottom;
+        var tr = parent.closest('tr');
+        if (tr) {
+          tr.classList.add('has-open-actions-row');
+          tr.style.position = 'relative';
+          tr.style.zIndex = '999';
+        }
 
-        var tableWrapper = parent.closest('.table-responsive, .docs-table-wrapper, .docs-table-container, .sys-table-container');
-        var spaceBelowContainer = tableWrapper ? (tableWrapper.getBoundingClientRect().bottom - rect.bottom) : 999;
+        var card = parent.closest('.doc-card-pro, .doc-card, .card');
+        if (card) {
+          card.classList.add('has-open-actions-card');
+          card.style.position = 'relative';
+          card.style.zIndex = '9999';
+          card.style.overflow = 'visible';
+        }
 
+        var tableWrapper = parent.closest('.table-responsive, .docs-table-wrapper, .docs-table-container, .sys-table-container, .card, .docs-card, .docs-content-area, .docs-grid-container');
         if (tableWrapper) {
           tableWrapper.classList.add('has-open-actions-menu');
         }
 
-        if ((spaceBelowViewport < 260 || spaceBelowContainer < 260) && rect.top > 180) {
+        var rect = parent.getBoundingClientRect();
+        var spaceBelowViewport = window.innerHeight - rect.bottom;
+        var spaceAboveViewport = rect.top;
+
+        // Never flip to dropup if rect.top < 320px to avoid sliding under topbar/header
+        if (spaceBelowViewport < 260 && spaceAboveViewport >= 320) {
           parent.classList.add('dropup');
         } else {
           parent.classList.remove('dropup');

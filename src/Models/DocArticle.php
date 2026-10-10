@@ -517,6 +517,160 @@ const categoryMap = Icons.getCategoryMap();</code></pre>
                     <code style="font-size: 0.9rem; color: #1e293b;">*/5 * * * * php /var/www/html/bin/cron.php --full &gt;&gt; /dev/null 2&gt;&amp;1</code>
                 </div>
             '
+        ],
+        'compilacao-build-assets' => [
+            'slug' => 'compilacao-build-assets',
+            'title' => '7. Guia de Build, Compilação e Minificação de Assets (CSS & JS)',
+            'category' => 'desenvolvimento',
+            'category_name' => 'Desenvolvimento & Build',
+            'icon' => 'code',
+            'summary' => 'Instruções de compilação, minificação e geração de bundles unificados CSS/JS usando Composer e matthiasmullie/minify.',
+            'read_time' => '4 min de leitura',
+            'content_html' => '
+                <h3>Sistema de Build e Minificação de Assets</h3>
+                <p>O DocManager possui um pipeline automatizado de compilação de ativos estáticos (CSS e JavaScript) para garantir opacidade 100%, carregamento rápido e eliminação de requisições HTTP redundantes no front-end.</p>
+
+                <div class="alert alert-info" style="margin: 1.25rem 0;">
+                    <div class="alert-body">
+                        <strong>Comando Principal de Build:</strong> Execute <code>composer build-assets</code> no terminal ou via CLI.
+                    </div>
+                </div>
+
+                <h4>🛠️ Estrutura do Pipeline de Assets</h4>
+                <div class="table-responsive" style="margin-top: 1rem;">
+                    <table class="table" style="font-size: 0.88rem;">
+                        <thead>
+                            <tr>
+                                <th>Arquivo / Ativo</th>
+                                <th>Origem(ns)</th>
+                                <th>Destino Minificado</th>
+                                <th>Descrição</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>utils.min.css</code></td>
+                                <td><code>gentelella.css</code>, <code>table.min.css</code>, <code>docs.min.css</code>, <code>reports.min.css</code></td>
+                                <td><code>public/assets/css/utils.min.css</code></td>
+                                <td><strong>Bundle CSS Unificado:</strong> Entrega única no front-end para 100% dos estilos do sistema.</td>
+                            </tr>
+                            <tr>
+                                <td><code>app.min.js</code></td>
+                                <td><code>icons.js</code>, <code>common.js</code>, <code>searchable_select.js</code>, <code>diff.js</code></td>
+                                <td><code>public/assets/js/app.min.js</code></td>
+                                <td><strong>Bundle JS Base:</strong> Utilitários e helpers centrais empacotados.</td>
+                            </tr>
+                            <tr>
+                                <td><code>*.min.js</code></td>
+                                <td><code>public/assets/js/src/*.js</code></td>
+                                <td><code>public/assets/js/*.min.js</code></td>
+                                <td><strong>Scripts de Página Minificados:</strong> Módulos de cada tela (ex: <code>docs.min.js</code>, <code>usuarios.min.js</code>).</td>
+                            </tr>
+                            <tr>
+                                <td><code>manifest.json</code></td>
+                                <td>Compilação automática</td>
+                                <td><code>public/assets/css/manifest.json</code></td>
+                                <td><strong>Cache-Busting:</strong> Grava o hash md5 de 8 caracteres de cada asset para invalidação instantânea de cache no navegador via <code>Controller::asset()</code>.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h4 style="margin-top: 1.5rem;">⚡ Como Executar o Build</h4>
+                <p>Sempre que realizar alterações nos arquivos de estilos ou rotinas em JavaScript, execute o script de build:</p>
+
+                <pre style="background: rgba(15,23,42,0.9); color: #38bdf8; padding: 12px; border-radius: 8px;"><code># Via Atalho Composer
+composer build-assets
+
+# Ou diretamente via PHP CLI
+php bin/build_assets.php</code></pre>
+            '
+        ],
+
+        'gestao-documentos-rascunhos' => [
+            'slug' => 'gestao-documentos-rascunhos',
+            'title' => '8. Gestão de Documentos, Rascunhos e Histórico de Versões',
+            'category' => 'funcionalidades',
+            'category_name' => 'Módulos do Sistema',
+            'icon' => 'document',
+            'summary' => 'Como funciona a criação de documentos, controle de rascunho sem impactar a versão pública ativa, comparação diff e publicação.',
+            'read_time' => '5 min de leitura',
+            'content_html' => '
+                <h3>Ciclo de Vida do Documento no DocManager</h3>
+                <p>O DocManager separa com precisão o conteúdo em rascunho (em edição) da versão oficial publicada. Isso garante que alterações em andamento não afetem a visualização dos usuários leitores até que a revisão seja finalizada e publicada.</p>
+
+                <h4>📑 Estados e Rascunho Isolado</h4>
+                <ul style="line-height: 1.8;">
+                    <li><strong>Rascunho (Draft):</strong> Ao editar um documento publicado, as alterações ficam salvas como rascunho discreto. Uma indicação sutil com ícone de lápis exibe que há uma versão em edição.</li>
+                    <li><strong>Publicação:</strong> Somente ao clicar em "Publicar", o rascunho é promovido a nova versão oficial e os alertas de rascunho são atualizados.</li>
+                    <li><strong>Comparador Visual (Diff):</strong> É possível visualizar lado a lado as diferenças entre o rascunho atual e a versão publicada.</li>
+                    <li><strong>Histórico & Reversão:</strong> Todas as edições anteriores ficam registradas no histórico de versões para auditoria e eventual restauração.</li>
+                </ul>
+            '
+        ],
+
+        'modulo-issues' => [
+            'slug' => 'modulo-issues',
+            'title' => '9. Módulo de Apontamentos (Issues), Comentários e Painel Flutuante',
+            'category' => 'funcionalidades',
+            'category_name' => 'Módulos do Sistema',
+            'icon' => 'bell',
+            'summary' => 'Como abrir apontamentos vinculados a trechos do documento, gerenciar status (Aberto, Em Análise, Concluído) e utilizar o painel flutuante.',
+            'read_time' => '4 min de leitura',
+            'content_html' => '
+                <h3>Gestão Integrada de Apontamentos (Issues)</h3>
+                <p>O módulo de Apontamentos permite registrar observações, dúvidas ou sugestões de melhoria vinculadas diretamente aos documentos cadastrados.</p>
+
+                <h4>💡 Recursos Principais</h4>
+                <ul style="line-height: 1.8;">
+                    <li><strong>Painel Flutuante de Reading Mode:</strong> Para manter a leitura do documento limpa e despoluída, o painel de apontamentos pode ser aberto através de um ícone flutuante sem sobrepor a barra superior.</li>
+                    <li><strong>Atribuição & Gravidade:</strong> Cada issue pode ter responsável, prazo e nível de severidade (Baixa, Média, Alta, Crítica).</li>
+                    <li><strong>Discussões & Comentários:</strong> Membros da equipe podem trocar mensagens e anexar contextos dentro de cada apontamento.</li>
+                </ul>
+            '
+        ],
+
+        'modulo-aprovacoes-links' => [
+            'slug' => 'modulo-aprovacoes-links',
+            'title' => '10. Processo de Aprovações, Assinaturas e Links Públicos',
+            'category' => 'funcionalidades',
+            'category_name' => 'Módulos do Sistema',
+            'icon' => 'shield',
+            'summary' => 'Fluxos de aprovação sequencial/paralela, geração de tokens para compartilhamento externo seguro e auditoria.',
+            'read_time' => '4 min de leitura',
+            'content_html' => '
+                <h3>Aprovações Corporativas e Envio Externo</h3>
+                <p>Garante governança no aceite de documentos por gestores internos e partes interessadas externas através de links seguros.</p>
+
+                <h4>🔐 Destaques do Fluxo</h4>
+                <ul style="line-height: 1.8;">
+                    <li><strong>Solicitações de Aprovação:</strong> Encaminhamento de documentos para revisão com notificação por e-mail e painel centralizado de aprovações.</li>
+                    <li><strong>Links Públicos Temporários:</strong> Compartilhamento seguro por token único com data de expiração e controle de acessos sem necessidade de login.</li>
+                    <li><strong>Registro de Log:</strong> Cada aceite ou rejeição registra IP, data/hora e justificativa.</li>
+                </ul>
+            '
+        ],
+
+        'gestao-usuarios-permissoes' => [
+            'slug' => 'gestao-usuarios-permissoes',
+            'title' => '11. Administração de Usuários, Áreas, Locais e Configurações',
+            'category' => 'configuracao',
+            'category_name' => 'Configuração & Administração',
+            'icon' => 'users',
+            'summary' => 'Cadastro de usuários, vinculação a áreas/setores, locais físicos e parâmetros gerais do sistema.',
+            'read_time' => '4 min de leitura',
+            'content_html' => '
+                <h3>Painel de Administração Geral</h3>
+                <p>Controles centrais do administrador para gerenciar o acesso ao DocManager e manter a taxonomia da organização.</p>
+
+                <h4>🏢 Módulos Administrativos</h4>
+                <ul style="line-height: 1.8;">
+                    <li><strong>Usuários:</strong> Gestão de acessos, papéis (Administrador e Usuário) e vinculação de e-mail para SSO Office 365.</li>
+                    <li><strong>Áreas & Setores:</strong> Organização de departamentos para segregação de visibilidade de documentos.</li>
+                    <li><strong>Locais:</strong> Mapeamento de unidades físicas para rastreabilidade de cópias físicas ou físicas/digitais.</li>
+                    <li><strong>Configurações do Sistema:</strong> Ajuste do nome da empresa, logo, tempo de expiração padrão e parâmetros de e-mail SMTP.</li>
+                </ul>
+            '
         ]
     ];
 

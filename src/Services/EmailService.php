@@ -122,7 +122,8 @@ class EmailService
         $encryption = strtolower(defined('SMTP_ENCRYPTION') ? (string) SMTP_ENCRYPTION : (string) ($_ENV['SMTP_ENCRYPTION'] ?? 'tls'));
         $user = defined('SMTP_USER') ? (string) SMTP_USER : (string) ($_ENV['SMTP_USER'] ?? '');
         $pass = defined('SMTP_PASS') ? (string) SMTP_PASS : (string) ($_ENV['SMTP_PASS'] ?? '');
-        $from = defined('SMTP_FROM') && SMTP_FROM !== '' ? (string) SMTP_FROM : ($user !== '' ? $user : 'nao-responda@docmanager.local');
+        $definedFrom = defined('SMTP_FROM') ? (string) SMTP_FROM : '';
+        $from = $definedFrom !== '' ? $definedFrom : ($user !== '' ? $user : 'nao-responda@docmanager.local');
         $fromName = defined('SMTP_FROM_NAME') ? (string) SMTP_FROM_NAME : (string) ($_ENV['SMTP_FROM_NAME'] ?? 'DocManager');
 
         $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
@@ -182,7 +183,8 @@ class EmailService
     private static function sendViaMail(string $toEmail, string $subject, string $htmlBody): bool
     {
         $fromName = defined('SMTP_FROM_NAME') ? (string) SMTP_FROM_NAME : 'DocManager';
-        $from = defined('SMTP_FROM') && SMTP_FROM !== '' ? (string) SMTP_FROM : 'nao-responda@docmanager.local';
+        $definedFrom = defined('SMTP_FROM') ? (string) SMTP_FROM : '';
+        $from = $definedFrom !== '' ? $definedFrom : 'nao-responda@docmanager.local';
 
         $headers = [];
         $headers[] = 'MIME-Version: 1.0';

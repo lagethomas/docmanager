@@ -118,12 +118,12 @@ class SettingsController extends Controller
         try {
             $converter = new DocConverterService();
             $elements = $converter->extractTimbradoElements($destFile, $dir);
-            $extractedHeader = $elements['header_text'] ?? '';
-            $extractedFooter = $elements['footer_text'] ?? '';
-            $headerImg = $elements['header_img'] ?? '';
-            $footerImg = $elements['footer_img'] ?? '';
-            $headerImages = $elements['header_images'] ?? [];
-            $footerImages = $elements['footer_images'] ?? [];
+            $extractedHeader = $elements['header_text'];
+            $extractedFooter = $elements['footer_text'];
+            $headerImg = $elements['header_img'];
+            $footerImg = $elements['footer_img'];
+            $headerImages = $elements['header_images'];
+            $footerImages = $elements['footer_images'];
         } catch (\Throwable $e) {
             Logger::log('timbrado_extract_warning', 'Aviso ao extrair elementos do timbrado: ' . $e->getMessage());
         }

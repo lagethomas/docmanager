@@ -9,6 +9,7 @@
         "ext-pdo": "*",
         "dompdf/dompdf": "^3.1",
         "erusev/parsedown": "^1.8",
+        "matthiasmullie/minify": "^1.3",
         "phpmailer/phpmailer": "^7.1",
         "vlucas/phpdotenv": "^5.7"
     },
@@ -20,7 +21,8 @@
     "scripts": {
         "lint": "find src public bin -name '*.php' -print0 | xargs -0 -n1 php -l",
         "migrate": "php bin/migrate.php",
-        "seed": "php bin/seed.php"
+        "seed": "php bin/seed.php",
+        "build-assets": "php bin/build_assets.php"
     },
     "config": {
         "sort-packages": true,

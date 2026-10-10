@@ -498,32 +498,6 @@ $timbradoConfig = (new \App\Models\SettingsModel())->getTimbradoConfig();
 </div>
 <?php endif; ?>
 
-<!-- ─── ESTILOS DO BOTÃO FLUTUANTE (FAB) ─────────────────────────────────── -->
-<style>
-.fab-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: var(--docs-text, #1e293b);
-  font-size: 0.83rem;
-  font-weight: 500;
-  text-decoration: none;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s ease, color 0.15s ease;
-  box-sizing: border-box;
-}
-.fab-menu-item:hover {
-  background: var(--docs-surface-2, #f1f5f9);
-  color: var(--docs-primary, #1abb9c);
-}
-</style>
-
 <!-- ─── BOTÕES FLUTUANTES DE AÇÕES & ISSUES (FAB) ──────────────────────────── -->
 <div id="fabContainer" style="position: fixed; bottom: 28px; right: 28px; z-index: 9999; display: flex; align-items: center; gap: 10px;">
   

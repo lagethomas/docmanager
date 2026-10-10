@@ -1,7 +1,9 @@
 {
-    "gentelella.css": "f4526e4b",
-    "modules/table.min.css": "e316020e",
-    "modules/docs.min.css": "8b8c2567",
+    "gentelella.css": "a475475d",
+    "modules/table.min.css": "e9bad053",
+    "modules/docs.min.css": "c88c95a0",
     "modules/auth.min.css": "f89c4d7a",
-    "modules/reports.min.css": "f93b6c1e"
+    "modules/reports.min.css": "ca0549f8",
+    "utils.min.css": "404a6a20",
+    "app.min.js": "e078bc8c"
 }
