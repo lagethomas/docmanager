@@ -462,6 +462,61 @@ const categoryMap = Icons.getCategoryMap();</code></pre>
                     </table>
                 </div>
             '
+        ],
+        'rotinas-cron' => [
+            'slug' => 'rotinas-cron',
+            'title' => '6. Guia do Gerenciador de Tarefas Agendadas (Cron CLI)',
+            'category' => 'configuracao',
+            'category_name' => 'Configuração',
+            'icon' => 'calendar',
+            'summary' => 'Instruções de configuração do executor CLI bin/cron.php (--full, --publish, --expiration) para automação de publicações, notificações de validade e envio de e-mails.',
+            'read_time' => '4 min de leitura',
+            'content_html' => '
+                <h3>Visão Geral das Tarefas Agendadas (Cron CLI)</h3>
+                <p>O DocManager possui um executor CLI unificado em <code>bin/cron.php</code> para processamento em segundo plano. Ele gerencia o agendamento de publicações de documentos e o controle de prazos de validade/revisão com alertas por e-mail.</p>
+
+                <h4>📋 Opções de Linha de Comando (CLI)</h4>
+                <div class="table-responsive" style="margin-top: 1rem;">
+                    <table class="table" style="font-size: 0.88rem;">
+                        <thead>
+                            <tr>
+                                <th>Parâmetro</th>
+                                <th>Comando</th>
+                                <th>Descrição & Finalidade</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>--full</code></td>
+                                <td><code>php bin/cron.php --full</code></td>
+                                <td><strong>Sequencial Completo (Recomendado):</strong> Executa todas as rotinas do sistema em sequência.</td>
+                            </tr>
+                            <tr>
+                                <td><code>--publish</code></td>
+                                <td><code>php bin/cron.php --publish</code></td>
+                                <td><strong>Agendamento de Publicação:</strong> Verifica documentos agendados (<code>publish_at &lt;= NOW()</code>) e altera o status para publicado.</td>
+                            </tr>
+                            <tr>
+                                <td><code>--expiration</code></td>
+                                <td><code>php bin/cron.php --expiration</code></td>
+                                <td><strong>Validade &amp; Expiração:</strong> Identifica documentos vencidos (<code>expires_at &lt;= NOW()</code>), cria notificações internas e dispara e-mails de aviso ao autor.</td>
+                            </tr>
+                            <tr>
+                                <td><code>--help</code></td>
+                                <td><code>php bin/cron.php --help</code></td>
+                                <td>Exibe o manual rápido com todos os parâmetros e opções disponíveis.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h4 style="margin-top: 1.5rem;">⚙️ Configuração no Crontab da Hospedagem (Linux)</h4>
+                <p>Para automatizar a execução do sistema a cada 5 minutos, adicione a seguinte linha no <code>crontab -e</code> do servidor Linux ou crie uma tarefa agendada no cPanel/Plesk:</p>
+
+                <div class="alert alert-info" style="margin: 1rem 0;">
+                    <code style="font-size: 0.9rem; color: #1e293b;">*/5 * * * * php /var/www/html/bin/cron.php --full &gt;&gt; /dev/null 2&gt;&amp;1</code>
+                </div>
+            '
         ]
     ];
 

@@ -197,6 +197,7 @@ class DocumentController extends Controller
         $sharedByMe = isset($_GET['shared_by_me']) && $_GET['shared_by_me'] !== '' && $_GET['shared_by_me'] !== '0' && $_GET['shared_by_me'] !== 'false';
 
         $model = new DocumentModel();
+        $model->processScheduledAndExpired();
         $docs = $model->search(
             query: $q,
             categoryId: $catId,
@@ -246,6 +247,7 @@ class DocumentController extends Controller
     {
         $user = Auth::user();
         $model = new DocumentModel();
+        $model->processScheduledAndExpired();
         $stats = $model->getStats(
             userId: isset($user['id']) ? (int) $user['id'] : null,
             userRole: $user['role'] ?? null,
@@ -320,9 +322,12 @@ class DocumentController extends Controller
             return;
         }
 
+        $publishAt = isset($input['publish_at']) && trim((string)$input['publish_at']) !== '' ? trim((string)$input['publish_at']) : null;
+        $expiresAt = isset($input['expires_at']) && trim((string)$input['expires_at']) !== '' ? trim((string)$input['expires_at']) : null;
+
         $role = $user['role'] ?? '';
         $model = new DocumentModel();
-        $docId = $model->create($title, $content, $categoryId, (int) $user['id'], 'rascunho', null, $isPublic, $isRestricted, $locationIds, $areaIds);
+        $docId = $model->create($title, $content, $categoryId, (int) $user['id'], 'rascunho', null, $isPublic, $isRestricted, $locationIds, $areaIds, '', $publishAt, $expiresAt);
 
         // Tags
         if (is_array($tags) && $tags !== []) {
@@ -381,8 +386,15 @@ class DocumentController extends Controller
         $versionNote = sanitize_input((string) ($input['version_note'] ?? ''));
         $tags = $input['tags'] ?? null;
 
+        $publishAt = array_key_exists('publish_at', $input)
+            ? (isset($input['publish_at']) && trim((string)$input['publish_at']) !== '' ? trim((string)$input['publish_at']) : null)
+            : ($doc['draft_publish_at'] ?? $doc['publish_at'] ?? null);
+        $expiresAt = array_key_exists('expires_at', $input)
+            ? (isset($input['expires_at']) && trim((string)$input['expires_at']) !== '' ? trim((string)$input['expires_at']) : null)
+            : ($doc['draft_expires_at'] ?? $doc['expires_at'] ?? null);
+
         // Ao salvar edições, salva como rascunho. A versão publicada não altera até que o rascunho seja aprovado.
-        $model->update($intId, $title, $content, $categoryId, $userId, $versionNote, 'rascunho', null, $isPublic, $isRestricted, $locationIds, $areaIds);
+        $model->update($intId, $title, $content, $categoryId, $userId, $versionNote, 'rascunho', null, $isPublic, $isRestricted, $locationIds, $areaIds, $publishAt, $expiresAt);
 
         if (is_array($tags)) {
             $tagModel = new TagModel();

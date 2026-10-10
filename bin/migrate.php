@@ -458,6 +458,16 @@ $migrations = [
         ALTER TABLE cp_document_versions 
             ADD COLUMN version_number INT UNSIGNED NOT NULL DEFAULT 1 AFTER document_id;
     ",
+
+    '0031_add_publish_and_expiration_dates' => "
+        ALTER TABLE cp_documents 
+            ADD COLUMN publish_at DATETIME DEFAULT NULL AFTER draft_version_note,
+            ADD COLUMN expires_at DATETIME DEFAULT NULL AFTER publish_at,
+            ADD COLUMN draft_publish_at DATETIME DEFAULT NULL AFTER expires_at,
+            ADD COLUMN draft_expires_at DATETIME DEFAULT NULL AFTER draft_publish_at;
+
+        CREATE INDEX idx_docs_publish_expires ON cp_documents (publish_at, expires_at, status, deleted_at);
+    ",
 ];
 
 $stmt = $db->query('SELECT name FROM cp_migrations');
@@ -545,6 +555,10 @@ $integrityChecks = [
         'draft_status' => "ALTER TABLE cp_documents ADD COLUMN draft_status ENUM('rascunho', 'pendente', 'rejeitado') NOT NULL DEFAULT 'rascunho' AFTER draft_category_id",
         'draft_updated_at' => "ALTER TABLE cp_documents ADD COLUMN draft_updated_at DATETIME DEFAULT NULL AFTER draft_status",
         'draft_version_note' => "ALTER TABLE cp_documents ADD COLUMN draft_version_note VARCHAR(255) DEFAULT NULL AFTER draft_updated_at",
+        'publish_at' => "ALTER TABLE cp_documents ADD COLUMN publish_at DATETIME DEFAULT NULL AFTER draft_version_note",
+        'expires_at' => "ALTER TABLE cp_documents ADD COLUMN expires_at DATETIME DEFAULT NULL AFTER publish_at",
+        'draft_publish_at' => "ALTER TABLE cp_documents ADD COLUMN draft_publish_at DATETIME DEFAULT NULL AFTER expires_at",
+        'draft_expires_at' => "ALTER TABLE cp_documents ADD COLUMN draft_expires_at DATETIME DEFAULT NULL AFTER draft_publish_at",
     ],
     'cp_doc_categories' => [
         'color' => "ALTER TABLE cp_doc_categories ADD COLUMN color VARCHAR(20) NOT NULL DEFAULT '#1abb9c'",

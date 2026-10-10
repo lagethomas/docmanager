@@ -43,76 +43,10 @@ $timbradoConfig = (new \App\Models\SettingsModel())->getTimbradoConfig();
       <?php endif; ?>
     </div>
 
-    <div class="docs-view-actions">
-      <!-- Botão Favoritar -->
-      <button type="button" class="btn btn-sm btn-outline btn-single-favorite <?php echo !empty($doc['is_favorite']) ? 'active' : ''; ?>" id="btnSingleFavorite" onclick="DocsView.toggleFavorite(<?php echo (int)$doc['id']; ?>)" title="<?php echo !empty($doc['is_favorite']) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'; ?>">
+    <div class="docs-view-actions" style="display: flex; align-items: center; gap: 8px;">
+      <!-- Botão Favoritar Rápido -->
+      <button type="button" class="btn btn-sm btn-outline btn-single-favorite <?php echo !empty($doc['is_favorite']) ? 'active' : ''; ?>" id="btnSingleFavorite" onclick="DocsView.toggleFavorite(<?php echo (int)$doc['id']; ?>)" title="<?php echo !empty($doc['is_favorite']) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'; ?>" style="padding: 6px 10px;">
         <?php echo \App\Helpers\IconHelper::get(!empty($doc['is_favorite']) ? 'starSolid' : 'starOutline', ['class' => 'btn-svg']); ?>
-        <span id="btnSingleFavoriteText"><?php echo !empty($doc['is_favorite']) ? 'Favorito' : 'Favoritar'; ?></span>
-      </button>
-
-      <!-- Botão Seguir Documento (Módulo 9) -->
-      <button type="button" class="btn btn-sm <?php echo $isFollowing ? 'btn-primary' : 'btn-outline'; ?>" id="btnFollowDoc" onclick="DocsView.toggleFollow(<?php echo (int)$doc['id']; ?>)" title="Receber notificação quando este documento mudar">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <span><?php echo $isFollowing ? 'Seguindo' : 'Seguir'; ?></span>
-      </button>
-
-      <?php if (($user['role'] ?? '') !== 'Visualizador'): ?>
-      <!-- Botão Link Público (Módulo 6) -->
-      <button type="button" class="btn btn-sm btn-outline" onclick="DocsView.openPublicLinkModal(<?php echo (int)$doc['id']; ?>)" title="Gerar link de acesso externo com token">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-        <span>Link Público</span>
-      </button>
-      <?php endif; ?>
-
-      <?php if ($canManageShares): ?>
-      <button type="button" class="btn btn-sm btn-outline" onclick="DocsView.openShareModal(<?php echo (int)$doc['id']; ?>)" title="Compartilhar documento com outros editores">
-        <?php echo icon('share', ['size' => 13, 'style' => 'margin-right:4px']); ?>
-        <span>Compartilhar</span>
-      </button>
-      <?php endif; ?>
-
-      <?php if (!empty($canSubmitApproval)): ?>
-      <button type="button" class="btn btn-sm btn-outline-primary" id="btnSubmitApprovalView" onclick="DocsView.openApprovalModal(<?php echo (int)$doc['id']; ?>)" title="Solicitar aprovação deste documento a outro usuário">
-        <?php echo icon('check', ['size' => 13, 'style' => 'margin-right:4px']); ?>
-        <span>Submeter p/ Aprovação</span>
-      </button>
-      <?php endif; ?>
-
-      <?php if (!empty($isDesignatedApprover) && !empty($approvalRequest) && ($doc['status'] ?? '') === 'pendente'): ?>
-      <button type="button" class="btn btn-sm btn-success" onclick="DocsView.decideApproval(<?php echo (int)$doc['id']; ?>, 'approve')" title="Aprovar este documento como aprovador designado">
-        <?php echo icon('check', ['size' => 13, 'style' => 'margin-right:4px']); ?>
-        <span>Aprovar</span>
-      </button>
-      <button type="button" class="btn btn-sm btn-danger-outline" onclick="DocsView.openRejectApprovalModal(<?php echo (int)$doc['id']; ?>)" title="Rejeitar este documento como aprovador designado" style="color:#dc2626;border-color:rgba(220,38,38,0.35);">
-        <span>Rejeitar</span>
-      </button>
-      <?php endif; ?>
-
-      <a href="<?php echo e(Controller::url('/api/docs/' . (int)$doc['id'] . '/pdf')); ?>" target="_blank" class="btn btn-sm btn-outline" title="Exportar / Imprimir PDF de Alta Qualidade">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-        <span>Imprimir</span>
-      </a>
-
-      <button type="button" class="btn btn-sm btn-outline" onclick="DocsView.copyMarkdown()" title="Copiar conteúdo em Markdown">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        <span>Copiar</span>
-      </button>
-
-      <button type="button" class="btn btn-sm btn-outline" onclick="DocsView.downloadMarkdown()" title="Baixar arquivo .MD">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        <span>Baixar .md</span>
-      </button>
-
-      <?php if (($user['role'] ?? '') === 'Admin' || ($user['role'] ?? '') === 'Editor' || ($user['role'] ?? '') === 'Aprovador' || $canEdit): ?>
-      <button type="button" class="btn btn-sm btn-outline" onclick="DocDiff.open(<?php echo (int)$doc['id']; ?>)" title="Comparar histórico de versões do documento (Diff)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-        <span>Comparar Diff</span>
-      </button>
-      <?php endif; ?>
-
-      <button type="button" class="btn btn-sm btn-outline-warning" onclick="DocsView.openIssueModal(<?php echo (int)$doc['id']; ?>)" title="Abrir uma Issue / Apontar correção para o autor do documento" style="display:inline-flex;align-items:center;gap:4px;color:#d97706;border-color:rgba(217,119,6,0.3);background:rgba(217,119,6,0.06);">
-        <?php echo icon('alert', ['size' => 13, 'style' => 'margin-right:2px']); ?>
-        <span>Abrir Issue / Correção</span>
       </button>
 
       <?php if ($canEdit): ?>
@@ -121,7 +55,8 @@ $timbradoConfig = (new \App\Models\SettingsModel())->getTimbradoConfig();
         <span>Editar</span>
       </button>
       <?php endif; ?>
-        <a href="<?php echo e(Controller::url('/docs')); ?>" class="btn btn-sm btn-outline" title="Voltar para a listagem">
+
+      <a href="<?php echo e(Controller::url('/docs')); ?>" class="btn btn-sm btn-outline" title="Voltar para a listagem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
         <span>Voltar</span>
       </a>
@@ -182,35 +117,43 @@ $timbradoConfig = (new \App\Models\SettingsModel())->getTimbradoConfig();
           Compartilhado
         </span>
         <?php endif; ?>
+
+        <?php 
+        $publishAtView = !empty($doc['draft_publish_at']) ? $doc['draft_publish_at'] : (!empty($doc['publish_at']) ? $doc['publish_at'] : null);
+        $expiresAtView = !empty($doc['draft_expires_at']) ? $doc['draft_expires_at'] : (!empty($doc['expires_at']) ? $doc['expires_at'] : null);
+        $isScheduledView = !empty($publishAtView) && strtotime($publishAtView) > time();
+        $isExpiredView = !empty($expiresAtView) && strtotime($expiresAtView) <= time();
+        ?>
+        <?php if ($isScheduledView): ?>
+        <span class="doc-status-badge badge-scheduled" style="background: rgba(14, 165, 233, 0.12); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.25); display: inline-flex; align-items: center; gap: 4px;" title="Publicação agendada para <?php echo e(date('d/m/Y H:i', strtotime($publishAtView))); ?>">
+          <?php echo icon('clock', ['size' => 11]); ?>
+          Agendado (<?php echo e(date('d/m/Y H:i', strtotime($publishAtView))); ?>)
+        </span>
+        <?php endif; ?>
+        <?php if ($isExpiredView): ?>
+        <span class="doc-status-badge badge-expired" style="background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3); display: inline-flex; align-items: center; gap: 4px;" title="Expirado em <?php echo e(date('d/m/Y H:i', strtotime($expiresAtView))); ?> - Necessita Revisão">
+          <?php echo icon('alert', ['size' => 11]); ?>
+          Expirado / Necessita Revisão
+        </span>
+        <?php endif; ?>
       </div>
 
       <?php if (!empty($doc['has_draft']) && ($canEdit || ($user['role'] ?? '') === 'Admin' || ($user['role'] ?? '') === 'Aprovador')): ?>
-      <div class="alert alert-warning" style="margin: 1rem 0; padding: 12px 16px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #b45309; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-        <div>
-          <strong>📝 Rascunho em Edição:</strong> Este documento possui alterações salvas em rascunho.
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.8rem; color: #92400e; background: rgba(245, 158, 11, 0.07); border: 1px solid rgba(245, 158, 11, 0.2); padding: 6px 12px; border-radius: 6px; margin: 0.75rem 0; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+          <?php echo icon('pencil', ['size' => 13, 'style' => 'color: #d97706; flex-shrink: 0;']); ?>
+          <span><strong>Rascunho em Edição:</strong> Exibindo versão publicada v<?php echo (int)($doc['current_version'] ?? 1); ?>.</span>
           <?php if (($doc['draft_status'] ?? '') === 'pendente'): ?>
-            <span class="badge badge-warning" style="margin-left: 6px; padding: 2px 8px; background: rgba(234,179,8,0.2); color: #ca8a04; border-radius: 4px;">Submetido • Pendente de Aprovação</span>
+            <span class="badge" style="padding: 1px 6px; background: rgba(234, 179, 8, 0.2); color: #854d0e; font-size: 0.72rem; font-weight: 500;">Pendente de Aprovação</span>
           <?php elseif (($doc['draft_status'] ?? '') === 'rejeitado'): ?>
-            <span class="badge badge-danger" style="margin-left: 6px; padding: 2px 8px; background: rgba(239,68,68,0.2); color: #dc2626; border-radius: 4px;">Rascunho Rejeitado: <?php echo e($doc['rejection_reason'] ?? ''); ?></span>
-          <?php else: ?>
-            <span class="badge badge-secondary" style="margin-left: 6px; padding: 2px 8px; background: rgba(107,114,128,0.2); color: #4b5563; border-radius: 4px;">Rascunho Não Submetido</span>
-          <?php endif; ?>
-          <div style="font-size: 0.8rem; margin-top: 2px;">
-            A versão exibida abaixo é a versão publicada v<?php echo (int)($doc['current_version'] ?? 1); ?>.
-          </div>
-        </div>
-        <div style="display: flex; gap: 8px;">
-          <?php if ($canEdit): ?>
-          <button type="button" class="btn btn-sm btn-primary" onclick="DocsView.editDoc(<?php echo (int)$doc['id']; ?>)">
-            Editar Rascunho
-          </button>
-          <?php endif; ?>
-          <?php if (!empty($canSubmitApproval) && ($doc['draft_status'] ?? '') !== 'pendente'): ?>
-          <button type="button" class="btn btn-sm btn-outline-primary" onclick="DocsView.openApprovalModal(<?php echo (int)$doc['id']; ?>)">
-            Submeter p/ Aprovação
-          </button>
+            <span class="badge" style="padding: 1px 6px; background: rgba(239, 68, 68, 0.15); color: #dc2626; font-size: 0.72rem; font-weight: 500;">Rejeitado: <?php echo e($doc['rejection_reason'] ?? ''); ?></span>
           <?php endif; ?>
         </div>
+        <?php if (!empty($canSubmitApproval) && ($doc['draft_status'] ?? '') !== 'pendente'): ?>
+        <button type="button" class="btn btn-link btn-sm" onclick="DocsView.openApprovalModal(<?php echo (int)$doc['id']; ?>)" style="padding: 0; font-size: 0.78rem; color: #d97706; text-decoration: underline; font-weight: 600; border: none; background: transparent; cursor: pointer;">
+          Submeter p/ Aprovação
+        </button>
+        <?php endif; ?>
       </div>
       <?php endif; ?>
 
@@ -287,26 +230,6 @@ $timbradoConfig = (new \App\Models\SettingsModel())->getTimbradoConfig();
           <?php endforeach; ?>
         </div>
       </details>
-    </div>
-    <?php endif; ?>
-
-    <!-- Seção de Issues do Documento — Somente usuários com permissão de comentário/issue -->
-    <?php if ($canComment): ?>
-    <div class="docs-comments-section" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--docs-border, #e2e8f0);">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
-        <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--docs-text); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-          <?php echo icon('alert', ['size' => 20, 'style' => 'color:#d97706;']); ?>
-          Issues
-        </h3>
-        <button type="button" class="btn btn-sm btn-outline-warning" onclick="DocsView.openIssueModal(<?php echo (int)$doc['id']; ?>)" style="display:inline-flex;align-items:center;gap:4px;color:#d97706;border-color:rgba(217,119,6,0.3);background:rgba(217,119,6,0.06);font-weight:600;">
-          <?php echo icon('alert', ['size' => 13, 'style' => 'margin-right:2px']); ?>
-          <span>Abrir Nova Issue</span>
-        </button>
-      </div>
-
-      <div id="commentsList" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
-        <div style="font-size: 0.85rem; color: var(--docs-text-mut); text-align: center; padding: 1.5rem;">Carregando issues...</div>
-      </div>
     </div>
     <?php endif; ?>
 
@@ -537,4 +460,180 @@ $timbradoConfig = (new \App\Models\SettingsModel())->getTimbradoConfig();
       <button type="button" class="btn btn-warning" onclick="DocsView.submitIssueFromModal(<?php echo (int)$doc['id']; ?>)">Enviar Issue</button>
     </div>
   </div>
+</div>
+
+<!-- Modal de Lista de Issues e Apontamentos -->
+<?php if ($canComment): ?>
+<div class="modal-backdrop-custom" id="issuesListModalOverlay" hidden>
+  <div class="modal-dialog-custom" style="max-width: 680px;">
+    <div class="modal-header-custom" style="display: flex; align-items: center; justify-content: space-between;">
+      <div class="modal-header-title" style="display: flex; align-items: center; gap: 10px;">
+        <span class="modal-icon-badge" style="background: rgba(245, 158, 11, 0.15); color: #d97706; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px;">
+          <?php echo icon('alert', ['size' => 18]); ?>
+        </span>
+        <div>
+          <h3 style="margin:0;font-size:1.1rem;font-weight:700;">Issues e Apontamentos</h3>
+          <p style="font-size:0.78rem;color:var(--docs-text-mut);margin:2px 0 0;">Histórico de correções e observações deste documento</p>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button type="button" class="btn btn-sm btn-outline-warning" onclick="DocsView.openIssueModal(<?php echo (int)$doc['id']; ?>)" style="display:inline-flex;align-items:center;gap:4px;color:#d97706;border-color:rgba(217,119,6,0.3);background:rgba(217,119,6,0.06);font-weight:600;">
+          <?php echo icon('alert', ['size' => 13, 'style' => 'margin-right:2px']); ?>
+          <span>Abrir Nova Issue</span>
+        </button>
+        <button type="button" class="modal-btn-close" onclick="DocsView.closeIssuesListModal()">×</button>
+      </div>
+    </div>
+
+    <div class="modal-body-custom" style="max-height: 60vh; overflow-y: auto; padding: 1.25rem;">
+      <div id="commentsList" style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <div style="font-size: 0.85rem; color: var(--docs-text-mut); text-align: center; padding: 1.5rem;">Carregando issues...</div>
+      </div>
+    </div>
+
+    <div class="modal-footer-custom" style="display:flex;justify-content:flex-end;">
+      <button type="button" class="btn btn-secondary" onclick="DocsView.closeIssuesListModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
+<!-- ─── ESTILOS DO BOTÃO FLUTUANTE (FAB) ─────────────────────────────────── -->
+<style>
+.fab-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--docs-text, #1e293b);
+  font-size: 0.83rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+  box-sizing: border-box;
+}
+.fab-menu-item:hover {
+  background: var(--docs-surface-2, #f1f5f9);
+  color: var(--docs-primary, #1abb9c);
+}
+</style>
+
+<!-- ─── BOTÕES FLUTUANTES DE AÇÕES & ISSUES (FAB) ──────────────────────────── -->
+<div id="fabContainer" style="position: fixed; bottom: 28px; right: 28px; z-index: 9999; display: flex; align-items: center; gap: 10px;">
+  
+  <?php if ($canComment): ?>
+  <!-- Botão Flutuante de Issues -->
+  <button type="button" id="btnFabIssuesToggle" onclick="DocsView.openIssuesListModal()" title="Ver e gerenciar Issues deste documento" style="display: flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: 50px; background: linear-gradient(135deg, #d97706, #b45309); color: #ffffff; border: none; font-size: 0.88rem; font-weight: 700; box-shadow: 0 8px 24px -2px rgba(217, 119, 6, 0.45); cursor: pointer; transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;">
+    <?php echo icon('alert', ['size' => 16]); ?>
+    <span>Issues</span>
+    <span id="fabIssuesCountBadge" style="background: #ffffff; color: #d97706; padding: 2px 7px; border-radius: 12px; font-size: 0.75rem; font-weight: 800; min-width: 14px; text-align: center;" hidden>0</span>
+  </button>
+  <?php endif; ?>
+
+  <!-- Botão Flutuante de Ações -->
+  <div style="position: relative;">
+    <div id="fabMenuCard" hidden style="position: absolute; bottom: 62px; right: 0; width: 300px; background: var(--docs-surface, #ffffff); border: 1px solid var(--docs-border, #e2e8f0); border-radius: 12px; box-shadow: 0 16px 36px -4px rgba(0,0,0,0.25); padding: 10px; display: flex; flex-direction: column; gap: 4px; box-sizing: border-box; backdrop-filter: blur(10px);">
+      
+      <div style="font-size: 0.72rem; font-weight: 700; color: var(--docs-text-mut, #64748b); text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 8px 4px; border-bottom: 1px solid var(--docs-border, #e2e8f0); margin-bottom: 2px;">
+        INTERAÇÃO &amp; COMPARTILHAMENTO
+      </div>
+
+      <!-- Botão Favoritar -->
+      <button type="button" class="fab-menu-item" onclick="DocsView.toggleFavorite(<?php echo (int)$doc['id']; ?>)">
+        <?php echo \App\Helpers\IconHelper::get(!empty($doc['is_favorite']) ? 'starSolid' : 'starOutline', ['size' => 14]); ?>
+        <span id="btnFabFavoriteText"><?php echo !empty($doc['is_favorite']) ? 'Remover dos Favoritos' : 'Adicionar aos Favoritos'; ?></span>
+      </button>
+
+      <!-- Seguir Documento -->
+      <button type="button" class="fab-menu-item" onclick="DocsView.toggleFollow(<?php echo (int)$doc['id']; ?>)">
+        <?php echo icon('bell', ['size' => 14]); ?>
+        <span><?php echo $isFollowing ? 'Deixar de Seguir' : 'Seguir Notificações'; ?></span>
+      </button>
+
+      <?php if (($user['role'] ?? '') !== 'Visualizador'): ?>
+      <!-- Link Público -->
+      <button type="button" class="fab-menu-item" onclick="DocsView.openPublicLinkModal(<?php echo (int)$doc['id']; ?>)">
+        <?php echo icon('link', ['size' => 14]); ?>
+        <span>Gerar Link Público</span>
+      </button>
+      <?php endif; ?>
+
+      <?php if ($canManageShares): ?>
+      <!-- Compartilhar -->
+      <button type="button" class="fab-menu-item" onclick="DocsView.openShareModal(<?php echo (int)$doc['id']; ?>)">
+        <?php echo icon('share', ['size' => 14]); ?>
+        <span>Compartilhar Documento</span>
+      </button>
+      <?php endif; ?>
+
+      <?php if (!empty($canSubmitApproval)): ?>
+      <!-- Submeter Aprovação -->
+      <button type="button" class="fab-menu-item" onclick="DocsView.openApprovalModal(<?php echo (int)$doc['id']; ?>)">
+        <?php echo icon('check', ['size' => 14]); ?>
+        <span>Submeter p/ Aprovação</span>
+      </button>
+      <?php endif; ?>
+
+      <?php if (!empty($isDesignatedApprover) && !empty($approvalRequest) && ($doc['status'] ?? '') === 'pendente'): ?>
+      <!-- Aprovação Designada -->
+      <button type="button" class="fab-menu-item" onclick="DocsView.decideApproval(<?php echo (int)$doc['id']; ?>, 'approve')" style="color: #16a34a;">
+        <?php echo icon('check', ['size' => 14]); ?>
+        <span>Aprovar Documento</span>
+      </button>
+      <button type="button" class="fab-menu-item" onclick="DocsView.openRejectApprovalModal(<?php echo (int)$doc['id']; ?>)" style="color: #dc2626;">
+        <?php echo icon('x', ['size' => 14]); ?>
+        <span>Rejeitar Documento</span>
+      </button>
+      <?php endif; ?>
+
+      <div style="font-size: 0.72rem; font-weight: 700; color: var(--docs-text-mut, #64748b); text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 8px 4px; border-bottom: 1px solid var(--docs-border, #e2e8f0); margin-top: 4px; margin-bottom: 2px;">
+        FERRAMENTAS &amp; EXPORTAÇÃO
+      </div>
+
+      <!-- Imprimir / PDF -->
+      <a href="<?php echo e(Controller::url('/api/docs/' . (int)$doc['id'] . '/pdf')); ?>" target="_blank" class="fab-menu-item">
+        <?php echo icon('printer', ['size' => 14]); ?>
+        <span>Imprimir / Salvar PDF</span>
+      </a>
+
+      <!-- Copiar Markdown -->
+      <button type="button" class="fab-menu-item" onclick="DocsView.copyMarkdown()">
+        <?php echo icon('copy', ['size' => 14]); ?>
+        <span>Copiar Markdown</span>
+      </button>
+
+      <!-- Baixar Markdown -->
+      <button type="button" class="fab-menu-item" onclick="DocsView.downloadMarkdown()">
+        <?php echo icon('download', ['size' => 14]); ?>
+        <span>Baixar Arquivo .MD</span>
+      </button>
+
+      <?php if (($user['role'] ?? '') === 'Admin' || ($user['role'] ?? '') === 'Editor' || ($user['role'] ?? '') === 'Aprovador' || $canEdit): ?>
+      <!-- Comparar Diff -->
+      <button type="button" class="fab-menu-item" onclick="DocDiff.open(<?php echo (int)$doc['id']; ?>)">
+        <?php echo icon('diff', ['size' => 14]); ?>
+        <span>Comparar Histórico (Diff)</span>
+      </button>
+      <?php endif; ?>
+
+      <!-- Abrir Issue -->
+      <button type="button" class="fab-menu-item" onclick="DocsView.openIssueModal(<?php echo (int)$doc['id']; ?>)" style="color: #d97706;">
+        <?php echo icon('alert', ['size' => 14]); ?>
+        <span>Abrir Issue / Correção</span>
+      </button>
+
+    </div>
+
+    <button type="button" id="btnFabToggle" onclick="DocsView.toggleFabMenu()" title="Opções e ferramentas do documento" style="display: flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 50px; background: linear-gradient(135deg, var(--docs-primary, #1abb9c), #149c82); color: #ffffff; border: none; font-size: 0.88rem; font-weight: 700; box-shadow: 0 8px 24px -2px rgba(26, 187, 156, 0.45); cursor: pointer; transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;">
+      <svg id="fabIcon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.25s ease;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 1 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Ações</span>
+    </button>
+  </div>
+
 </div>

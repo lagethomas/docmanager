@@ -5,6 +5,7 @@ namespace App\Models;
 
 use App\Core\Repository;
 use App\Helpers\SecurityHelper;
+use App\Services\EmailService;
 
 class DocumentModel extends Repository
 {
@@ -179,7 +180,7 @@ class DocumentModel extends Repository
 
         $sql .= ' WHERE ' . implode(' AND ', $conditions);
 
-        $sql .= ' GROUP BY d.id, d.title, d.content, d.category_id, d.created_by, d.status, d.current_version, d.has_draft, d.draft_title, d.draft_status, d.draft_updated_at, d.approved_by, d.rejected_by, d.approved_at, d.rejection_reason, d.views_count, d.created_at, d.updated_at, d.deleted_at, u.name, app_u.name, rej_u.name, c.name, c.icon, c.color';
+        $sql .= ' GROUP BY d.id, d.title, d.content, d.category_id, d.created_by, d.status, d.current_version, d.has_draft, d.draft_title, d.draft_status, d.draft_updated_at, d.approved_by, d.rejected_by, d.approved_at, d.rejection_reason, d.views_count, d.created_at, d.updated_at, d.deleted_at, d.publish_at, d.expires_at, d.draft_publish_at, d.draft_expires_at, u.name, app_u.name, rej_u.name, c.name, c.icon, c.color';
 
         // Ordenação
         $orderBy = match ($sort) {
@@ -217,6 +218,9 @@ class DocumentModel extends Repository
             $row['shares_count'] = $sharesCount;
             $row['is_shared_with_me'] = $isSharedWithMe;
             $row['is_shared_by_me'] = $isOwner && $sharesCount > 0;
+
+            $row['is_expired'] = !empty($row['expires_at']) && strtotime((string) $row['expires_at']) < time();
+            $row['is_scheduled'] = !empty($row['publish_at']) && strtotime((string) $row['publish_at']) > time();
 
             if ($isAdmin) {
                 $row['can_edit'] = true;
@@ -351,10 +355,14 @@ class DocumentModel extends Repository
         int $isRestricted = 0,
         array $locationIds = [],
         array $areaIds = [],
-        string $versionNote = ''
+        string $versionNote = '',
+        ?string $publishAt = null,
+        ?string $expiresAt = null
     ): int {
         $categoryId = ($categoryId !== null && $categoryId > 0) ? $categoryId : null;
         $encryptedContent = SecurityHelper::encryptPskTags($content);
+        $pubAt = ($publishAt !== null && trim($publishAt) !== '') ? trim($publishAt) : null;
+        $expAt = ($expiresAt !== null && trim($expiresAt) !== '') ? trim($expiresAt) : null;
 
         $isApproved = ($status === 'aprovado');
         $approvedAt = $isApproved ? date('Y-m-d H:i:s') : null;
@@ -366,8 +374,9 @@ class DocumentModel extends Repository
             'INSERT INTO cp_documents (
                 title, content, category_id, created_by, status, approved_by, approved_at,
                 is_public, is_restricted, current_version, has_draft,
-                draft_title, draft_content, draft_category_id, draft_status, draft_updated_at, draft_version_note
-             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                draft_title, draft_content, draft_category_id, draft_status, draft_updated_at, draft_version_note,
+                publish_at, expires_at, draft_publish_at, draft_expires_at
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             trim($title),
@@ -386,7 +395,11 @@ class DocumentModel extends Repository
             $categoryId,
             $draftStatus,
             date('Y-m-d H:i:s'),
-            trim($versionNote) !== '' ? trim($versionNote) : 'Criação inicial'
+            trim($versionNote) !== '' ? trim($versionNote) : 'Criação inicial',
+            $pubAt,
+            $expAt,
+            $pubAt,
+            $expAt
         ]);
         $id = (int) $this->db->lastInsertId();
 
@@ -422,7 +435,9 @@ class DocumentModel extends Repository
         ?int $isPublic = null,
         ?int $isRestricted = null,
         ?array $locationIds = null,
-        ?array $areaIds = null
+        ?array $areaIds = null,
+        ?string $publishAt = null,
+        ?string $expiresAt = null
     ): bool {
         $doc = $this->find($id);
         if ($doc === null) {
@@ -437,6 +452,9 @@ class DocumentModel extends Repository
             ? $status
             : 'rascunho';
 
+        $pubAt = ($publishAt !== null && trim($publishAt) !== '') ? trim($publishAt) : null;
+        $expAt = ($expiresAt !== null && trim($expiresAt) !== '') ? trim($expiresAt) : null;
+
         $fields = [
             'has_draft = 1',
             'draft_title = ?',
@@ -444,17 +462,21 @@ class DocumentModel extends Repository
             'draft_category_id = ?',
             'draft_status = ?',
             'draft_updated_at = NOW()',
-            'draft_version_note = ?'
+            'draft_version_note = ?',
+            'draft_publish_at = ?',
+            'draft_expires_at = ?'
         ];
         $params = [
             trim($title),
             $encryptedContent,
             $categoryId,
             $draftStatusVal,
-            trim($versionNote) !== '' ? trim($versionNote) : 'Atualização de rascunho'
+            trim($versionNote) !== '' ? trim($versionNote) : 'Atualização de rascunho',
+            $pubAt,
+            $expAt
         ];
 
-        // Se o documento NUNCA foi publicado (current_version = 0), atualiza também title, content e category_id principais
+        // Se o documento NUNCA foi publicado (current_version = 0), atualiza também title, content, category_id e datas principais
         if ($currentVer === 0) {
             $fields[] = 'title = ?';
             $params[] = trim($title);
@@ -462,6 +484,10 @@ class DocumentModel extends Repository
             $params[] = $encryptedContent;
             $fields[] = 'category_id = ?';
             $params[] = $categoryId;
+            $fields[] = 'publish_at = ?';
+            $params[] = $pubAt;
+            $fields[] = 'expires_at = ?';
+            $params[] = $expAt;
             if ($status !== null) {
                 $fields[] = 'status = ?';
                 $params[] = $status;
@@ -638,13 +664,20 @@ class DocumentModel extends Repository
         $currentVer = (int) ($doc['current_version'] ?? 0);
         $newVersion = $currentVer + 1;
 
+        $pubPublishAt = array_key_exists('draft_publish_at', $doc) && $doc['draft_publish_at'] !== null
+            ? $doc['draft_publish_at']
+            : ($doc['publish_at'] ?? null);
+        $pubExpiresAt = array_key_exists('draft_expires_at', $doc) && $doc['draft_expires_at'] !== null
+            ? $doc['draft_expires_at']
+            : ($doc['expires_at'] ?? null);
+
         $stmt = $this->db->prepare(
             "UPDATE cp_documents 
-             SET title = ?, content = ?, category_id = ?, status = 'aprovado', current_version = ?, approved_by = ?, approved_at = NOW(),
+             SET title = ?, content = ?, category_id = ?, publish_at = ?, expires_at = ?, status = 'aprovado', current_version = ?, approved_by = ?, approved_at = NOW(),
                  has_draft = 0, draft_status = 'rascunho', rejection_reason = NULL, rejected_by = NULL 
              WHERE id = ?"
         );
-        $ok = $stmt->execute([$pubTitle, $encContent, $pubCategory, $newVersion, $approvedBy, $id]);
+        $ok = $stmt->execute([$pubTitle, $encContent, $pubCategory, $pubPublishAt, $pubExpiresAt, $newVersion, $approvedBy, $id]);
 
         if ($ok) {
             $note = !empty($doc['draft_version_note'])
@@ -897,6 +930,10 @@ class DocumentModel extends Repository
         $stmtRej->execute($params);
         $totalRejected = (int) $stmtRej->fetchColumn();
 
+        $stmtExp = $this->db->prepare("SELECT COUNT(*) FROM cp_documents d {$joinUser} {$baseWhere} AND d.expires_at IS NOT NULL AND d.expires_at < NOW() AND d.status = 'aprovado'");
+        $stmtExp->execute($params);
+        $totalExpired = (int) $stmtExp->fetchColumn();
+
         $stmtViews = $this->db->prepare("SELECT COALESCE(SUM(d.views_count), 0) FROM cp_documents d {$joinUser} {$baseWhere}");
         $stmtViews->execute($params);
         $totalViews = (int) $stmtViews->fetchColumn();
@@ -945,6 +982,7 @@ class DocumentModel extends Repository
             'total_pending' => $totalPending,
             'total_approved' => $totalApproved,
             'total_rejected' => $totalRejected,
+            'total_expired' => $totalExpired,
             'total_views' => $totalViews,
             'total_trash' => $totalTrash,
             'total_categories' => $totalCategories,
@@ -1160,6 +1198,93 @@ class DocumentModel extends Repository
         }
 
         return true;
+    }
+
+    /**
+     * Processa publicações agendadas e envia notificações de documentos vencidos/expirados.
+     * @return array{published: int, expired_notified: int}
+     */
+    public function processScheduledAndExpired(): array
+    {
+        // 1. Processar documentos com agendamento ativado
+        $stmtSched = $this->db->prepare(
+            "SELECT id, title, created_by FROM cp_documents 
+             WHERE deleted_at IS NULL AND publish_at IS NOT NULL AND publish_at <= NOW() AND (status = 'rascunho' OR status = 'pendente')"
+        );
+        $stmtSched->execute();
+        $scheduled = $stmtSched->fetchAll() ?: [];
+
+        $publishedCount = 0;
+        foreach ($scheduled as $doc) {
+            $docId = (int) $doc['id'];
+            $authorId = (int) $doc['created_by'];
+            $this->approve($docId, $authorId);
+            $publishedCount++;
+
+            (new NotificationModel())->notify(
+                $authorId,
+                'agendamento',
+                'Documento Publicado (Agendamento)',
+                "Seu documento \"{$doc['title']}\" (#{$docId}) foi publicado automaticamente conforme o agendamento.",
+                "/docs/view/{$docId}"
+            );
+        }
+
+        // 2. Notificar sobre documentos vencidos/expirados que precisam de revisão
+        $stmtExp = $this->db->prepare(
+            "SELECT d.id, d.title, d.created_by, d.expires_at, u.email AS author_email, u.name AS author_name 
+             FROM cp_documents d
+             LEFT JOIN cp_users u ON d.created_by = u.id
+             WHERE d.deleted_at IS NULL AND d.expires_at IS NOT NULL AND d.expires_at <= NOW() AND d.status = 'aprovado'
+               AND NOT EXISTS (
+                   SELECT 1 FROM cp_notifications n 
+                   WHERE n.user_id = d.created_by AND n.type = 'expiracao' AND n.link = CONCAT('/docs/view/', d.id)
+               )"
+        );
+        $stmtExp->execute();
+        $expired = $stmtExp->fetchAll() ?: [];
+
+        $expiredNotifiedCount = 0;
+        foreach ($expired as $doc) {
+            $docId = (int) $doc['id'];
+            $authorId = (int) $doc['created_by'];
+            (new NotificationModel())->notify(
+                $authorId,
+                'expiracao',
+                'Documento Vencido / Necessita Revisão',
+                "O documento \"{$doc['title']}\" (#{$docId}) atingiu a data de validade/expiração e necessita de revisão.",
+                "/docs/view/{$docId}"
+            );
+
+            // Enviar e-mail de notificação de expiração para o autor
+            $authorEmail = trim((string) ($doc['author_email'] ?? ''));
+            if ($authorEmail !== '') {
+                try {
+                    $docTitle = (string) $doc['title'];
+                    $authorName = (string) ($doc['author_name'] ?? 'Usuário');
+                    $expiresAtStr = !empty($doc['expires_at']) ? date('d/m/Y H:i', strtotime((string) $doc['expires_at'])) : date('d/m/Y H:i');
+                    $viewUrl = EmailService::absoluteUrl("/docs/view/{$docId}");
+
+                    $subject = "Aviso: Documento Vencido Necessita Revisão — {$docTitle}";
+                    $htmlBody = EmailService::renderTemplate('document_expiration', [
+                        'docTitle' => $docTitle,
+                        'authorName' => $authorName,
+                        'viewUrl' => $viewUrl,
+                        'expiresAt' => $expiresAtStr,
+                    ]);
+                    EmailService::send($authorEmail, $subject, $htmlBody);
+                } catch (\Throwable $e) {
+                    // Silenciosamente capturado para não interromper fluxo
+                }
+            }
+
+            $expiredNotifiedCount++;
+        }
+
+        return [
+            'published' => $publishedCount,
+            'expired_notified' => $expiredNotifiedCount,
+        ];
     }
 }
 

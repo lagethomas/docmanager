@@ -85,9 +85,17 @@ var DocsView = (function () {
   // ─── COMENTÁRIOS & ISSUES (MÓDULO 3) ─────────────────
   function loadComments(docId) {
     var container = document.getElementById('commentsList');
-    if (!container) return;
 
     api('GET', '/api/docs/' + docId + '/comments').then(function (comments) {
+      var badge = document.getElementById('fabIssuesCountBadge');
+      var openCount = (comments || []).length;
+      if (badge) {
+        badge.textContent = openCount;
+        badge.hidden = (openCount === 0);
+      }
+
+      if (!container) return;
+
       if (!comments || comments.length === 0) {
         container.innerHTML = '<div style="font-size:0.85rem;color:var(--docs-text-mut);text-align:center;padding:1.5rem;background:var(--docs-surface-2);border-radius:10px;border:1px dashed var(--docs-border);">Nenhuma Issue ou comentário registrado para este documento.</div>';
         return;
@@ -752,8 +760,42 @@ var DocsView = (function () {
     });
   }
 
+  function toggleFabMenu() {
+    var menu = document.getElementById('fabMenuCard');
+    var icon = document.getElementById('fabIcon');
+    if (!menu) return;
+    menu.hidden = !menu.hidden;
+    if (icon) {
+      icon.style.transform = menu.hidden ? 'rotate(0deg)' : 'rotate(90deg)';
+    }
+  }
+
+  document.addEventListener('click', function (e) {
+    var fabContainer = document.getElementById('fabContainer');
+    var menu = document.getElementById('fabMenuCard');
+    if (menu && !menu.hidden && fabContainer && !fabContainer.contains(e.target)) {
+      menu.hidden = true;
+      var icon = document.getElementById('fabIcon');
+      if (icon) icon.style.transform = 'rotate(0deg)';
+    }
+  });
+
+  function openIssuesListModal() {
+    var overlay = document.getElementById('issuesListModalOverlay');
+    if (overlay) overlay.hidden = false;
+    if (CURRENT_DOC_ID) loadComments(CURRENT_DOC_ID);
+  }
+
+  function closeIssuesListModal() {
+    var overlay = document.getElementById('issuesListModalOverlay');
+    if (overlay) overlay.hidden = true;
+  }
+
   return {
     init: init,
+    toggleFabMenu: toggleFabMenu,
+    openIssuesListModal: openIssuesListModal,
+    closeIssuesListModal: closeIssuesListModal,
     toggleFavorite: toggleFavorite,
     editDoc: editDoc,
     copyMarkdown: copyMarkdown,

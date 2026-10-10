@@ -207,6 +207,29 @@ $user = $user ?? [];
             <select id="docCategory" class="doceditor-select" title="Pasta do Documento"></select>
           </div>
 
+          <!-- Dropdown Agendamento & Validade -->
+          <div id="docSchedulePicker" class="doceditor-dropdown-wrap" style="position: relative;">
+            <button type="button" class="btn btn-sm btn-outline" id="btnDocSchedule" onclick="Docs.toggleScheduleDropdown()" title="Agendar publicação e data de validade/expiração" style="display: flex; align-items: center; gap: 4px;">
+              <?php echo icon('clock', ['size' => 13]); ?>
+              <span id="docScheduleLabel">Agendamento &amp; Validade</span>
+            </button>
+            <div id="docScheduleDropdown" class="doceditor-dropdown-menu" hidden style="width: 310px; min-width: 280px; max-width: calc(100vw - 24px); padding: 12px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.25); z-index: 1050; background: var(--docs-surface); border: 1px solid var(--docs-border); box-sizing: border-box; white-space: normal;">
+              <div style="font-size: 0.72rem; font-weight: 700; color: var(--docs-text-mut); margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--docs-border); display: flex; align-items: center; justify-content: space-between;">
+                <span>AGENDAMENTO &amp; VALIDADE</span>
+              </div>
+              <div style="margin-bottom: 10px;">
+                <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--docs-text-mut); margin-bottom: 4px;">Agendar Publicação</label>
+                <input type="datetime-local" id="docPublishAt" class="form-control form-control-sm" style="width: 100%; font-size: 0.8rem; padding: 4px 8px; border: 1px solid var(--docs-border); border-radius: 6px; background: var(--docs-bg); color: var(--docs-text); box-sizing: border-box;" />
+                <span style="font-size: 0.7rem; color: var(--docs-text-mut); display: block; margin-top: 2px; white-space: normal; line-height: 1.35; word-wrap: break-word;">O documento ficará agendado até esta data.</span>
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--docs-text-mut); margin-bottom: 4px;">Data de Validade / Revisão</label>
+                <input type="datetime-local" id="docExpiresAt" class="form-control form-control-sm" style="width: 100%; font-size: 0.8rem; padding: 4px 8px; border: 1px solid var(--docs-border); border-radius: 6px; background: var(--docs-bg); color: var(--docs-text); box-sizing: border-box;" />
+                <span style="font-size: 0.7rem; color: var(--docs-text-mut); display: block; margin-top: 2px; white-space: normal; line-height: 1.35; word-wrap: break-word;">Após a data, o documento é marcado para revisão.</span>
+              </div>
+            </div>
+          </div>
+
           <label class="toggle-switch" title="Tornar documento livremente visível na Biblioteca sem login">
             <input type="checkbox" id="chkDocIsPublic" />
             <span class="toggle-slider"></span>

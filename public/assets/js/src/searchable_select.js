@@ -207,6 +207,11 @@ var SearchableSelect = (function () {
         var modalBody = wrap.closest('.modal-body');
         if (modalBody) modalBody.classList.add('has-open-select');
 
+        dropdown._ownerWrap = wrap;
+        if (dropdown.parentNode !== document.body) {
+          document.body.appendChild(dropdown);
+        }
+
         dropdown.hidden = false;
         wrap.classList.add('is-open');
         trigger.setAttribute('aria-expanded', 'true');
@@ -226,6 +231,9 @@ var SearchableSelect = (function () {
         wrap.classList.remove('is-open');
         trigger.setAttribute('aria-expanded', 'false');
         instance.highlightedIndex = -1;
+        if (dropdown.parentNode === document.body) {
+          wrap.appendChild(dropdown);
+        }
         var modalBody = wrap.closest('.modal-body');
         if (modalBody) modalBody.classList.remove('has-open-select');
       }
@@ -323,10 +331,14 @@ var SearchableSelect = (function () {
     document.querySelectorAll('.searchable-select-wrap.is-open').forEach(function (w) {
       if (w !== exceptWrap) {
         w.classList.remove('is-open');
-        var dd = w.querySelector('.searchable-select-dropdown');
-        if (dd) dd.hidden = true;
         var tr = w.querySelector('.searchable-select-trigger');
         if (tr) tr.setAttribute('aria-expanded', 'false');
+      }
+    });
+    document.querySelectorAll('.searchable-select-dropdown:not([hidden])').forEach(function (dd) {
+      dd.hidden = true;
+      if (dd._ownerWrap && dd.parentNode === document.body) {
+        dd._ownerWrap.appendChild(dd);
       }
     });
     document.querySelectorAll('.modal-body.has-open-select').forEach(function (mb) {
@@ -355,7 +367,7 @@ var SearchableSelect = (function () {
 window.SearchableSelect = SearchableSelect;
 
 document.addEventListener('click', function (e) {
-  if (!e.target.closest('.searchable-select-wrap')) {
+  if (!e.target.closest('.searchable-select-wrap') && !e.target.closest('.searchable-select-dropdown')) {
     SearchableSelect.closeAll();
   }
 });
@@ -363,7 +375,7 @@ document.addEventListener('click', function (e) {
 window.addEventListener('scroll', function (e) {
   var openWrap = document.querySelector('.searchable-select-wrap.is-open');
   if (openWrap) {
-    var dd = openWrap.querySelector('.searchable-select-dropdown');
+    var dd = document.querySelector('.searchable-select-dropdown:not([hidden])');
     if (dd && (dd.contains(e.target) || dd === e.target)) {
       return;
     }

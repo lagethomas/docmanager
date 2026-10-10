@@ -412,6 +412,10 @@ var Docs = (function () {
       if (locMenu && !locMenu.hidden && !e.target.closest('#docLocationPicker')) {
         locMenu.hidden = true;
       }
+      var schedMenu = document.getElementById('docScheduleDropdown');
+      if (schedMenu && !schedMenu.hidden && !e.target.closest('#docSchedulePicker')) {
+        schedMenu.hidden = true;
+      }
     });
   }
 
@@ -470,6 +474,20 @@ var Docs = (function () {
       leftPos = Math.max(12, window.innerWidth - dw - 12);
     }
     dropdownEl.style.left = leftPos + 'px';
+  }
+
+  function toggleScheduleDropdown() {
+    var btn = document.getElementById('btnDocSchedule');
+    var dropdown = document.getElementById('docScheduleDropdown');
+    if (!dropdown) return;
+    var locDropdown = document.getElementById('docLocationsDropdown');
+    if (locDropdown) locDropdown.hidden = true;
+    var areaDropdown = document.getElementById('docAreasDropdown');
+    if (areaDropdown) areaDropdown.hidden = true;
+    dropdown.hidden = !dropdown.hidden;
+    if (!dropdown.hidden && btn) {
+      positionTopBarDropdown(btn, dropdown);
+    }
   }
 
   function toggleLocationDropdown() {
@@ -1182,6 +1200,18 @@ var Docs = (function () {
       html += '<span class="doc-status-badge badge-shared-with-me" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;gap:3px;" title="Compartilhado com você">' + Icons.get('users', { size: 9 }) + 'Compartilhado</span>';
     }
 
+    // Agendamento & Expiração / Validade
+    var pubDate = d.draft_publish_at || d.publish_at;
+    var expDate = d.draft_expires_at || d.expires_at;
+
+    if (d.is_scheduled || (pubDate && new Date(pubDate.replace(' ', 'T')).getTime() > Date.now())) {
+      html += '<span class="doc-status-badge badge-scheduled" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;background:rgba(14,165,233,0.12);color:#0ea5e9;border:1px solid rgba(14,165,233,0.25);display:inline-flex;align-items:center;gap:3px;" title="Agendado para ' + esc(pubDate) + '">' + Icons.get('clock', { size: 9 }) + 'Agendado</span>';
+    }
+
+    if (d.is_expired || (expDate && new Date(expDate.replace(' ', 'T')).getTime() <= Date.now())) {
+      html += '<span class="doc-status-badge badge-expired" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;background:rgba(245,158,11,0.15);color:#d97706;border:1px solid rgba(245,158,11,0.3);display:inline-flex;align-items:center;gap:3px;" title="Expirado em ' + esc(expDate) + ' - Necessita Revisão">' + Icons.get('alert', { size: 9 }) + 'Necessita Revisão</span>';
+    }
+
     return html;
   }
 
@@ -1473,12 +1503,16 @@ var Docs = (function () {
     var verNoteInput = document.getElementById('docVersionNote');
     var chkPublic = document.getElementById('chkDocIsPublic');
     var chkRestricted = document.getElementById('chkDocIsRestricted');
+    var publishInput = document.getElementById('docPublishAt');
+    var expiresInput = document.getElementById('docExpiresAt');
 
     if (titleInput) titleInput.value = '';
     if (contentInput) contentInput.value = '';
     if (verNoteInput) verNoteInput.value = '';
     if (chkPublic) chkPublic.checked = false;
     if (chkRestricted) chkRestricted.checked = false;
+    if (publishInput) publishInput.value = '';
+    if (expiresInput) expiresInput.value = '';
       SELECTED_DOC_LOCATIONS = [];
       SELECTED_DOC_AREAS = [];
       toggleRestricted(false);
@@ -1537,6 +1571,14 @@ var Docs = (function () {
       if (verNoteInput) verNoteInput.value = CURRENT_DOC.draft_version_note || '';
       if (catSelect) catSelect.value = activeCat;
       if (chkPublic) chkPublic.checked = !!(parseInt(CURRENT_DOC.is_public, 10));
+
+      var publishInput = document.getElementById('docPublishAt');
+      var expiresInput = document.getElementById('docExpiresAt');
+      var pubVal = (CURRENT_DOC.has_draft && CURRENT_DOC.draft_publish_at) ? CURRENT_DOC.draft_publish_at : (CURRENT_DOC.publish_at || '');
+      var expVal = (CURRENT_DOC.has_draft && CURRENT_DOC.draft_expires_at) ? CURRENT_DOC.draft_expires_at : (CURRENT_DOC.expires_at || '');
+
+      if (publishInput) publishInput.value = pubVal ? pubVal.replace(' ', 'T').substring(0, 16) : '';
+      if (expiresInput) expiresInput.value = expVal ? expVal.replace(' ', 'T').substring(0, 16) : '';
 
       var isRestricted = !!(parseInt(CURRENT_DOC.is_restricted, 10));
       if (chkRestricted) chkRestricted.checked = isRestricted;
@@ -1613,6 +1655,11 @@ var Docs = (function () {
       return;
     }
 
+    var publishInput = document.getElementById('docPublishAt');
+    var expiresInput = document.getElementById('docExpiresAt');
+    var publishAt = publishInput && publishInput.value ? publishInput.value : null;
+    var expiresAt = expiresInput && expiresInput.value ? expiresInput.value : null;
+
     var payload = {
       title: title,
       content: content,
@@ -1621,6 +1668,8 @@ var Docs = (function () {
       is_restricted: isRestricted,
       location_ids: SELECTED_DOC_LOCATIONS,
       area_ids: SELECTED_DOC_AREAS,
+      publish_at: publishAt,
+      expires_at: expiresAt,
       version_note: verNote,
       tags: CURRENT_TAGS,
     };
@@ -3087,6 +3136,7 @@ var Docs = (function () {
     cancelApprovalRequest: cancelApprovalRequest,
     updateSubmitApprovalBtn: updateSubmitApprovalBtn,
     toggleRestricted: toggleRestricted,
+    toggleScheduleDropdown: toggleScheduleDropdown,
     toggleLocationDropdown: toggleLocationDropdown,
     filterLocations: filterLocations,
     onLocationChange: onLocationChange,

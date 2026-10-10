@@ -3,3 +3,4 @@
 /storage/
 *.neon
 *.cache
+.phpunit.result.cache
