@@ -11,6 +11,7 @@ use App\Core\Database;
 use App\Core\Logger;
 use App\Models\ApprovalRequestModel;
 use App\Models\CategoryModel;
+use App\Models\DocumentFollowerModel;
 use App\Models\DocumentModel;
 use App\Models\NotificationModel;
 use App\Models\TagModel;
@@ -320,13 +321,8 @@ class DocumentController extends Controller
         }
 
         $role = $user['role'] ?? '';
-        // Admin e Aprovador auto-aprovam na criação; Editor cria como pendente de aprovação
-        $isApprover = in_array($role, ['Admin', 'Aprovador'], true);
-        $status = $isApprover ? 'aprovado' : 'pendente';
-        $approvedBy = $isApprover ? (int) $user['id'] : null;
-
         $model = new DocumentModel();
-        $docId = $model->create($title, $content, $categoryId, (int) $user['id'], $status, $approvedBy, $isPublic, $isRestricted, $locationIds, $areaIds);
+        $docId = $model->create($title, $content, $categoryId, (int) $user['id'], 'rascunho', null, $isPublic, $isRestricted, $locationIds, $areaIds);
 
         // Tags
         if (is_array($tags) && $tags !== []) {
@@ -337,28 +333,9 @@ class DocumentController extends Controller
             $model->setTags($docId, $tagIds);
         }
 
-        $statusMsg = ($status === 'aprovado') ? 'criado e publicado' : 'criado e enviado para aprovação';
-        Logger::log('create_doc', "Documento \"{$title}\" {$statusMsg}");
+        Logger::log('create_doc', "Documento \"{$title}\" criado como rascunho");
 
-        // Notificar Admin e Aprovador quando documento fica pendente
-        if ($status === 'pendente') {
-            $db = Database::getInstance();
-            $stmtNotif = $db->prepare("SELECT id FROM cp_users WHERE role IN ('Admin','Aprovador') AND status = 'ativo'");
-            $stmtNotif->execute();
-            $notifyIds = array_map('intval', array_column($stmtNotif->fetchAll() ?: [], 'id'));
-            $notifyIds = array_values(array_filter($notifyIds, fn(int $nid) => $nid !== (int) $user['id']));
-            if ($notifyIds !== []) {
-                (new \App\Models\NotificationModel())->notifyUsers(
-                    $notifyIds,
-                    'novo_documento',
-                    'Novo documento para aprovação',
-                    $user['name'] . ' enviou o documento "' . $title . '" para aprovação.',
-                    '/aprovacoes'
-                );
-            }
-        }
-
-        $this->jsonOk(['id' => $docId, 'status' => $status], 201);
+        $this->jsonOk(['id' => $docId, 'status' => 'rascunho', 'message' => 'Documento criado como Rascunho. Submeta para aprovação quando desejar publicar.'], 201);
     }
 
     public function updateDoc(string $id): void
@@ -386,11 +363,11 @@ class DocumentController extends Controller
         }
 
         $input = self::input();
-        $title = sanitize_input((string) ($input['title'] ?? $doc['title']));
-        $content = (string) ($input['content'] ?? $doc['content']);
+        $title = sanitize_input((string) ($input['title'] ?? $doc['draft_title'] ?? $doc['title']));
+        $content = (string) ($input['content'] ?? $doc['draft_content'] ?? $doc['content']);
         $categoryId = array_key_exists('category_id', $input)
             ? ($input['category_id'] !== null && $input['category_id'] !== '' ? (int) $input['category_id'] : null)
-            : ($doc['category_id'] !== null ? (int) $doc['category_id'] : null);
+            : ($doc['draft_category_id'] !== null ? (int) $doc['draft_category_id'] : ($doc['category_id'] !== null ? (int) $doc['category_id'] : null));
         $isPublic = array_key_exists('is_public', $input) ? (!empty($input['is_public']) ? 1 : 0) : (int) ($doc['is_public'] ?? 0);
         $isRestricted = array_key_exists('is_restricted', $input)
             ? (!empty($input['is_restricted']) ? 1 : 0)
@@ -404,12 +381,8 @@ class DocumentController extends Controller
         $versionNote = sanitize_input((string) ($input['version_note'] ?? ''));
         $tags = $input['tags'] ?? null;
 
-        // Se Admin ou Aprovador editar, mantém aprovado; se Editor editar, volta para pendente para revisão
-        $isApprover = in_array($role, ['Admin', 'Aprovador'], true);
-        $status = $isApprover ? 'aprovado' : 'pendente';
-        $approvedBy = $isApprover ? (int) $user['id'] : null;
-
-        $model->update($intId, $title, $content, $categoryId, $userId, $versionNote, $status, $approvedBy, $isPublic, $isRestricted, $locationIds, $areaIds);
+        // Ao salvar edições, salva como rascunho. A versão publicada não altera até que o rascunho seja aprovado.
+        $model->update($intId, $title, $content, $categoryId, $userId, $versionNote, 'rascunho', null, $isPublic, $isRestricted, $locationIds, $areaIds);
 
         if (is_array($tags)) {
             $tagModel = new TagModel();
@@ -419,33 +392,14 @@ class DocumentController extends Controller
             $model->setTags($intId, $tagIds);
         }
 
-        $statusMsg = ($status === 'aprovado') ? 'atualizado e mantido publicado' : 'atualizado e enviado para re-aprovação';
-        Logger::log('edit_doc', "Documento #{$intId} {$statusMsg}");
-
-        // Notificar Admin e Aprovador quando documento alterado fica pendente
-        if ($status === 'pendente') {
-            $db = Database::getInstance();
-            $stmtNotif = $db->prepare("SELECT id FROM cp_users WHERE role IN ('Admin','Aprovador') AND status = 'ativo'");
-            $stmtNotif->execute();
-            $notifyIds = array_map('intval', array_column($stmtNotif->fetchAll() ?: [], 'id'));
-            $notifyIds = array_values(array_filter($notifyIds, fn(int $nid) => $nid !== $userId));
-            if ($notifyIds !== []) {
-                (new \App\Models\NotificationModel())->notifyUsers(
-                    $notifyIds,
-                    'edicao_documento',
-                    'Documento alterado para re-aprovação',
-                    $user['name'] . ' alterou o documento "' . $title . '" e enviou para re-avaliação.',
-                    '/aprovacoes'
-                );
-            }
-        }
+        Logger::log('edit_doc', "Rascunho do documento #{$intId} atualizado");
 
         // Notificar seguidores do documento (exceto quem atualizou)
-        $followerModel = new \App\Models\DocumentFollowerModel();
+        $followerModel = new DocumentFollowerModel();
         $followerIds = $followerModel->getFollowers($intId);
         $followerIds = array_filter($followerIds, fn(int $fid) => $fid !== $userId);
         if ($followerIds !== []) {
-            $notifModel = new \App\Models\NotificationModel();
+            $notifModel = new NotificationModel();
             $notifModel->notifyUsers(
                 array_values($followerIds),
                 'doc_update',
@@ -455,7 +409,7 @@ class DocumentController extends Controller
             );
         }
 
-        $this->jsonOk(['id' => $intId, 'status' => $status]);
+        $this->jsonOk(['id' => $intId, 'status' => 'rascunho', 'message' => 'Rascunho salvo com sucesso!']);
     }
 
     public function duplicateDoc(string $id): void
@@ -758,8 +712,13 @@ class DocumentController extends Controller
             return;
         }
 
-        if (($doc['status'] ?? '') === 'aprovado') {
-            $this->jsonError('Este documento já está aprovado. Edite-o para gerar uma nova revisão.', 422);
+        if (empty($doc['has_draft']) && ($doc['status'] ?? '') === 'aprovado') {
+            $this->jsonError('Este documento já está aprovado e não possui alterações em rascunho. Edite-o para submeter uma nova versão.', 422);
+            return;
+        }
+
+        if (($doc['draft_status'] ?? '') === 'pendente') {
+            $this->jsonError('Este documento já possui uma solicitação de aprovação pendente.', 422);
             return;
         }
 
@@ -791,6 +750,17 @@ class DocumentController extends Controller
             $this->jsonError('O aprovador selecionado não tem acesso a este documento (restrição de localização/área).', 422);
             return;
         }
+
+        // Marca o rascunho como pendente de aprovação
+        $model->update(
+            $intId,
+            (string) ($doc['draft_title'] ?? $doc['title']),
+            (string) ($doc['draft_content'] ?? $doc['content']),
+            $doc['draft_category_id'] !== null ? (int) $doc['draft_category_id'] : ($doc['category_id'] !== null ? (int) $doc['category_id'] : null),
+            $userId,
+            (string) ($doc['draft_version_note'] ?? ''),
+            'pendente'
+        );
 
         $approvalModel = new ApprovalRequestModel();
         $request = $approvalModel->createFor($intId, $userId, $approverId);
@@ -904,8 +874,8 @@ class DocumentController extends Controller
         $docTitle = (string) $doc['title'];
 
         if ($action === 'approve') {
-            if (!in_array($doc['status'], ['pendente', 'rejeitado'], true)) {
-                $this->jsonError('Este documento não pode ser aprovado (status atual: ' . $doc['status'] . ').', 422);
+            if ($doc['status'] !== 'pendente' && ($doc['draft_status'] ?? '') !== 'pendente' && ($doc['draft_status'] ?? '') !== 'rejeitado') {
+                $this->jsonError('Este documento não possui alterações pendentes para aprovação.', 422);
                 return;
             }
             if (!$approvalModel->settle((int) $pending['id'], 'aprovado', $userId, null)) {
@@ -940,8 +910,8 @@ class DocumentController extends Controller
                 $this->jsonError('Informe o motivo da rejeição.', 422);
                 return;
             }
-            if ($doc['status'] !== 'pendente') {
-                $this->jsonError('Este documento não pode ser rejeitado (status atual: ' . $doc['status'] . ').', 422);
+            if ($doc['status'] !== 'pendente' && ($doc['draft_status'] ?? '') !== 'pendente') {
+                $this->jsonError('Este documento não possui alterações pendentes para rejeição.', 422);
                 return;
             }
             if (!$approvalModel->settle((int) $pending['id'], 'rejeitado', $userId, $reason)) {

@@ -165,31 +165,47 @@ var Approvals = (function () {
 
   /* ─── HELPERS: badges & actions ─────────────────────────────── */
 
-  function buildStatusBadge(status) {
+  function buildStatusBadge(d) {
+    var status = (typeof d === 'object' && d !== null)
+      ? (d.draft_status === 'pendente' || d.status === 'pendente'
+          ? 'pendente'
+          : (d.draft_status === 'rejeitado' || d.status === 'rejeitado'
+              ? 'rejeitado'
+              : (d.status === 'aprovado' && !d.has_draft ? 'aprovado' : 'rascunho')))
+      : d;
+
     if (status === 'aprovado') {
       return '<span class="approval-badge approved" style="display:inline-flex;align-items:center;gap:3px;">' + Icons.get('check', { size: 11 }) + 'Publicado</span>';
     }
     if (status === 'rejeitado') {
       return '<span class="approval-badge rejected" style="display:inline-flex;align-items:center;gap:3px;">' + Icons.get('close', { size: 11 }) + 'Rejeitado</span>';
     }
-    return '<span class="approval-badge pending" style="display:inline-flex;align-items:center;gap:3px;">' + Icons.get('clock', { size: 11 }) + 'Aguardando</span>';
+    if (status === 'pendente') {
+      return '<span class="approval-badge pending" style="display:inline-flex;align-items:center;gap:3px;">' + Icons.get('clock', { size: 11 }) + 'Aguardando Aprovação</span>';
+    }
+    return '<span class="approval-badge draft" style="display:inline-flex;align-items:center;gap:3px;background:var(--docs-surface-2);color:var(--docs-text-mut);">' + Icons.get('pencil', { size: 11 }) + 'Rascunho</span>';
   }
 
   function buildActionsHtml(d) {
-    if (d.status === 'pendente') {
-      return '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Approvals.previewDoc(' + d.id + ')" title="Revisar documento">'
-        + Icons.eye + '</button>'
-        + '<button type="button" class="table-action-btn" style="color:var(--danger,#d63939)" onclick="event.stopPropagation();Approvals.openRejectModal(' + d.id + ')" title="Rejeitar">'
+    var myRole = (window.ME && window.ME.role) || '';
+    var isAdmin = (myRole === 'Admin');
+    var isPending = (d.draft_status === 'pendente' || d.status === 'pendente');
+    var isRejected = (d.draft_status === 'rejeitado' || d.status === 'rejeitado');
+    var isDraft = (d.draft_status === 'rascunho' || d.status === 'rascunho' || d.has_draft);
+
+    var html = '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Approvals.previewDoc(' + d.id + ')" title="Visualizar / Revisar">'
+      + Icons.eye + '</button>';
+
+    if (isPending || (isAdmin && (isDraft || isRejected) && d.status !== 'aprovado')) {
+      html += '<button type="button" class="table-action-btn" style="color:var(--danger,#d63939)" onclick="event.stopPropagation();Approvals.openRejectModal(' + d.id + ')" title="Rejeitar">'
         + Icons.close + '</button>'
         + '<button type="button" class="table-action-btn" style="color:var(--docs-primary,#1abb9c)" onclick="event.stopPropagation();Approvals.approveDoc(' + d.id + ')" title="Aprovar e publicar">'
         + Icons.check + '</button>';
-    }
-    var html = '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Approvals.previewDoc(' + d.id + ')" title="Visualizar / Revisar">'
-      + Icons.eye + '</button>';
-    if (d.status === 'rejeitado') {
-      html += '<button type="button" class="table-action-btn" style="color:var(--docs-primary,#1abb9c)" onclick="event.stopPropagation();Approvals.approveDoc(' + d.id + ')" title="Reavaliar e Aprovar">'
+    } else if (isRejected || (isAdmin && d.has_draft)) {
+      html += '<button type="button" class="table-action-btn" style="color:var(--docs-primary,#1abb9c)" onclick="event.stopPropagation();Approvals.approveDoc(' + d.id + ')" title="Aprovar e publicar rascunho">'
         + Icons.check + '</button>';
     }
+
     return html;
   }
 
@@ -211,7 +227,7 @@ var Approvals = (function () {
         : '';
 
       var rejectionHtml = '';
-      if (d.status === 'rejeitado' && d.rejection_reason) {
+      if ((d.status === 'rejeitado' || d.draft_status === 'rejeitado') && d.rejection_reason) {
         rejectionHtml = '<div class="approval-rejection-callout">'
           + '<strong>Motivo da rejeição:</strong> ' + esc(d.rejection_reason)
           + '</div>';
@@ -220,7 +236,7 @@ var Approvals = (function () {
       html += '<div class="approval-card-item">'
         + '<div class="card-top">'
         + catBadge
-        + buildStatusBadge(d.status)
+        + buildStatusBadge(d)
         + '</div>'
         + '<h3 class="card-title">' + esc(d.title) + '</h3>'
         + '<div class="card-preview">' + (cleanPreview ? esc(cleanPreview) : '<em>Documento sem conteúdo</em>') + '</div>'
@@ -229,7 +245,7 @@ var Approvals = (function () {
         + '<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;margin-right:2px"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Autor: <strong>' + esc(d.author_name || 'Desconhecido') + '</strong></span>'
         + '<span>🕒 Enviado em: ' + formatDate(d.updated_at) + '</span>'
         + versionHtml
-        + (d.status === 'rejeitado' && d.rejected_by_name
+        + ((d.status === 'rejeitado' || d.draft_status === 'rejeitado') && d.rejected_by_name
             ? '<span style="color:var(--danger,#d63939)">↩ Rejeitado por: ' + esc(d.rejected_by_name) + '</span>'
             : (d.approved_by_name ? '<span>🛡️ Aprovado por: ' + esc(d.approved_by_name) + '</span>' : ''))
         + '</div>'
@@ -282,7 +298,7 @@ var Approvals = (function () {
         ? '<span class="doc-category-badge" style="font-size:0.75rem;padding:0.18rem 0.55rem;border-left:3px solid ' + esc(catColor) + ';"><span style="color:' + esc(catColor) + '">' + catIcon + '</span> ' + esc(d.category_name) + '</span>'
         : '<span style="color:var(--docs-text-mut);font-size:0.75rem">—</span>';
 
-      var rejNote = (d.status === 'rejeitado' && d.rejection_reason)
+      var rejNote = ((d.status === 'rejeitado' || d.draft_status === 'rejeitado') && d.rejection_reason)
         ? '<div style="font-size:0.7rem;color:var(--danger,#d63939);margin-top:2px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(d.rejection_reason) + '">↩ ' + esc(d.rejection_reason) + '</div>'
         : '';
 
@@ -298,7 +314,7 @@ var Approvals = (function () {
         + '</td>'
         + '<td>' + catHtml + '</td>'
         + '<td><span style="font-size:0.78rem;color:var(--docs-text-mut);font-weight:500;display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' + esc(d.author_name || 'Admin') + '</span></td>'
-        + '<td>' + buildStatusBadge(d.status) + (d.version_count > 0 ? ' <span style="font-size:0.7rem;color:var(--docs-text-mut);margin-left:2px;">v' + d.version_count + '</span>' : '') + '</td>'
+        + '<td>' + buildStatusBadge(d) + (d.version_count > 0 ? ' <span style="font-size:0.7rem;color:var(--docs-text-mut);margin-left:2px;">v' + d.version_count + '</span>' : '') + '</td>'
         + '<td><span style="font-size:0.8rem;color:var(--docs-text-mut);white-space:nowrap">' + formatDate(d.updated_at) + '</span></td>'
         + '<td style="text-align:right;white-space:nowrap">'
         + '<div class="table-actions">'

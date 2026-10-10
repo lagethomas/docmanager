@@ -177,9 +177,18 @@ var DocDiff = (function () {
     oldSelect.innerHTML = '';
     newSelect.innerHTML = '';
 
+    if (CURRENT_DOC && CURRENT_DOC.has_draft) {
+      var optDraft = document.createElement('option');
+      optDraft.value = 'draft';
+      optDraft.textContent = '📝 Rascunho Salvo (' + (CURRENT_DOC.draft_status === 'pendente' ? 'Submetido p/ Aprovação' : 'Em edição') + ')';
+      newSelect.appendChild(optDraft);
+    }
+
     if (!versions || !versions.length) {
       oldSelect.innerHTML = '<option value="">Sem versão anterior</option>';
-      newSelect.innerHTML = '<option value="0">Conteúdo Atual</option>';
+      if (!CURRENT_DOC || !CURRENT_DOC.has_draft) {
+        newSelect.innerHTML = '<option value="0">Conteúdo Atual</option>';
+      }
       return;
     }
 
@@ -187,7 +196,7 @@ var DocDiff = (function () {
 
     for (var i = 0; i < total; i++) {
       var v = versions[i];
-      var vNum = total - i;
+      var vNum = v.version_number || (total - i);
       var dateStr = fmtFull(v.edited_at);
       var label = 'v' + vNum + ' (' + dateStr + ' - ' + (v.editor_name || 'Autor') + ')';
 
@@ -203,11 +212,16 @@ var DocDiff = (function () {
       newSelect.appendChild(optNew);
     }
 
-    newSelect.value = '0';
-    if (total >= 2) {
-      oldSelect.value = '1';
-    } else {
+    if (CURRENT_DOC && CURRENT_DOC.has_draft) {
+      newSelect.value = 'draft';
       oldSelect.value = '0';
+    } else {
+      newSelect.value = '0';
+      if (total >= 2) {
+        oldSelect.value = '1';
+      } else {
+        oldSelect.value = '0';
+      }
     }
   }
 
@@ -226,32 +240,62 @@ var DocDiff = (function () {
 
     var versions = CURRENT_DOC.versions || [];
 
+    var isNewDraft = newSelect && newSelect.value === 'draft';
     var oldIdx = oldSelect ? parseInt(oldSelect.value, 10) : 1;
-    var newIdx = newSelect ? parseInt(newSelect.value, 10) : 0;
+    var newIdx = isNewDraft ? 'draft' : (newSelect ? parseInt(newSelect.value, 10) : 0);
 
     var oldContent = '';
-    var oldLabel = 'Versão Anterior';
+    var oldLabel = 'Versão Publicada';
     var newContent = CURRENT_DOC.content || '';
-    var newLabel = 'Nova Alteração (Proposta)';
+    var newLabel = 'Nova Alteração';
 
-    var oldVer = (versions && !isNaN(oldIdx) && versions[oldIdx]) ? versions[oldIdx] : null;
-    var newVer = (versions && !isNaN(newIdx) && versions[newIdx]) ? versions[newIdx] : null;
+    var oldVer = null;
+    var newVer = null;
 
-    if (versions.length > 0) {
+    if (isNewDraft) {
+      newContent = CURRENT_DOC.draft_content || '';
+      newLabel = '📝 Rascunho (' + (CURRENT_DOC.draft_status === 'pendente' ? 'Pendente de Aprovação' : 'Em Edição') + ')';
+      newVer = {
+        title: CURRENT_DOC.draft_title || CURRENT_DOC.title,
+        category_id: CURRENT_DOC.draft_category_id || CURRENT_DOC.category_id,
+        category_name: CURRENT_DOC.draft_category_name || CURRENT_DOC.category_name
+      };
+
+      if (!isNaN(oldIdx) && versions[oldIdx]) {
+        oldContent = versions[oldIdx].content || '';
+        var vNumOld = versions[oldIdx].version_number || (versions.length - oldIdx);
+        oldLabel = 'Versão v' + vNumOld + ' (' + fmtFull(versions[oldIdx].edited_at) + ')';
+        oldVer = versions[oldIdx];
+      } else {
+        oldContent = CURRENT_DOC.content || '';
+        oldLabel = 'Versão Publicada Atual (v' + (CURRENT_DOC.current_version || 1) + ')';
+        oldVer = CURRENT_DOC;
+      }
+    } else if (versions.length > 0) {
       if (!isNaN(newIdx) && versions[newIdx]) {
         newContent = versions[newIdx].content || '';
-        var vNumNew = versions.length - newIdx;
+        var vNumNew = versions[newIdx].version_number || (versions.length - newIdx);
         newLabel = 'Versão v' + vNumNew + ' (' + fmtFull(versions[newIdx].edited_at) + ')';
+        newVer = versions[newIdx];
+      } else {
+        newVer = CURRENT_DOC;
       }
 
       if (!isNaN(oldIdx) && versions[oldIdx] && oldIdx !== newIdx) {
         oldContent = versions[oldIdx].content || '';
-        var vNumOld = versions.length - oldIdx;
+        var vNumOld = versions[oldIdx].version_number || (versions.length - oldIdx);
         oldLabel = 'Versão v' + vNumOld + ' (' + fmtFull(versions[oldIdx].edited_at) + ')';
+        oldVer = versions[oldIdx];
       } else if (oldIdx === newIdx) {
         oldContent = newContent;
         oldLabel = newLabel + ' (Sem alteração)';
+        oldVer = newVer;
+      } else {
+        oldVer = CURRENT_DOC;
       }
+    } else {
+      newVer = CURRENT_DOC;
+      oldVer = CURRENT_DOC;
     }
 
     if (!oldContent && (!versions || versions.length <= 1)) {
@@ -392,8 +436,12 @@ var DocDiff = (function () {
           + '<span style="display:inline-flex;align-items:center;gap:3px;">' + clockIcon + ' ' + dateStr + '</span>';
       }
 
+      var effectiveStatus = (CURRENT_DOC.draft_status === 'rejeitado' || CURRENT_DOC.status === 'rejeitado')
+        ? 'rejeitado'
+        : ((CURRENT_DOC.draft_status === 'pendente' || CURRENT_DOC.status === 'pendente') ? 'pendente' : CURRENT_DOC.status);
+
       if (notice) {
-        if (CURRENT_DOC.status === 'rejeitado' && CURRENT_DOC.rejection_reason) {
+        if (effectiveStatus === 'rejeitado' && CURRENT_DOC.rejection_reason) {
           notice.hidden = false;
           notice.className = 'approval-rejection-callout';
           notice.innerHTML = '<strong>Motivo da rejeição anterior:</strong> ' + esc(CURRENT_DOC.rejection_reason);
@@ -417,7 +465,7 @@ var DocDiff = (function () {
       if (actions) {
         var userRole = (window.ME && window.ME.role) || '';
         var canApprove = (userRole === 'Admin' || userRole === 'Aprovador');
-        var isPendingOrRejected = (CURRENT_DOC.status === 'pendente' || CURRENT_DOC.status === 'rejeitado');
+        var isPendingOrRejected = (effectiveStatus === 'pendente' || effectiveStatus === 'rejeitado');
         actions.hidden = !(options.showApprovalButtons && canApprove && isPendingOrRejected);
       }
       if (modal) modal.hidden = false;

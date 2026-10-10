@@ -46,6 +46,9 @@ final class DocumentModelTest extends TestCase
         $tagIds = $this->tagModel->resolve(['php', 'docs', 'unit-test']);
         $this->docModel->setTags($docId, $tagIds);
 
+        // Aprovação da v1
+        $this->docModel->approve($docId, $this->userId);
+
         // Find
         $doc = $this->docModel->find($docId);
         $this->assertNotNull($doc);
@@ -59,6 +62,9 @@ final class DocumentModelTest extends TestCase
         $updatedContent = $content . PHP_EOL . 'Atualização do conteúdo.';
         $updated = $this->docModel->update($docId, $updatedTitle, $updatedContent, $catId, $this->userId, 'Segunda versão');
         $this->assertTrue($updated);
+
+        // Aprovação da v2
+        $this->docModel->approve($docId, $this->userId);
 
         $docV2 = $this->docModel->find($docId);
         $this->assertNotNull($docV2);
@@ -107,10 +113,12 @@ final class DocumentModelTest extends TestCase
     {
         $title = 'Doc With Many Versions ' . uniqid();
         $docId = $this->docModel->create($title, 'Versão 1', null, $this->userId);
+        $this->docModel->approve($docId, $this->userId);
 
-        // Criar 7 versões
+        // Criar 7 versões aprovadas
         for ($i = 2; $i <= 7; $i++) {
             $this->docModel->update($docId, $title, "Versão {$i}", null, $this->userId, "Nota {$i}");
+            $this->docModel->approve($docId, $this->userId);
         }
 
         // Poda para manter no máximo 3 versões
@@ -186,11 +194,13 @@ final class DocumentModelTest extends TestCase
 
         $docId = $this->docModel->create($titleInitial, $content, $catId1, $this->userId);
         $this->assertGreaterThan(0, $docId);
+        $this->docModel->approve($docId, $this->userId);
 
         // Mover para a Pasta Destino e alterar o título
         $titleUpdated = $titleInitial . ' Renomeado';
         $updated = $this->docModel->update($docId, $titleUpdated, $content, $catId2, $this->userId, 'Mudança de pasta');
         $this->assertTrue($updated);
+        $this->docModel->approve($docId, $this->userId);
 
         $doc = $this->docModel->find($docId);
         $this->assertNotNull($doc);
@@ -392,6 +402,47 @@ final class DocumentModelTest extends TestCase
         $locModel->delete($rjLocId);
         $areaModel->delete($tiAreaId);
         $areaModel->delete($rhAreaId);
+    }
+
+    public function testDraftSavingDoesNotIncrementVersionUntilApproval(): void
+    {
+        // 1. Criar e aprovar Versão 1
+        $docId = $this->docModel->create('Documento Versão 1', 'Conteúdo v1', null, $this->userId);
+        $this->docModel->approve($docId, $this->userId);
+
+        $docV1 = $this->docModel->find($docId);
+        $this->assertSame(1, (int) $docV1['current_version']);
+        $this->assertSame('Documento Versão 1', $docV1['title']);
+        $this->assertSame('Conteúdo v1', $docV1['content']);
+        $this->assertCount(1, $docV1['versions']);
+
+        // 2. Editar e salvar rascunho múltiplas vezes
+        $this->docModel->update($docId, 'Rascunho Alterado 1', 'Conteúdo rascunho 1', null, $this->userId);
+        $this->docModel->update($docId, 'Rascunho Alterado 2', 'Conteúdo rascunho final', null, $this->userId);
+
+        // A versão publicada DEVE permanecer inalterada como v1!
+        $docDraft = $this->docModel->find($docId);
+        $this->assertSame(1, (int) $docDraft['current_version']);
+        $this->assertSame('Documento Versão 1', $docDraft['title']);
+        $this->assertSame('Conteúdo v1', $docDraft['content']);
+        $this->assertSame(1, (int) $docDraft['has_draft']);
+        $this->assertSame('Rascunho Alterado 2', $docDraft['draft_title']);
+        $this->assertSame('Conteúdo rascunho final', $docDraft['draft_content']);
+        $this->assertCount(1, $docDraft['versions']);
+
+        // 3. Aprovação publica as alterações acumuladas e incrementa para Versão 2
+        $approved = $this->docModel->approve($docId, $this->userId);
+        $this->assertTrue($approved);
+
+        $docV2 = $this->docModel->find($docId);
+        $this->assertSame(2, (int) $docV2['current_version']);
+        $this->assertSame('Rascunho Alterado 2', $docV2['title']);
+        $this->assertSame('Conteúdo rascunho final', $docV2['content']);
+        $this->assertSame(0, (int) $docV2['has_draft']);
+        $this->assertCount(2, $docV2['versions']);
+
+        // Cleanup
+        $this->docModel->forceDelete($docId);
     }
 }
 

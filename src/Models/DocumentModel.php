@@ -89,8 +89,20 @@ class DocumentModel extends Repository
                 $conditions[] = "d.status = 'aprovado'";
             }
         } elseif ($status !== null && $status !== '') {
-            $conditions[] = 'd.status = ?';
-            $params[] = $status;
+            if ($status === 'pendente') {
+                if ($userRole === 'Admin') {
+                    $conditions[] = "(d.status = 'pendente' OR d.draft_status = 'pendente' OR d.status = 'rascunho' OR d.has_draft = 1)";
+                } else {
+                    $conditions[] = "(d.status = 'pendente' OR d.draft_status = 'pendente' OR EXISTS (SELECT 1 FROM cp_approval_requests ar WHERE ar.document_id = d.id AND ar.approver_id = {$uid} AND ar.status = 'pendente'))";
+                }
+            } elseif ($status === 'rascunho') {
+                $conditions[] = "(d.status = 'rascunho' OR d.draft_status = 'rascunho')";
+            } elseif ($status === 'rejeitado') {
+                $conditions[] = "(d.status = 'rejeitado' OR d.draft_status = 'rejeitado')";
+            } else {
+                $conditions[] = 'd.status = ?';
+                $params[] = $status;
+            }
         } elseif ($userRole === 'Editor' && !$trash && $userId !== null) {
             // Editor visualiza aprovados OU seus próprios criados OU compartilhados OU onde é aprovador designado
             $conditions[] = "(d.status = 'aprovado' OR d.created_by = ? OR EXISTS (SELECT 1 FROM cp_document_shares ds WHERE ds.document_id = d.id AND ds.user_id = ?) OR EXISTS (SELECT 1 FROM cp_approval_requests ar WHERE ar.document_id = d.id AND ar.approver_id = ? AND ar.status = 'pendente'))";
@@ -102,6 +114,7 @@ class DocumentModel extends Repository
         // Filtro por restrição de localização e área (para usuários não-Admin)
         if ($userRole !== 'Admin') {
             $scopeConds = [
+                'd.is_restricted = 0',
                 'd.created_by = ?',
                 'EXISTS (SELECT 1 FROM cp_document_shares ds_sec WHERE ds_sec.document_id = d.id AND ds_sec.user_id = ?)'
             ];
@@ -166,7 +179,7 @@ class DocumentModel extends Repository
 
         $sql .= ' WHERE ' . implode(' AND ', $conditions);
 
-        $sql .= ' GROUP BY d.id, d.title, d.content, d.category_id, d.created_by, d.status, d.approved_by, d.rejected_by, d.approved_at, d.rejection_reason, d.views_count, d.created_at, d.updated_at, d.deleted_at, u.name, app_u.name, rej_u.name, c.name, c.icon, c.color';
+        $sql .= ' GROUP BY d.id, d.title, d.content, d.category_id, d.created_by, d.status, d.current_version, d.has_draft, d.draft_title, d.draft_status, d.draft_updated_at, d.approved_by, d.rejected_by, d.approved_at, d.rejection_reason, d.views_count, d.created_at, d.updated_at, d.deleted_at, u.name, app_u.name, rej_u.name, c.name, c.icon, c.color';
 
         // Ordenação
         $orderBy = match ($sort) {
@@ -244,8 +257,23 @@ class DocumentModel extends Repository
         if (isset($row['content'])) {
             $row['content'] = SecurityHelper::decryptPskTags((string) $row['content']);
         }
-
-        $row['is_favorite'] = !empty($row['is_favorite']);
+        $rowDraftContent = $row['draft_content'] ?? null;
+        if (is_string($rowDraftContent) && $rowDraftContent !== '') {
+            $row['draft_content'] = SecurityHelper::decryptPskTags($rowDraftContent);
+        } else {
+            $row['draft_content'] = $row['content'] ?? '';
+        }
+        $rowDraftTitle = $row['draft_title'] ?? null;
+        if (!is_string($rowDraftTitle) || $rowDraftTitle === '') {
+            $row['draft_title'] = $row['title'] ?? '';
+        }
+        if (!array_key_exists('draft_category_id', $row) || $row['draft_category_id'] === null) {
+            $row['draft_category_id'] = $row['category_id'] ?? null;
+        }
+        $rowDraftStatus = $row['draft_status'] ?? null;
+        if (!is_string($rowDraftStatus) || $rowDraftStatus === '') {
+            $row['draft_status'] = $row['status'] ?? 'rascunho';
+        }
 
         // Tags
         $stmt2 = $this->db->prepare(
@@ -317,21 +345,49 @@ class DocumentModel extends Repository
         string $content,
         ?int $categoryId,
         int $createdBy,
-        string $status = 'pendente',
+        string $status = 'rascunho',
         ?int $approvedBy = null,
         int $isPublic = 0,
         int $isRestricted = 0,
         array $locationIds = [],
-        array $areaIds = []
+        array $areaIds = [],
+        string $versionNote = ''
     ): int {
         $categoryId = ($categoryId !== null && $categoryId > 0) ? $categoryId : null;
-        $approvedAt = ($status === 'aprovado') ? date('Y-m-d H:i:s') : null;
         $encryptedContent = SecurityHelper::encryptPskTags($content);
 
+        $isApproved = ($status === 'aprovado');
+        $approvedAt = $isApproved ? date('Y-m-d H:i:s') : null;
+        $currentVersion = $isApproved ? 1 : 0;
+        $hasDraft = $isApproved ? 0 : 1;
+        $draftStatus = $isApproved ? 'rascunho' : (in_array($status, ['rascunho', 'pendente'], true) ? $status : 'rascunho');
+
         $stmt = $this->db->prepare(
-            'INSERT INTO cp_documents (title, content, category_id, created_by, status, approved_by, approved_at, is_public, is_restricted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO cp_documents (
+                title, content, category_id, created_by, status, approved_by, approved_at,
+                is_public, is_restricted, current_version, has_draft,
+                draft_title, draft_content, draft_category_id, draft_status, draft_updated_at, draft_version_note
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->execute([trim($title), $encryptedContent, $categoryId, $createdBy, $status, $approvedBy, $approvedAt, $isPublic, $isRestricted]);
+        $stmt->execute([
+            trim($title),
+            $encryptedContent,
+            $categoryId,
+            $createdBy,
+            $status,
+            $approvedBy,
+            $approvedAt,
+            $isPublic,
+            $isRestricted,
+            $currentVersion,
+            $hasDraft,
+            trim($title),
+            $encryptedContent,
+            $categoryId,
+            $draftStatus,
+            date('Y-m-d H:i:s'),
+            trim($versionNote) !== '' ? trim($versionNote) : 'Criação inicial'
+        ]);
         $id = (int) $this->db->lastInsertId();
 
         if ($isRestricted && !empty($locationIds)) {
@@ -342,13 +398,14 @@ class DocumentModel extends Repository
             (new \App\Models\AreaModel())->setDocumentAreas($id, $areaIds);
         }
 
-        // Versão inicial
-        $stmt2 = $this->db->prepare(
-            'INSERT INTO cp_document_versions (document_id, title, category_id, content, version_note, edited_by) VALUES (?, ?, ?, ?, ?, ?)'
-        );
-        $stmt2->execute([$id, trim($title), $categoryId, $encryptedContent, 'Criação inicial', $createdBy]);
-
-        $this->pruneVersions($id, $this->getMaxVersions());
+        // Versão inicial SOMENTE se já foi aprovado
+        if ($isApproved) {
+            $stmt2 = $this->db->prepare(
+                'INSERT INTO cp_document_versions (document_id, version_number, title, category_id, content, version_note, edited_by) VALUES (?, ?, ?, ?, ?, ?, ?)'
+            );
+            $stmt2->execute([$id, 1, trim($title), $categoryId, $encryptedContent, trim($versionNote) !== '' ? trim($versionNote) : 'Publicação inicial (v1)', $createdBy]);
+            $this->pruneVersions($id, $this->getMaxVersions());
+        }
 
         return $id;
     }
@@ -367,25 +424,47 @@ class DocumentModel extends Repository
         ?array $locationIds = null,
         ?array $areaIds = null
     ): bool {
+        $doc = $this->find($id);
+        if ($doc === null) {
+            return false;
+        }
+
         $categoryId = ($categoryId !== null && $categoryId > 0) ? $categoryId : null;
         $encryptedContent = SecurityHelper::encryptPskTags($content);
 
-        $fields = ['title = ?', 'content = ?', 'category_id = ?'];
-        $params = [trim($title), $encryptedContent, $categoryId];
+        $currentVer = (int) ($doc['current_version'] ?? 0);
+        $draftStatusVal = ($status !== null && in_array($status, ['rascunho', 'pendente', 'rejeitado'], true))
+            ? $status
+            : 'rascunho';
 
-        if ($status !== null) {
-            $fields[] = 'status = ?';
-            $params[] = $status;
+        $fields = [
+            'has_draft = 1',
+            'draft_title = ?',
+            'draft_content = ?',
+            'draft_category_id = ?',
+            'draft_status = ?',
+            'draft_updated_at = NOW()',
+            'draft_version_note = ?'
+        ];
+        $params = [
+            trim($title),
+            $encryptedContent,
+            $categoryId,
+            $draftStatusVal,
+            trim($versionNote) !== '' ? trim($versionNote) : 'Atualização de rascunho'
+        ];
 
-            $fields[] = 'approved_by = ?';
-            $params[] = $approvedBy;
-
-            $fields[] = 'approved_at = ?';
-            $params[] = ($status === 'aprovado') ? date('Y-m-d H:i:s') : null;
-
-            if ($status === 'pendente' || $status === 'aprovado') {
-                $fields[] = 'rejection_reason = NULL';
-                $fields[] = 'rejected_by = NULL';
+        // Se o documento NUNCA foi publicado (current_version = 0), atualiza também title, content e category_id principais
+        if ($currentVer === 0) {
+            $fields[] = 'title = ?';
+            $params[] = trim($title);
+            $fields[] = 'content = ?';
+            $params[] = $encryptedContent;
+            $fields[] = 'category_id = ?';
+            $params[] = $categoryId;
+            if ($status !== null) {
+                $fields[] = 'status = ?';
+                $params[] = $status;
             }
         }
 
@@ -410,16 +489,6 @@ class DocumentModel extends Repository
 
         if ($ok && $areaIds !== null) {
             (new \App\Models\AreaModel())->setDocumentAreas($id, $isRestricted ? $areaIds : []);
-        }
-
-        if ($ok) {
-            $note = trim($versionNote) !== '' ? trim($versionNote) : 'Atualização de conteúdo';
-            $stmt2 = $this->db->prepare(
-                'INSERT INTO cp_document_versions (document_id, title, category_id, content, version_note, edited_by) VALUES (?, ?, ?, ?, ?, ?)'
-            );
-            $stmt2->execute([$id, trim($title), $categoryId, $encryptedContent, $note, $userId]);
-
-            $this->pruneVersions($id, $this->getMaxVersions());
         }
 
         return $ok;
@@ -550,20 +619,70 @@ class DocumentModel extends Repository
 
     public function approve(int $id, int $approvedBy): bool
     {
+        $doc = $this->find($id);
+        if ($doc === null) {
+            return false;
+        }
+
+        $pubTitle = !empty($doc['draft_title']) ? (string) $doc['draft_title'] : (string) $doc['title'];
+        $pubCategory = array_key_exists('draft_category_id', $doc) && $doc['draft_category_id'] !== null
+            ? (int) $doc['draft_category_id']
+            : ($doc['category_id'] !== null ? (int) $doc['category_id'] : null);
+
+        $draftVal = $doc['draft_content'] ?? null;
+        $rawContent = (is_string($draftVal) && $draftVal !== '')
+            ? $draftVal
+            : (string) ($doc['content'] ?? '');
+        $encContent = SecurityHelper::encryptPskTags($rawContent);
+
+        $currentVer = (int) ($doc['current_version'] ?? 0);
+        $newVersion = $currentVer + 1;
+
         $stmt = $this->db->prepare(
             "UPDATE cp_documents 
-             SET status = 'aprovado', approved_by = ?, approved_at = NOW(), rejection_reason = NULL, rejected_by = NULL 
-             WHERE id = ? AND status IN ('pendente', 'rejeitado')"
+             SET title = ?, content = ?, category_id = ?, status = 'aprovado', current_version = ?, approved_by = ?, approved_at = NOW(),
+                 has_draft = 0, draft_status = 'rascunho', rejection_reason = NULL, rejected_by = NULL 
+             WHERE id = ?"
         );
-        return $stmt->execute([$approvedBy, $id]);
+        $ok = $stmt->execute([$pubTitle, $encContent, $pubCategory, $newVersion, $approvedBy, $id]);
+
+        if ($ok) {
+            $note = !empty($doc['draft_version_note'])
+                ? (string) $doc['draft_version_note']
+                : ("Versão {$newVersion} aprovada e publicada");
+
+            $stmtVer = $this->db->prepare(
+                'INSERT INTO cp_document_versions (document_id, version_number, title, category_id, content, version_note, edited_by) VALUES (?, ?, ?, ?, ?, ?, ?)'
+            );
+            $stmtVer->execute([$id, $newVersion, $pubTitle, $pubCategory, $encContent, $note, $approvedBy]);
+            $this->pruneVersions($id, $this->getMaxVersions());
+        }
+
+        return $ok;
     }
 
     public function reject(int $id, int $rejectedBy, string $reason): bool
     {
+        $doc = $this->find($id);
+        if ($doc === null) {
+            return false;
+        }
+
+        $currentVer = (int) ($doc['current_version'] ?? 0);
+
+        if ($currentVer === 0) {
+            $stmt = $this->db->prepare(
+                "UPDATE cp_documents 
+                 SET status = 'rejeitado', draft_status = 'rejeitado', rejected_by = ?, rejection_reason = ? 
+                 WHERE id = ?"
+            );
+            return $stmt->execute([$rejectedBy, trim($reason), $id]);
+        }
+
         $stmt = $this->db->prepare(
             "UPDATE cp_documents 
-             SET status = 'rejeitado', rejected_by = ?, approved_at = NOW(), rejection_reason = ? 
-             WHERE id = ? AND status = 'pendente'"
+             SET draft_status = 'rejeitado', rejected_by = ?, rejection_reason = ? 
+             WHERE id = ?"
         );
         return $stmt->execute([$rejectedBy, trim($reason), $id]);
     }
@@ -708,9 +827,24 @@ class DocumentModel extends Repository
         $scopeConditions = ['d.deleted_at IS NULL'];
         $params = [];
 
+        if ($userRole === 'Visualizador') {
+            if ($userId !== null) {
+                $scopeConditions[] = "(d.status = 'aprovado' OR EXISTS (SELECT 1 FROM cp_document_shares ds_v WHERE ds_v.document_id = d.id AND ds_v.user_id = ?))";
+                $params[] = $uid;
+            } else {
+                $scopeConditions[] = "d.status = 'aprovado'";
+            }
+        } elseif ($userRole === 'Editor' && $userId !== null) {
+            $scopeConditions[] = "(d.status = 'aprovado' OR d.created_by = ? OR EXISTS (SELECT 1 FROM cp_document_shares ds WHERE ds.document_id = d.id AND ds.user_id = ?) OR EXISTS (SELECT 1 FROM cp_approval_requests ar WHERE ar.document_id = d.id AND ar.approver_id = ? AND ar.status = 'pendente'))";
+            $params[] = $uid;
+            $params[] = $uid;
+            $params[] = $uid;
+        }
+
         if ($userRole !== 'Admin') {
             $joinUser = 'LEFT JOIN cp_users u ON d.created_by = u.id';
             $scopeConds = [
+                'd.is_restricted = 0',
                 'd.created_by = ?',
                 'EXISTS (SELECT 1 FROM cp_document_shares ds_sec WHERE ds_sec.document_id = d.id AND ds_sec.user_id = ?)'
             ];
@@ -745,15 +879,21 @@ class DocumentModel extends Repository
         $stmtTotal->execute($params);
         $totalDocs = (int) $stmtTotal->fetchColumn();
 
-        $stmtPend = $this->db->prepare("SELECT COUNT(*) FROM cp_documents d {$joinUser} {$baseWhere} AND d.status = 'pendente'");
+        if ($userRole === 'Admin') {
+            $pendSql = "(d.status = 'pendente' OR d.draft_status = 'pendente' OR d.status = 'rascunho' OR d.has_draft = 1)";
+        } else {
+            $pendSql = "(d.status = 'pendente' OR d.draft_status = 'pendente' OR EXISTS (SELECT 1 FROM cp_approval_requests ar WHERE ar.document_id = d.id AND ar.approver_id = {$uid} AND ar.status = 'pendente'))";
+        }
+
+        $stmtPend = $this->db->prepare("SELECT COUNT(*) FROM cp_documents d {$joinUser} {$baseWhere} AND {$pendSql}");
         $stmtPend->execute($params);
         $totalPending = (int) $stmtPend->fetchColumn();
 
-        $stmtApp = $this->db->prepare("SELECT COUNT(*) FROM cp_documents d {$joinUser} {$baseWhere} AND d.status = 'aprovado'");
+        $stmtApp = $this->db->prepare("SELECT COUNT(*) FROM cp_documents d {$joinUser} {$baseWhere} AND d.status = 'aprovado' AND (d.draft_status IS NULL OR d.draft_status != 'pendente')");
         $stmtApp->execute($params);
         $totalApproved = (int) $stmtApp->fetchColumn();
 
-        $stmtRej = $this->db->prepare("SELECT COUNT(*) FROM cp_documents d {$joinUser} {$baseWhere} AND d.status = 'rejeitado'");
+        $stmtRej = $this->db->prepare("SELECT COUNT(*) FROM cp_documents d {$joinUser} {$baseWhere} AND (d.status = 'rejeitado' OR d.draft_status = 'rejeitado')");
         $stmtRej->execute($params);
         $totalRejected = (int) $stmtRej->fetchColumn();
 

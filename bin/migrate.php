@@ -443,6 +443,21 @@ $migrations = [
             CONSTRAINT fk_approval_doc FOREIGN KEY (document_id) REFERENCES cp_documents(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ",
+
+    '0030_add_draft_and_version_control' => "
+        ALTER TABLE cp_documents 
+            ADD COLUMN current_version INT UNSIGNED NOT NULL DEFAULT 1 AFTER status,
+            ADD COLUMN has_draft TINYINT(1) NOT NULL DEFAULT 0 AFTER current_version,
+            ADD COLUMN draft_title VARCHAR(255) DEFAULT NULL AFTER has_draft,
+            ADD COLUMN draft_content LONGTEXT DEFAULT NULL AFTER draft_title,
+            ADD COLUMN draft_category_id INT UNSIGNED DEFAULT NULL AFTER draft_content,
+            ADD COLUMN draft_status ENUM('rascunho', 'pendente', 'rejeitado') NOT NULL DEFAULT 'rascunho' AFTER draft_category_id,
+            ADD COLUMN draft_updated_at DATETIME DEFAULT NULL AFTER draft_status,
+            ADD COLUMN draft_version_note VARCHAR(255) DEFAULT NULL AFTER draft_updated_at;
+
+        ALTER TABLE cp_document_versions 
+            ADD COLUMN version_number INT UNSIGNED NOT NULL DEFAULT 1 AFTER document_id;
+    ",
 ];
 
 $stmt = $db->query('SELECT name FROM cp_migrations');
@@ -522,6 +537,14 @@ $integrityChecks = [
         'confidentiality_level' => "ALTER TABLE cp_documents ADD COLUMN confidentiality_level ENUM('publico', 'interno', 'confidencial', 'restrito') NOT NULL DEFAULT 'interno'",
         'views_count' => "ALTER TABLE cp_documents ADD COLUMN views_count INT UNSIGNED NOT NULL DEFAULT 0",
         'is_restricted' => "ALTER TABLE cp_documents ADD COLUMN is_restricted TINYINT(1) NOT NULL DEFAULT 0 AFTER is_public",
+        'current_version' => "ALTER TABLE cp_documents ADD COLUMN current_version INT UNSIGNED NOT NULL DEFAULT 1 AFTER status",
+        'has_draft' => "ALTER TABLE cp_documents ADD COLUMN has_draft TINYINT(1) NOT NULL DEFAULT 0 AFTER current_version",
+        'draft_title' => "ALTER TABLE cp_documents ADD COLUMN draft_title VARCHAR(255) DEFAULT NULL AFTER has_draft",
+        'draft_content' => "ALTER TABLE cp_documents ADD COLUMN draft_content LONGTEXT DEFAULT NULL AFTER draft_title",
+        'draft_category_id' => "ALTER TABLE cp_documents ADD COLUMN draft_category_id INT UNSIGNED DEFAULT NULL AFTER draft_content",
+        'draft_status' => "ALTER TABLE cp_documents ADD COLUMN draft_status ENUM('rascunho', 'pendente', 'rejeitado') NOT NULL DEFAULT 'rascunho' AFTER draft_category_id",
+        'draft_updated_at' => "ALTER TABLE cp_documents ADD COLUMN draft_updated_at DATETIME DEFAULT NULL AFTER draft_status",
+        'draft_version_note' => "ALTER TABLE cp_documents ADD COLUMN draft_version_note VARCHAR(255) DEFAULT NULL AFTER draft_updated_at",
     ],
     'cp_doc_categories' => [
         'color' => "ALTER TABLE cp_doc_categories ADD COLUMN color VARCHAR(20) NOT NULL DEFAULT '#1abb9c'",
@@ -529,6 +552,7 @@ $integrityChecks = [
     'cp_document_versions' => [
         'title' => "ALTER TABLE cp_document_versions ADD COLUMN title VARCHAR(255) DEFAULT NULL AFTER document_id",
         'category_id' => "ALTER TABLE cp_document_versions ADD COLUMN category_id INT UNSIGNED DEFAULT NULL AFTER title",
+        'version_number' => "ALTER TABLE cp_document_versions ADD COLUMN version_number INT UNSIGNED NOT NULL DEFAULT 1 AFTER document_id",
     ],
 ];
 

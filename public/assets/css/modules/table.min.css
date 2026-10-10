@@ -335,3 +335,109 @@
 .th-actions {
   text-align: right !important;
 }
+
+/* ─── DROPDOWN DE AÇÕES ────────────────────────────────────────────────── */
+
+.doc-actions-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.doc-actions-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--docs-text-mut, #64748b);
+  background-color: var(--docs-surface, #ffffff);
+  border: 1px solid var(--docs-border, #e2e8f0);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.doc-actions-toggle-btn:hover,
+.doc-actions-toggle-btn.active {
+  color: var(--docs-primary, #1abb9c);
+  border-color: var(--docs-primary, #1abb9c);
+  background-color: var(--docs-primary-lt, rgba(26, 187, 156, 0.08));
+}
+
+.has-open-actions-menu {
+  overflow: visible !important;
+}
+
+.doc-actions-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  min-width: 195px;
+  background: var(--docs-surface, #ffffff);
+  border: 1px solid var(--docs-border, #cbd5e1);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 8px 10px -6px rgba(0, 0, 0, 0.12);
+  padding: 5px;
+  z-index: 99999 !important;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: docActionsFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.doc-actions-dropdown.dropup .doc-actions-menu {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+@keyframes docActionsFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.doc-actions-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--docs-text, #334155);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease, color 0.12s ease;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.doc-actions-item svg {
+  flex-shrink: 0;
+}
+
+.doc-actions-item:hover {
+  background: var(--docs-surface-2, #f1f5f9);
+  color: var(--docs-primary, #1abb9c);
+}
+
+.doc-actions-item.danger-item {
+  color: var(--danger, #ef4444);
+}
+
+.doc-actions-item.danger-item:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--danger, #dc2626);
+}
+
+.doc-actions-divider {
+  height: 1px;
+  background: var(--docs-border, #e2e8f0);
+  margin: 3px 0;
+}
+

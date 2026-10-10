@@ -1213,34 +1213,7 @@ var Docs = (function () {
 
       var isOwner = (d.is_owner || (myId > 0 && parseInt(d.created_by, 10) === myId));
       var canEdit = !isReadOnlyRole() && (myRole === 'Admin' || isOwner || !!d.can_edit);
-      var canManageShares = (myRole === 'Admin' || isOwner || !!d.can_manage_shares);
-
-      var favBtn = '<button type="button" class="table-action-btn ' + (d.is_favorite ? 'is-fav active' : '') + '" onclick="Docs.toggleFavorite(' + d.id + ', event)" title="' + (d.is_favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos') + '">'
-        + (d.is_favorite ? Icons.get('starSolid', { size: 14, color: '#f59e0b' }) : Icons.get('star', { size: 14 }))
-        + '</button>';
-
-      var actionsHtml = '';
-      if (isReadOnlyRole()) {
-        actionsHtml = favBtn + '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Docs.viewDoc(' + d.id + ')" title="Visualizar Documento (Leitura)">' + Icons.eye + '</button>';
-      } else if (IS_TRASH) {
-        actionsHtml = '<button type="button" class="table-action-btn restore-btn" onclick="event.stopPropagation();Docs.restoreDoc(' + d.id + ')" title="Restaurar Documento">' + Icons.restore + '</button>'
-          + (myRole === 'Admin' ? '<button type="button" class="table-action-btn del" onclick="event.stopPropagation();Docs.forceDeleteDoc(' + d.id + ')" title="Excluir Definitivamente">' + Icons.forceDelete + '</button>' : '');
-      } else {
-        var diffBtn = '<button type="button" class="table-action-btn" onclick="event.stopPropagation();DocDiff.open(' + d.id + ')" title="Comparar Versões (Diff)">' + Icons.diff + '</button>';
-
-        actionsHtml = favBtn + '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Docs.viewDoc(' + d.id + ')" title="Visualizar Documento (Leitura)">' + Icons.eye + '</button>'
-          + diffBtn;
-
-        if (canEdit) {
-          actionsHtml += '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Docs.openDoc(' + d.id + ', \'split\')" title="Editar Documento">' + Icons.pencil + '</button>'
-            + '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Docs.duplicateDoc(' + d.id + ')" title="Duplicar">' + Icons.duplicate + '</button>';
-        }
-
-        if (canManageShares) {
-          actionsHtml += '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Docs.openShareModal(' + d.id + ')" title="Compartilhar Documento">' + Icons.share + '</button>'
-            + '<button type="button" class="table-action-btn del" onclick="event.stopPropagation();Docs.deleteDocDirect(' + d.id + ')" title="Mover para a Lixeira">' + Icons.trash + '</button>';
-        }
-      }
+      var actionsHtml = buildDocActionsDropdown(d);
 
       var metaBadgesGrid = buildDocMetaBadges(d);
 
@@ -1272,6 +1245,109 @@ var Docs = (function () {
     }
 
     grid.innerHTML = html;
+  }
+
+  function closeAllActionsMenus() {
+    var menus = document.querySelectorAll('.doc-actions-menu');
+    for (var i = 0; i < menus.length; i++) {
+      menus[i].setAttribute('hidden', '');
+      var parent = menus[i].closest('.doc-actions-dropdown');
+      if (parent) parent.classList.remove('dropup');
+    }
+    var openContainers = document.querySelectorAll('.has-open-actions-menu');
+    for (var j = 0; j < openContainers.length; j++) {
+      openContainers[j].classList.remove('has-open-actions-menu');
+    }
+  }
+
+  function toggleActionsMenu(docId, event) {
+    if (event) event.stopPropagation();
+    var menu = document.getElementById('doc-actions-menu-' + docId);
+    if (!menu) return;
+
+    var isHidden = menu.hasAttribute('hidden');
+    closeAllActionsMenus();
+
+    if (isHidden) {
+      menu.removeAttribute('hidden');
+      var parent = menu.closest('.doc-actions-dropdown');
+      if (parent) {
+        var rect = parent.getBoundingClientRect();
+        var spaceBelowViewport = window.innerHeight - rect.bottom;
+
+        var tableWrapper = parent.closest('.table-responsive, .docs-table-wrapper, .docs-table-container, .sys-table-container');
+        var spaceBelowContainer = tableWrapper ? (tableWrapper.getBoundingClientRect().bottom - rect.bottom) : 999;
+
+        if (tableWrapper) {
+          tableWrapper.classList.add('has-open-actions-menu');
+        }
+
+        if ((spaceBelowViewport < 260 || spaceBelowContainer < 260) && rect.top > 180) {
+          parent.classList.add('dropup');
+        } else {
+          parent.classList.remove('dropup');
+        }
+      }
+    }
+  }
+
+  function buildDocActionsDropdown(d) {
+    var myRole = (window.ME && window.ME.role) || '';
+    var myId = window.ME && window.ME.id ? parseInt(window.ME.id, 10) : 0;
+    var isOwner = (d.is_owner || (myId > 0 && parseInt(d.created_by, 10) === myId));
+    var canEdit = !isReadOnlyRole() && (myRole === 'Admin' || isOwner || !!d.can_edit);
+    var canManageShares = (myRole === 'Admin' || isOwner || !!d.can_manage_shares);
+
+    var items = [];
+
+    if (isReadOnlyRole()) {
+      items.push('<button type="button" class="doc-actions-item" onclick="Docs.closeAllActionsMenus();Docs.viewDoc(' + d.id + ')">'
+        + Icons.eye + ' Visualizar Documento</button>');
+    } else if (IS_TRASH) {
+      items.push('<button type="button" class="doc-actions-item" onclick="Docs.closeAllActionsMenus();Docs.restoreDoc(' + d.id + ')">'
+        + Icons.restore + ' Restaurar Documento</button>');
+      if (myRole === 'Admin') {
+        items.push('<button type="button" class="doc-actions-item danger-item" onclick="Docs.closeAllActionsMenus();Docs.forceDeleteDoc(' + d.id + ')">'
+          + Icons.forceDelete + ' Excluir Definitivamente</button>');
+      }
+    } else {
+      var favIcon = d.is_favorite ? Icons.get('starSolid', { size: 14, color: '#f59e0b' }) : Icons.get('star', { size: 14 });
+      var favLabel = d.is_favorite ? 'Remover dos Favoritos' : 'Adicionar aos Favoritos';
+      items.push('<button type="button" class="doc-actions-item" onclick="Docs.closeAllActionsMenus();Docs.toggleFavorite(' + d.id + ', event)">'
+        + favIcon + ' ' + favLabel + '</button>');
+
+      items.push('<button type="button" class="doc-actions-item" onclick="Docs.closeAllActionsMenus();Docs.viewDoc(' + d.id + ')">'
+        + Icons.eye + ' Visualizar Documento</button>');
+
+      items.push('<button type="button" class="doc-actions-item" onclick="Docs.closeAllActionsMenus();DocDiff.open(' + d.id + ')">'
+        + Icons.diff + ' Comparar Versões (Diff)</button>');
+
+      if (canEdit) {
+        items.push('<button type="button" class="doc-actions-item" onclick="Docs.closeAllActionsMenus();Docs.openDoc(' + d.id + ', \'split\')">'
+          + Icons.pencil + ' Editar Documento</button>');
+        items.push('<button type="button" class="doc-actions-item" onclick="Docs.closeAllActionsMenus();Docs.duplicateDoc(' + d.id + ')">'
+          + Icons.duplicate + ' Duplicar Documento</button>');
+      }
+
+      if (canManageShares) {
+        items.push('<button type="button" class="doc-actions-item" onclick="Docs.closeAllActionsMenus();Docs.openShareModal(' + d.id + ')">'
+          + Icons.share + ' Compartilhar</button>');
+        items.push('<div class="doc-actions-divider"></div>');
+        items.push('<button type="button" class="doc-actions-item danger-item" onclick="Docs.closeAllActionsMenus();Docs.deleteDocDirect(' + d.id + ')">'
+          + Icons.trash + ' Mover para a Lixeira</button>');
+      }
+    }
+
+    var dotsIcon = Icons.get('dotsVertical', { size: 14 }) || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"/></svg>';
+
+    return '<div class="doc-actions-dropdown" onclick="event.stopPropagation();">'
+      + '<button type="button" class="doc-actions-toggle-btn" onclick="event.stopPropagation();Docs.toggleActionsMenu(' + d.id + ', event)" title="Ações disponíveis">'
+      + 'Ações ' + dotsIcon
+      + '</button>'
+      + '<div class="doc-actions-menu" id="doc-actions-menu-' + d.id + '" hidden>'
+      + items.join('')
+      + '</div>'
+      + '</div>';
   }
 
   function renderTableView(tableBody) {
@@ -1307,38 +1383,9 @@ var Docs = (function () {
       }
 
       var metaBadgesTable = buildDocMetaBadges(d);
-
       var isOwner = (d.is_owner || (myId > 0 && parseInt(d.created_by, 10) === myId));
       var canEdit = !isReadOnlyRole() && (myRole === 'Admin' || isOwner || !!d.can_edit);
-      var canManageShares = (myRole === 'Admin' || isOwner || !!d.can_manage_shares);
-
-      var favBtn = '<button type="button" class="table-action-btn ' + (d.is_favorite ? 'is-fav active' : '') + '" onclick="Docs.toggleFavorite(' + d.id + ', event)" title="' + (d.is_favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos') + '">'
-        + (d.is_favorite ? Icons.get('starSolid', { size: 13, color: '#f59e0b' }) : Icons.get('star', { size: 13 }))
-        + '</button>';
-
-      var actionsHtml = '';
-      if (isReadOnlyRole()) {
-        actionsHtml = favBtn + '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Docs.viewDoc(' + d.id + ')" title="Visualizar (Leitura)">' + Icons.eye + '</button>';
-      } else if (IS_TRASH) {
-        actionsHtml = '<button type="button" class="table-action-btn restore-btn" onclick="event.stopPropagation();Docs.restoreDoc(' + d.id + ')" title="Restaurar Documento">' + Icons.restore + '</button>'
-          + (myRole === 'Admin' ? '<button type="button" class="table-action-btn del" onclick="event.stopPropagation();Docs.forceDeleteDoc(' + d.id + ')" title="Excluir Definitivamente">' + Icons.forceDelete + '</button>' : '');
-      } else {
-        var diffBtn = '<button type="button" class="table-action-btn" onclick="event.stopPropagation();DocDiff.open(' + d.id + ')" title="Comparar Versões (Diff)">' + Icons.diff + '</button>';
-
-        actionsHtml = favBtn + '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Docs.viewDoc(' + d.id + ')" title="Visualizar (Leitura)">' + Icons.eye + '</button>'
-          + diffBtn;
-
-        if (canEdit) {
-          actionsHtml += '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Docs.openDoc(' + d.id + ', \'split\')" title="Editar">' + Icons.pencil + '</button>'
-            + '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Docs.duplicateDoc(' + d.id + ')" title="Duplicar">' + Icons.duplicate + '</button>';
-        }
-
-        if (canManageShares) {
-          actionsHtml += '<button type="button" class="table-action-btn" onclick="event.stopPropagation();Docs.openShareModal(' + d.id + ')" title="Compartilhar Documento">' + Icons.share + '</button>'
-            + '<button type="button" class="table-action-btn del" onclick="event.stopPropagation();Docs.deleteDocDirect(' + d.id + ')" title="Mover para a Lixeira">' + Icons.trash + '</button>';
-        }
-      }
-
+      var actionsHtml = buildDocActionsDropdown(d);
       var titleAction = isReadOnlyRole() ? ('Docs.viewDoc(' + d.id + ')') : ('Docs.openDoc(' + d.id + ', \'' + (canEdit ? 'split' : 'preview') + '\')');
 
       html += '<tr>'
@@ -1481,10 +1528,14 @@ var Docs = (function () {
       var chkPublic = document.getElementById('chkDocIsPublic');
       var chkRestricted = document.getElementById('chkDocIsRestricted');
 
-      if (titleInput) titleInput.value = CURRENT_DOC.title || '';
-      if (contentInput) contentInput.value = CURRENT_DOC.content || '';
-      if (verNoteInput) verNoteInput.value = '';
-      if (catSelect) catSelect.value = CURRENT_DOC.category_id || '';
+      var activeTitle = (CURRENT_DOC.has_draft && CURRENT_DOC.draft_title) ? CURRENT_DOC.draft_title : (CURRENT_DOC.title || '');
+      var activeContent = (CURRENT_DOC.has_draft && CURRENT_DOC.draft_content !== null && CURRENT_DOC.draft_content !== undefined) ? CURRENT_DOC.draft_content : (CURRENT_DOC.content || '');
+      var activeCat = (CURRENT_DOC.has_draft && CURRENT_DOC.draft_category_id !== null && CURRENT_DOC.draft_category_id !== undefined) ? CURRENT_DOC.draft_category_id : (CURRENT_DOC.category_id || '');
+
+      if (titleInput) titleInput.value = activeTitle;
+      if (contentInput) contentInput.value = activeContent;
+      if (verNoteInput) verNoteInput.value = CURRENT_DOC.draft_version_note || '';
+      if (catSelect) catSelect.value = activeCat;
       if (chkPublic) chkPublic.checked = !!(parseInt(CURRENT_DOC.is_public, 10));
 
       var isRestricted = !!(parseInt(CURRENT_DOC.is_restricted, 10));
@@ -1591,9 +1642,9 @@ var Docs = (function () {
 
       document.getElementById('docVersionNote').value = '';
       var status = document.getElementById('statusSaveState');
-      if (status) status.textContent = 'Salvo com sucesso!';
+      if (status) status.textContent = 'Rascunho salvo!';
 
-      toast('Documento salvo com sucesso!', 'success');
+      toast(res.message || 'Rascunho salvo com sucesso! Submeta para aprovação para publicar.', 'success');
       loadAll();
     }).catch(function (err) {
       toast(err.message || 'Erro ao salvar documento.', 'error');
@@ -2751,7 +2802,8 @@ var Docs = (function () {
     var myRole = (window.ME && window.ME.role) || '';
     var show = !!(CURRENT_DOC && CURRENT_DOC.id &&
       (CURRENT_DOC.is_owner || CURRENT_DOC.can_manage_shares || myRole === 'Admin') &&
-      CURRENT_DOC.status !== 'aprovado' &&
+      (CURRENT_DOC.status !== 'aprovado' || CURRENT_DOC.has_draft) &&
+      CURRENT_DOC.draft_status !== 'pendente' &&
       !IS_VIEW_ONLY);
     btn.hidden = !show;
   }
@@ -3041,8 +3093,19 @@ var Docs = (function () {
     toggleAreaDropdown: toggleAreaDropdown,
     filterAreas: filterAreas,
     onAreaChange: onAreaChange,
+    toggleActionsMenu: toggleActionsMenu,
+    closeAllActionsMenus: closeAllActionsMenus,
   };
 })();
 
+document.addEventListener('click', function (e) {
+  if (!e.target.closest('.doc-actions-dropdown')) {
+    if (typeof Docs !== 'undefined' && Docs.closeAllActionsMenus) {
+      Docs.closeAllActionsMenus();
+    }
+  }
+});
+
 document.addEventListener('DOMContentLoaded', Docs.init);
+
 

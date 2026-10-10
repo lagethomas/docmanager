@@ -96,8 +96,8 @@ class ApprovalController extends Controller
             return;
         }
 
-        if (!in_array($doc['status'], ['pendente', 'rejeitado'], true)) {
-            $this->jsonError('Este documento não pode ser aprovado (status atual: ' . $doc['status'] . ').', 422);
+        if ($userRole !== 'Admin' && $doc['status'] !== 'pendente' && ($doc['draft_status'] ?? '') !== 'pendente' && ($doc['draft_status'] ?? '') !== 'rejeitado') {
+            $this->jsonError('Este documento não possui alterações pendentes para aprovação.', 422);
             return;
         }
 
@@ -166,8 +166,8 @@ class ApprovalController extends Controller
             return;
         }
 
-        if ($doc['status'] !== 'pendente') {
-            $this->jsonError('Este documento não pode ser rejeitado (status atual: ' . $doc['status'] . ').', 422);
+        if ($userRole !== 'Admin' && $doc['status'] !== 'pendente' && ($doc['draft_status'] ?? '') !== 'pendente') {
+            $this->jsonError('Este documento não possui alterações pendentes para rejeição.', 422);
             return;
         }
 

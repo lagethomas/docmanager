@@ -25,7 +25,7 @@ class SharedLinkController extends Controller
         $role = (string) $user['role'];
 
         $docModel = new DocumentModel();
-        if (!$docModel->canUserManageShares($id, $userId, $role)) {
+        if ($role === 'Visualizador' || !$docModel->canUserManageShares($id, $userId, $role)) {
             $this->jsonError('Acesso negado.', 403);
             return;
         }
@@ -48,8 +48,8 @@ class SharedLinkController extends Controller
         $role = (string) $user['role'];
 
         $docModel = new DocumentModel();
-        if (!$docModel->canUserManageShares($id, $userId, $role)) {
-            $this->jsonError('Acesso negado: apenas o autor do documento ou Administrador pode criar links de compartilhamento.', 403);
+        if ($role === 'Visualizador' || !$docModel->canUserManageShares($id, $userId, $role)) {
+            $this->jsonError('Acesso negado: o perfil Visualizador não possui permissão para criar links públicos.', 403);
             return;
         }
 
@@ -82,8 +82,8 @@ class SharedLinkController extends Controller
         $role = (string) $user['role'];
 
         $docModel = new DocumentModel();
-        if (!$docModel->canUserManageShares((int) $link['document_id'], $userId, $role)) {
-            $this->jsonError('Acesso negado: apenas o autor do documento ou Administrador pode remover links.', 403);
+        if ($role === 'Visualizador' || !$docModel->canUserManageShares((int) $link['document_id'], $userId, $role)) {
+            $this->jsonError('Acesso negado: o perfil Visualizador não possui permissão para remover links públicos.', 403);
             return;
         }
 

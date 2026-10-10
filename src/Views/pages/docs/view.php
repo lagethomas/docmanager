@@ -56,11 +56,13 @@ $timbradoConfig = (new \App\Models\SettingsModel())->getTimbradoConfig();
         <span><?php echo $isFollowing ? 'Seguindo' : 'Seguir'; ?></span>
       </button>
 
+      <?php if (($user['role'] ?? '') !== 'Visualizador'): ?>
       <!-- Botão Link Público (Módulo 6) -->
       <button type="button" class="btn btn-sm btn-outline" onclick="DocsView.openPublicLinkModal(<?php echo (int)$doc['id']; ?>)" title="Gerar link de acesso externo com token">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
         <span>Link Público</span>
       </button>
+      <?php endif; ?>
 
       <?php if ($canManageShares): ?>
       <button type="button" class="btn btn-sm btn-outline" onclick="DocsView.openShareModal(<?php echo (int)$doc['id']; ?>)" title="Compartilhar documento com outros editores">
@@ -146,6 +148,12 @@ $timbradoConfig = (new \App\Models\SettingsModel())->getTimbradoConfig();
           <?php echo e(ucfirst($doc['confidentiality_level'] ?? 'interno')); ?>
         </span>
 
+        <?php if (!empty($doc['current_version'])): ?>
+        <span class="doc-status-badge version-badge" style="background: rgba(59, 130, 246, 0.12); color: #2563eb; border: 1px solid rgba(59, 130, 246, 0.3); display: inline-flex; align-items: center; gap: 4px; font-weight: 700;">
+          v<?php echo (int)$doc['current_version']; ?>
+        </span>
+        <?php endif; ?>
+
         <?php if ($status === 'aprovado'): ?>
         <span class="doc-status-badge approved">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="badge-svg"><polyline points="20 6 9 17 4 12"/></svg>
@@ -175,6 +183,36 @@ $timbradoConfig = (new \App\Models\SettingsModel())->getTimbradoConfig();
         </span>
         <?php endif; ?>
       </div>
+
+      <?php if (!empty($doc['has_draft']) && ($canEdit || ($user['role'] ?? '') === 'Admin' || ($user['role'] ?? '') === 'Aprovador')): ?>
+      <div class="alert alert-warning" style="margin: 1rem 0; padding: 12px 16px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #b45309; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+        <div>
+          <strong>📝 Rascunho em Edição:</strong> Este documento possui alterações salvas em rascunho.
+          <?php if (($doc['draft_status'] ?? '') === 'pendente'): ?>
+            <span class="badge badge-warning" style="margin-left: 6px; padding: 2px 8px; background: rgba(234,179,8,0.2); color: #ca8a04; border-radius: 4px;">Submetido • Pendente de Aprovação</span>
+          <?php elseif (($doc['draft_status'] ?? '') === 'rejeitado'): ?>
+            <span class="badge badge-danger" style="margin-left: 6px; padding: 2px 8px; background: rgba(239,68,68,0.2); color: #dc2626; border-radius: 4px;">Rascunho Rejeitado: <?php echo e($doc['rejection_reason'] ?? ''); ?></span>
+          <?php else: ?>
+            <span class="badge badge-secondary" style="margin-left: 6px; padding: 2px 8px; background: rgba(107,114,128,0.2); color: #4b5563; border-radius: 4px;">Rascunho Não Submetido</span>
+          <?php endif; ?>
+          <div style="font-size: 0.8rem; margin-top: 2px;">
+            A versão exibida abaixo é a versão publicada v<?php echo (int)($doc['current_version'] ?? 1); ?>.
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <?php if ($canEdit): ?>
+          <button type="button" class="btn btn-sm btn-primary" onclick="DocsView.editDoc(<?php echo (int)$doc['id']; ?>)">
+            Editar Rascunho
+          </button>
+          <?php endif; ?>
+          <?php if (!empty($canSubmitApproval) && ($doc['draft_status'] ?? '') !== 'pendente'): ?>
+          <button type="button" class="btn btn-sm btn-outline-primary" onclick="DocsView.openApprovalModal(<?php echo (int)$doc['id']; ?>)">
+            Submeter p/ Aprovação
+          </button>
+          <?php endif; ?>
+        </div>
+      </div>
+      <?php endif; ?>
 
       <h1 class="docs-single-title" id="docSingleTitle"><?php echo e($doc['title'] ?? ''); ?></h1>
 
@@ -418,6 +456,7 @@ $timbradoConfig = (new \App\Models\SettingsModel())->getTimbradoConfig();
   </div>
 </div>
 
+<?php if (($user['role'] ?? '') !== 'Visualizador'): ?>
 <!-- Modal de Links Públicos (Módulo 6) -->
 <div class="modal-backdrop-custom" id="publicLinkModalOverlay" hidden>
   <div class="modal-dialog-custom" style="max-width: 560px">
@@ -465,6 +504,7 @@ $timbradoConfig = (new \App\Models\SettingsModel())->getTimbradoConfig();
     </div>
   </div>
 </div>
+<?php endif; ?>
 
 <!-- Modal para Abrir Issue / Apontar Correção -->
 <div class="modal-backdrop-custom" id="issueModalOverlay" hidden>
